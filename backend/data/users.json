@@ -1,0 +1,10 @@
+[
+  {
+    "_id": "USE-032808-154",
+    "createdAt": "2026-07-22T03:13:52.808Z",
+    "updatedAt": "2026-08-09T16:32:07.768Z",
+    "username": "MRSassociates",
+    "password": "$2a$10$PiCJeLFQaqsCEb2NsuOFFOEMy9cHKiS6W5Brj93.ndy2ZIPADFDbG",
+    "role": "admin"
+  }
+]

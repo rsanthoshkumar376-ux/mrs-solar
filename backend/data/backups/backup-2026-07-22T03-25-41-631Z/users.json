@@ -1,0 +1,10 @@
+[
+  {
+    "_id": "USE-032808-154",
+    "createdAt": "2026-07-22T03:13:52.808Z",
+    "updatedAt": "2026-07-22T03:13:52.811Z",
+    "username": "admin@mrs-solari.com",
+    "password": "$2a$10$lK5mZhuWb18GBFWvVSsc3ehs6p9PwmEmgCBD.eArapLNRGZEjZiqG",
+    "role": "admin"
+  }
+]

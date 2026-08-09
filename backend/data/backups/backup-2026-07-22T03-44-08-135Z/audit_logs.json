@@ -1,0 +1,48 @@
+[
+  {
+    "_id": "AUD-678804-292",
+    "createdAt": "2026-07-22T03:24:38.804Z",
+    "updatedAt": "2026-07-22T03:24:38.804Z",
+    "username": "admin@mrs-solari.com",
+    "action": "TRIGGER_SCHEDULER",
+    "target": "SYSTEM",
+    "details": {
+      "checkedCount": 0
+    },
+    "timestamp": "2026-07-22T03:24:38.802Z"
+  },
+  {
+    "_id": "AUD-750074-956",
+    "createdAt": "2026-07-22T03:25:50.074Z",
+    "updatedAt": "2026-07-22T03:25:50.074Z",
+    "username": "admin@mrs-solari.com",
+    "action": "RESTORE_BACKUP",
+    "target": "backup-2026-07-22T03-25-41-631Z",
+    "details": {},
+    "timestamp": "2026-07-22T03:25:50.071Z"
+  },
+  {
+    "_id": "AUD-136548-826",
+    "createdAt": "2026-07-22T03:32:16.548Z",
+    "updatedAt": "2026-07-22T03:32:16.548Z",
+    "username": "admin@mrs-solari.com",
+    "action": "CREATE_CUSTOMER",
+    "target": "SOL-1001",
+    "details": {
+      "name": "Santhosh Kumar r Santosh"
+    },
+    "timestamp": "2026-07-22T03:32:16.546Z"
+  },
+  {
+    "_id": "AUD-832519-569",
+    "createdAt": "2026-07-22T03:43:52.519Z",
+    "updatedAt": "2026-07-22T03:43:52.519Z",
+    "username": "admin@mrs-solari.com",
+    "action": "DELETE_CUSTOMER",
+    "target": "SOL-1001",
+    "details": {
+      "name": "Santhosh Kumar r Santosh"
+    },
+    "timestamp": "2026-07-22T03:43:52.511Z"
+  }
+]

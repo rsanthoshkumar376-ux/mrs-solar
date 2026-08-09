@@ -1,0 +1,142 @@
+[
+  {
+    "_id": "AUD-678804-292",
+    "createdAt": "2026-07-22T03:24:38.804Z",
+    "updatedAt": "2026-07-22T03:24:38.804Z",
+    "username": "admin@mrs-solari.com",
+    "action": "TRIGGER_SCHEDULER",
+    "target": "SYSTEM",
+    "details": {
+      "checkedCount": 0
+    },
+    "timestamp": "2026-07-22T03:24:38.802Z"
+  },
+  {
+    "_id": "AUD-750074-956",
+    "createdAt": "2026-07-22T03:25:50.074Z",
+    "updatedAt": "2026-07-22T03:25:50.074Z",
+    "username": "admin@mrs-solari.com",
+    "action": "RESTORE_BACKUP",
+    "target": "backup-2026-07-22T03-25-41-631Z",
+    "details": {},
+    "timestamp": "2026-07-22T03:25:50.071Z"
+  },
+  {
+    "_id": "AUD-136548-826",
+    "createdAt": "2026-07-22T03:32:16.548Z",
+    "updatedAt": "2026-07-22T03:32:16.548Z",
+    "username": "admin@mrs-solari.com",
+    "action": "CREATE_CUSTOMER",
+    "target": "SOL-1001",
+    "details": {
+      "name": "Santhosh Kumar r Santosh"
+    },
+    "timestamp": "2026-07-22T03:32:16.546Z"
+  },
+  {
+    "_id": "AUD-832519-569",
+    "createdAt": "2026-07-22T03:43:52.519Z",
+    "updatedAt": "2026-07-22T03:43:52.519Z",
+    "username": "admin@mrs-solari.com",
+    "action": "DELETE_CUSTOMER",
+    "target": "SOL-1001",
+    "details": {
+      "name": "Santhosh Kumar r Santosh"
+    },
+    "timestamp": "2026-07-22T03:43:52.511Z"
+  },
+  {
+    "_id": "AUD-848211-874",
+    "createdAt": "2026-07-22T03:44:08.211Z",
+    "updatedAt": "2026-07-22T03:44:08.211Z",
+    "username": "admin@mrs-solari.com",
+    "action": "CREATE_BACKUP",
+    "target": "backup-2026-07-22T03-44-08-135Z",
+    "details": {},
+    "timestamp": "2026-07-22T03:44:08.203Z"
+  },
+  {
+    "_id": "AUD-901104-442",
+    "createdAt": "2026-08-01T13:28:21.104Z",
+    "updatedAt": "2026-08-01T13:28:21.104Z",
+    "username": "admin@mrs-solar.com",
+    "action": "CREATE_CUSTOMER",
+    "target": "SOL-1001",
+    "details": {
+      "name": "radhika ramesh"
+    },
+    "timestamp": "2026-08-01T13:28:21.101Z"
+  },
+  {
+    "_id": "AUD-947846-695",
+    "createdAt": "2026-08-01T13:29:07.847Z",
+    "updatedAt": "2026-08-01T13:29:07.847Z",
+    "username": "admin@mrs-solar.com",
+    "action": "TRIGGER_SCHEDULER",
+    "target": "SYSTEM",
+    "details": {
+      "checkedCount": 1
+    },
+    "timestamp": "2026-08-01T13:29:07.841Z"
+  },
+  {
+    "_id": "AUD-951804-693",
+    "createdAt": "2026-08-01T13:29:11.804Z",
+    "updatedAt": "2026-08-01T13:29:11.804Z",
+    "username": "admin@mrs-solar.com",
+    "action": "TRIGGER_SCHEDULER",
+    "target": "SYSTEM",
+    "details": {
+      "checkedCount": 1
+    },
+    "timestamp": "2026-08-01T13:29:11.799Z"
+  },
+  {
+    "_id": "AUD-582831-888",
+    "createdAt": "2026-08-01T13:56:22.831Z",
+    "updatedAt": "2026-08-01T13:56:22.831Z",
+    "username": "admin@mrs-solar.com",
+    "action": "CREATE_CUSTOMER",
+    "target": "SOL-1002",
+    "details": {
+      "name": "sr7"
+    },
+    "timestamp": "2026-08-01T13:56:22.828Z"
+  },
+  {
+    "_id": "AUD-913262-941",
+    "createdAt": "2026-08-01T14:01:53.262Z",
+    "updatedAt": "2026-08-01T14:01:53.262Z",
+    "username": "admin@mrs-solar.com",
+    "action": "TRIGGER_SCHEDULER",
+    "target": "SYSTEM",
+    "details": {
+      "checkedCount": 2
+    },
+    "timestamp": "2026-08-01T14:01:53.259Z"
+  },
+  {
+    "_id": "AUD-899533-281",
+    "createdAt": "2026-08-09T16:44:59.533Z",
+    "updatedAt": "2026-08-09T16:44:59.533Z",
+    "username": "MRSassociates",
+    "action": "DELETE_CUSTOMER",
+    "target": "SOL-1001",
+    "details": {
+      "name": "radhika ramesh"
+    },
+    "timestamp": "2026-08-09T16:44:59.523Z"
+  },
+  {
+    "_id": "AUD-905183-146",
+    "createdAt": "2026-08-09T16:45:05.183Z",
+    "updatedAt": "2026-08-09T16:45:05.183Z",
+    "username": "MRSassociates",
+    "action": "DELETE_CUSTOMER",
+    "target": "SOL-1002",
+    "details": {
+      "name": "sr7"
+    },
+    "timestamp": "2026-08-09T16:45:05.173Z"
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "_id": "AUD-678804-292",
+    "createdAt": "2026-07-22T03:24:38.804Z",
+    "updatedAt": "2026-07-22T03:24:38.804Z",
+    "username": "admin@mrs-solari.com",
+    "action": "TRIGGER_SCHEDULER",
+    "target": "SYSTEM",
+    "details": {
+      "checkedCount": 0
+    },
+    "timestamp": "2026-07-22T03:24:38.802Z"
+  }
+]
