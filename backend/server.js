@@ -43,7 +43,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
 
 // Serve Frontend Static Production Build
-const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
+// Works both locally (backend/server.js) and on Render (node backend/server.js from root)
+const frontendDistPath = path.resolve(__dirname, '..', 'frontend', 'dist');
 app.use(express.static(frontendDistPath));
 
 // API Health Check
