@@ -1,0 +1,14 @@
+{
+  "name": "mrs-solar",
+  "version": "1.0.0",
+  "description": "MRS SOLAR - Solar Panel Loan Management System",
+  "main": "backend/server.js",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build && cd ../backend && npm install",
+    "start": "cd backend && node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
