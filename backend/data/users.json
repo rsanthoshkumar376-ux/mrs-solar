@@ -2,9 +2,18 @@
   {
     "_id": "USE-032808-154",
     "createdAt": "2026-07-22T03:13:52.808Z",
-    "updatedAt": "2026-08-09T16:32:07.768Z",
+    "updatedAt": "2026-08-10T03:00:05.436Z",
     "username": "MRSassociates",
-    "password": "$2a$10$PiCJeLFQaqsCEb2NsuOFFOEMy9cHKiS6W5Brj93.ndy2ZIPADFDbG",
+    "password": "$2a$10$GIJJpWtidYX1nR4vWgKD/uJvoY8nszsBx/1p5tQ6yJjpMDydIqJ7C",
     "role": "admin"
+  },
+  {
+    "_id": "USE-809374-392",
+    "createdAt": "2026-08-10T02:43:29.374Z",
+    "updatedAt": "2026-08-10T03:00:05.750Z",
+    "username": "deepi",
+    "customerId": "SOL-1001",
+    "password": "$2a$10$9IxUaPAqVQksUQJ3FzLfSuQ/ULFvA0glVtUINU3FdQfUHE8EJ1ZwO",
+    "role": "customer"
   }
 ]

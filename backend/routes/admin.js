@@ -250,12 +250,12 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
       totalOutstandingAmount: emiSchedule.reduce((sum, e) => sum + e.emiAmount, 0)
     });
 
-    // Create corresponding Customer User for login (password = mobileNumber)
+    // Create corresponding Customer User for login (username = fullName, password = mobileNumber)
     const salt = await bcrypt.genSalt(10);
     const rawPassword = String(rawData.mobileNumber || 'password123').trim();
     const hashedPassword = await bcrypt.hash(rawPassword, salt);
     await db.create('users', {
-      username: customerId, // Login using ID
+      username: rawData.fullName ? rawData.fullName.trim() : customerId,
       customerId: customerId,
       password: hashedPassword,
       role: 'customer'

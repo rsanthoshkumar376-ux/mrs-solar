@@ -16,10 +16,32 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    // Check if user exists by username (for admins) or customerId (for customers)
-    let user = await db.findOne('users', { username: usernameOrCustomerId });
+    const input = String(usernameOrCustomerId).trim();
+
+    // 1. Check if user exists by exact username or customerId
+    let user = await db.findOne('users', { username: input });
     if (!user) {
-      user = await db.findOne('users', { customerId: usernameOrCustomerId });
+      user = await db.findOne('users', { customerId: input });
+    }
+
+    // 2. Case-insensitive username match
+    if (!user) {
+      const allUsers = await db.find('users');
+      user = allUsers.find(u => u.username && u.username.toLowerCase() === input.toLowerCase());
+    }
+
+    // 3. Lookup by Customer Name, Customer ID, or Mobile Number in customers collection
+    if (!user) {
+      const allCustomers = await db.find('customers');
+      const matchedCustomer = allCustomers.find(c => 
+        (c.fullName && c.fullName.trim().toLowerCase() === input.toLowerCase()) ||
+        (c.customerId && c.customerId.trim().toLowerCase() === input.toLowerCase()) ||
+        (c.mobileNumber && c.mobileNumber.trim() === input)
+      );
+
+      if (matchedCustomer) {
+        user = await db.findOne('users', { customerId: matchedCustomer.customerId });
+      }
     }
 
     if (!user) {

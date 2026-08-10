@@ -31,5 +31,16 @@
     "message": "Customer sr7 (SOL-1002) added with Loan of ₹20.",
     "type": "New_Customer",
     "read": true
+  },
+  {
+    "_id": "NOT-809503-632",
+    "createdAt": "2026-08-10T02:43:29.503Z",
+    "updatedAt": "2026-08-10T02:43:29.503Z",
+    "role": "admin",
+    "customerId": "SOL-1001",
+    "title": "New Customer Registered",
+    "message": "Customer deepi (SOL-1001) added with Loan of ₹500.",
+    "type": "New_Customer",
+    "read": false
   }
 ]

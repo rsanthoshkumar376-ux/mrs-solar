@@ -67,7 +67,7 @@ async function seedAdmin() {
       console.log('Owner account updated: MRSassociates / 2332');
     }
 
-    // Sync existing customer passwords to their mobile numbers
+    // Sync existing customer passwords to their mobile numbers and username to full name
     const customers = await db.find('customers');
     for (const c of customers) {
       if (c.mobileNumber) {
@@ -75,7 +75,11 @@ async function seedAdmin() {
         const cHash = await bcrypt.hash(String(c.mobileNumber).trim(), cSalt);
         const userAcc = await db.findOne('users', { customerId: c.customerId });
         if (userAcc) {
-          await db.updateOne('users', { _id: userAcc._id }, { password: cHash });
+          await db.updateOne('users', { _id: userAcc._id }, { 
+            username: c.fullName ? c.fullName.trim() : c.customerId,
+            password: cHash 
+          });
+          console.log(`Synced user login for customer ${c.fullName} (${c.customerId}) with password: ${c.mobileNumber}`);
         }
       }
     }

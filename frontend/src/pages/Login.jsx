@@ -135,7 +135,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                {roleTab === 'customer' ? 'Customer ID' : 'Username/Email'}
+                {roleTab === 'customer' ? 'Customer Name / ID' : 'Username'}
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 dark:text-slate-500">
@@ -145,7 +145,7 @@ export default function Login() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder={roleTab === 'customer' ? 'e.g. SOL-1001' : 'e.g. MRSassociates'}
+                  placeholder={roleTab === 'customer' ? 'e.g. Radhika Ramesh or SOL-1001' : 'e.g. MRSassociates'}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 rounded-xl py-3 pl-10 pr-4 outline-none transition-all text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 text-sm"
                 />
               </div>
