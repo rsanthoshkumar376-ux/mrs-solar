@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+// Auto-detect origin so API calls automatically match current host & port (laptop, mobile, or cloud)
+const API_BASE_URL = `${window.location.origin}/api`;
 
 const api = axios.create({
   baseURL: API_BASE_URL,

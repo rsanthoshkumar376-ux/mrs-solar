@@ -42,9 +42,22 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
 
-// Simple Health Check
-app.get('/', (req, res) => {
+// Serve Frontend Static Production Build
+const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
+app.use(express.static(frontendDistPath));
+
+// API Health Check
+app.get('/api/health', (req, res) => {
   res.json({ message: 'MRS SOLAR Solar Panel Loan API is running' });
+});
+
+// SPA Fallback for Client-Side Routing (React Router)
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+  } else {
+    res.status(404).json({ message: 'Resource Not Found' });
+  }
 });
 
 // Seed Initial Admin User
