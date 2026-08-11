@@ -54,7 +54,12 @@ app.get('/api/health', (req, res) => {
 // SPA Fallback for Client-Side Routing (React Router)
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
-    res.sendFile(path.join(frontendDistPath, 'index.html'));
+    const indexPath = path.join(frontendDistPath, 'index.html');
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        res.status(200).send('<h1>MRS SOLAR Server is Running!</h1><p>Frontend is currently initializing.</p>');
+      }
+    });
   } else {
     res.status(404).json({ message: 'Resource Not Found' });
   }
@@ -112,9 +117,9 @@ cron.schedule('0 0 * * *', async () => {
   }
 });
 
-// Start Server
-app.listen(PORT, async () => {
-  console.log(`[Server] MRS SOLAR backend listening on http://localhost:${PORT}`);
+// Start Server - Bind to 0.0.0.0 for Render cloud hosting compatibility
+app.listen(PORT, '0.0.0.0', async () => {
+  console.log(`[Server] MRS SOLAR backend listening on port ${PORT}`);
   await seedAdmin();
   
   // Make sure upload folders exist
