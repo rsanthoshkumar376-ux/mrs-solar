@@ -4,7 +4,7 @@
   "description": "MRS SOLAR - Solar Panel Loan Management System",
   "private": true,
   "scripts": {
-    "build": "npm install && npx vite build || (cd frontend && npm install && npm run build) && (cd backend && npm install || true)",
+    "build": "cd frontend && npm install --include=dev && npm run build && cd ../backend && npm install",
     "start": "node backend/server.js"
   },
   "engines": {
