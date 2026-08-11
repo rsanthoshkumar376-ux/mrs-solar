@@ -1,8 +1,17 @@
-# React + Vite
+# ☀️ MRS SOLAR - Solar Panel Loan Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome to **MRS SOLAR**. 
 
-Currently, two official plugins are available:
+### 🚀 [Click Here to Open Live Web Application](https://mrs-solar.onrender.com)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
+
+### 🌟 Features
+- **Customer Portal**: View EMI statements, remaining loan balance, payment schedule, and complete 1-click mobile UPI payments (GPay/PhonePe).
+- **Owner / Admin Portal**: Financial analytics, customer onboarding, payment verification queue, and automated interest/penalty audits.
+
+---
+
+### 🔐 Access Credentials
+- **Owner / Admin**: `MRSassociates` / `2332`
+- **Customer**: Customer Name / ID / Mobile No. (Password: Mobile Number)
