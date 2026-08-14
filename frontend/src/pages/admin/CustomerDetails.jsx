@@ -445,11 +445,11 @@ export default function CustomerDetails() {
 
       {/* RENDER ACTIVE RECEIPT FOR DOWNLOAD/PRINT */}
       {activeReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-sm no-print">
-          <div className="w-full max-w-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-2xl relative space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-sm receipt-modal-overlay">
+          <div className="w-full max-w-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-2xl relative space-y-6 receipt-modal-container">
             
             {/* Modal Actions */}
-            <div className="absolute top-4 right-4 flex space-x-2">
+            <div className="absolute top-4 right-4 flex space-x-2 no-print">
               <button 
                 onClick={handlePrint}
                 className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition-colors"
