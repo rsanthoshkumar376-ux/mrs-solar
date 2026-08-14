@@ -54,6 +54,40 @@ export default function BackupRestore() {
     }
   };
 
+  const handleDownloadJson = async () => {
+    try {
+      const response = await api.get('/admin/backup/export-json', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `MRS_SOLAR_Database_Backup_${Date.now()}.json`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download JSON failed:', error);
+      alert('Failed to download JSON database backup.');
+    }
+  };
+
+  const handleDownloadCsv = async () => {
+    try {
+      const response = await api.get('/admin/backup/export-csv', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `MRS_SOLAR_Customer_Ledger_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download CSV failed:', error);
+      alert('Failed to export CSV ledger.');
+    }
+  };
+
   const handleRestore = async (backupName) => {
     if (!confirm(`WARNING: Restoring will overwrite all current customer ledgers, payment schedules, and user credentials with the state stored in:\n"${backupName}"\n\nDo you want to proceed?`)) {
       return;
@@ -79,29 +113,45 @@ export default function BackupRestore() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Database Backup & Recovery</h2>
-          <p className="text-sm text-slate-500">Generate secure database recovery restore points and roll back data states.</p>
+          <p className="text-sm text-slate-500">Generate secure database recovery restore points and export data files.</p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleDownloadJson}
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all shadow outline-none cursor-pointer"
+          >
+            <Archive className="w-4 h-4 text-teal-400" />
+            <span>Download JSON</span>
+          </button>
+
+          <button
+            onClick={handleDownloadCsv}
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all shadow outline-none cursor-pointer"
+          >
+            <Archive className="w-4 h-4 text-emerald-400" />
+            <span>Export Excel/CSV</span>
+          </button>
+
           <button
             onClick={handleDownloadMdb}
-            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl flex items-center space-x-2 text-sm font-bold transition-all shadow outline-none cursor-pointer"
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all shadow outline-none cursor-pointer"
           >
             <Archive className="w-4 h-4 text-yellow-400" />
-            <span>Download .MDB Database</span>
+            <span>Download .MDB</span>
           </button>
 
           <button
             onClick={handleCreateBackup}
             disabled={actionLoading}
-            className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/60 text-white rounded-xl flex items-center space-x-2 text-sm font-bold transition-all shadow shadow-teal-500/10 outline-none"
+            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/60 text-white rounded-xl flex items-center space-x-2 text-xs font-bold transition-all shadow shadow-teal-500/10 outline-none"
           >
             {actionLoading ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
             ) : (
               <PlusCircle className="w-4 h-4" />
             )}
-            <span>Create New Backup Point</span>
+            <span>New Backup Point</span>
           </button>
         </div>
       </div>

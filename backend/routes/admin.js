@@ -496,14 +496,79 @@ router.post('/backup/create', authenticateToken, authorizeRole(['admin']), async
   }
 });
 
-// 10b. Export Database as .MDB file
+// 10b. Export Full Database as JSON
+router.get('/backup/export-json', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const collections = ['users', 'customers', 'payments', 'notifications', 'audit_logs'];
+    const exportData = {
+      appName: 'MRS SOLAR Solar Panel Loan System',
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      collections: {}
+    };
+
+    for (const col of collections) {
+      exportData.collections[col] = await db.find(col);
+    }
+
+    const content = JSON.stringify(exportData, null, 2);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=MRS_SOLAR_Database_Backup_${Date.now()}.json`);
+    res.send(content);
+  } catch (error) {
+    console.error('JSON export error:', error);
+    res.status(500).json({ message: 'Failed to export JSON database backup' });
+  }
+});
+
+// 10c. Export Customer Ledger as CSV (Excel Compatible)
+router.get('/backup/export-csv', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const customers = await db.find('customers');
+    const headers = [
+      'Customer ID', 'Full Name', 'Mobile Number', 'Aadhaar Number', 'PAN Number',
+      'Solar Capacity (kW)', 'Solar Cost', 'Down Payment', 'Loan Amount',
+      'Monthly EMI', 'EMI Duration (Months)', 'Payment Status', 'Total Outstanding'
+    ];
+
+    let csvContent = headers.join(',') + '\n';
+
+    customers.forEach(c => {
+      const row = [
+        `"${c.customerId || ''}"`,
+        `"${(c.fullName || '').replace(/"/g, '""')}"`,
+        `"${c.mobileNumber || ''}"`,
+        `"${c.aadhaarNumber || ''}"`,
+        `"${c.panNumber || ''}"`,
+        `"${c.solarCapacity || 0}"`,
+        `"${c.solarCost || 0}"`,
+        `"${c.downPayment || 0}"`,
+        `"${c.loanAmount || 0}"`,
+        `"${c.monthlyEmi || 0}"`,
+        `"${c.emiDuration || 0}"`,
+        `"${c.paymentStatus || 'Pending'}"`,
+        `"${c.totalOutstandingAmount || 0}"`
+      ];
+      csvContent += row.join(',') + '\n';
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=MRS_SOLAR_Customer_Ledger_${Date.now()}.csv`);
+    res.send(csvContent);
+  } catch (error) {
+    console.error('CSV export error:', error);
+    res.status(500).json({ message: 'Failed to export CSV database ledger' });
+  }
+});
+
+// 10d. Export Database as MDB File
 router.get('/backup/export-mdb', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
     const collections = ['users', 'customers', 'payments', 'notifications', 'audit_logs'];
     const exportData = {
-      appName: 'MRS SOLAR Loan Management System',
+      databaseName: 'MRS_SOLAR_MDB',
       exportedAt: new Date().toISOString(),
-      format: 'MongoDB Dump (JSON-BSON Mongo Export)',
+      format: 'Microsoft Access MDB / JSON Database Dump',
       collections: {}
     };
 
@@ -512,7 +577,7 @@ router.get('/backup/export-mdb', authenticateToken, authorizeRole(['admin']), as
     }
 
     const mdbContent = JSON.stringify(exportData, null, 2);
-    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename=MRS_SOLAR_Backup_${Date.now()}.mdb`);
     res.send(mdbContent);
   } catch (error) {
