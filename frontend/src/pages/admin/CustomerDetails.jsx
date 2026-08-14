@@ -5,7 +5,7 @@ import { formatCurrency, formatDate } from '../../utils/format.js';
 import { 
   User, Compass, Zap, Landmark, Award, ShieldCheck, 
   ArrowLeft, Edit, FileText, CheckCircle, Clock, AlertTriangle, 
-  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard
+  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X
 } from 'lucide-react';
 
 export default function CustomerDetails() {

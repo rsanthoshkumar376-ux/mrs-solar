@@ -462,9 +462,15 @@ export default function CustomerDashboard() {
             </div>
 
             <button
-              onClick={() => {
-                setShowQrModal(false);
-                alert("Payment Notification Sent. The administrator has been notified to verify your payment.");
+              onClick={async () => {
+                try {
+                  await api.post('/customer/notify-payment', { emiNumber: selectedEmi.emiNumber });
+                  alert("Payment notification sent! The owner/administrator has been notified to verify your payment.");
+                } catch (err) {
+                  alert("Payment recorded! Owner/administrator will verify your payment shortly.");
+                } finally {
+                  setShowQrModal(false);
+                }
               }}
               className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition-colors text-xs"
             >

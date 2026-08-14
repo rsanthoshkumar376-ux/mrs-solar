@@ -88,4 +88,34 @@ router.post('/notifications/read', authenticateToken, async (req, res) => {
   }
 });
 
+// 5. Notify Admin of Customer Payment
+router.post('/notify-payment', authenticateToken, authorizeRole(['customer']), async (req, res) => {
+  try {
+    const customerId = req.user.customerId;
+    const { emiNumber } = req.body;
+
+    const customer = await db.findOne('customers', { customerId });
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer record not found' });
+    }
+
+    // Create an admin notification
+    await db.create('notifications', {
+      role: 'admin',
+      type: 'PAYMENT_SUBMITTED',
+      title: 'Payment Submitted by Customer',
+      message: `Customer ${customer.fullName} (${customerId}) reported paying EMI #${emiNumber} via UPI. Please verify and mark as paid.`,
+      customerId,
+      emiNumber,
+      read: false,
+      createdAt: new Date().toISOString()
+    });
+
+    res.json({ message: 'Payment notification successfully sent to administrator for verification.' });
+  } catch (error) {
+    console.error('Notify payment error:', error);
+    res.status(500).json({ message: 'Error sending payment notification' });
+  }
+});
+
 export default router;
