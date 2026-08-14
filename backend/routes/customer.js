@@ -99,12 +99,18 @@ router.post('/notify-payment', authenticateToken, authorizeRole(['customer']), a
       return res.status(404).json({ message: 'Customer record not found' });
     }
 
+    // Stamp requestingEmi on customer record so admin EMI table shows "Requesting" badge
+    await db.updateOne('customers', { _id: customer._id }, {
+      ...customer,
+      requestingEmi: Number(emiNumber)
+    });
+
     // Create an admin notification
     await db.create('notifications', {
       role: 'admin',
       type: 'PAYMENT_SUBMITTED',
-      title: 'Payment Submitted by Customer',
-      message: `Customer ${customer.fullName} (${customerId}) reported paying EMI #${emiNumber} via UPI. Please verify and mark as paid.`,
+      title: 'Payment Requested by Customer',
+      message: `Customer ${customer.fullName} (${customerId}) says they paid EMI #${emiNumber} via UPI. Please verify and mark as paid.`,
       customerId,
       emiNumber,
       read: false,

@@ -459,7 +459,76 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
   }
 });
 
-// 8. Trigger Scheduler manually (For admin convenience/testing)
+// 8. Delete / Undo a Payment (Reverse Paid → Pending)
+router.delete('/payments/delete-payment', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  const { customerId, emiNumber } = req.body;
+
+  if (!customerId || !emiNumber) {
+    return res.status(400).json({ message: 'Customer ID and EMI Number are required' });
+  }
+
+  try {
+    const customer = await db.findOne('customers', { customerId });
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    const scheduleIndex = customer.emiSchedule.findIndex(e => e.emiNumber === Number(emiNumber));
+    if (scheduleIndex === -1) {
+      return res.status(404).json({ message: `EMI #${emiNumber} not found in schedule` });
+    }
+
+    const emi = customer.emiSchedule[scheduleIndex];
+    if (emi.status !== 'Paid') {
+      return res.status(400).json({ message: `EMI #${emiNumber} is not marked as Paid — nothing to delete` });
+    }
+
+    // Reset EMI back to Pending
+    customer.emiSchedule[scheduleIndex].status = 'Pending';
+    customer.emiSchedule[scheduleIndex].paidAmount = 0;
+    customer.emiSchedule[scheduleIndex].paidDate = null;
+    customer.emiSchedule[scheduleIndex].lateFee = 0;
+    customer.emiSchedule[scheduleIndex].remarks = '';
+
+    // Clear requestingEmi if it matches this EMI
+    if (customer.requestingEmi === Number(emiNumber)) {
+      customer.requestingEmi = null;
+    }
+
+    // Recalculate customer status
+    const updatedCustomer = recalculateCustomerEmiStatus(customer, new Date());
+    await db.updateOne('customers', { _id: customer._id }, updatedCustomer);
+
+    // Remove the payment record from payments collection
+    const allPayments = await db.find('payments');
+    const matchingPayment = allPayments.find(p => p.customerId === customerId && p.emiNumber === Number(emiNumber));
+    if (matchingPayment) {
+      await db.deleteOne('payments', { _id: matchingPayment._id });
+    }
+
+    await logAdminAction(req.user.username, 'DELETE_EMI_PAYMENT', customerId, {
+      emiNumber,
+      note: 'EMI payment reversed to Pending by admin'
+    });
+
+    // Notify the customer that admin removed the payment (they need to re-pay)
+    await db.create('notifications', {
+      customerId,
+      role: 'customer',
+      title: 'Payment Record Removed',
+      message: `Admin has reversed EMI #${emiNumber} payment record. The installment is now marked as Pending. Please contact MRS Associates if you have already paid.`,
+      type: 'Payment_Removed',
+      read: false
+    });
+
+    res.json({ message: `EMI #${emiNumber} payment successfully deleted. Status reset to Pending.` });
+  } catch (error) {
+    console.error('Delete payment error:', error);
+    res.status(500).json({ message: 'Error deleting payment record' });
+  }
+});
+
+// 9. Trigger Scheduler manually (For admin convenience/testing)
 router.post('/trigger-scheduler', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
     const result = await runDailyInterestAndPenaltyCheck(new Date());

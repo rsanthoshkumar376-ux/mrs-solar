@@ -5,7 +5,7 @@ import { formatCurrency, formatDate } from '../../utils/format.js';
 import { 
   User, Compass, Zap, Landmark, Award, ShieldCheck, 
   ArrowLeft, Edit, FileText, CheckCircle, Clock, AlertTriangle, 
-  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X
+  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2
 } from 'lucide-react';
 
 export default function CustomerDetails() {
@@ -71,6 +71,20 @@ export default function CustomerDetails() {
   const openMarkModal = (emi) => {
     setSelectedEmi(emi);
     setShowMarkModal(true);
+  };
+
+  const handleDeletePayment = async (emi) => {
+    if (!window.confirm(`Are you sure you want to DELETE payment for EMI #${emi.emiNumber}?\nThis will reset it back to Pending status.`)) return;
+    try {
+      await api.delete('/admin/payments/delete-payment', {
+        data: { customerId: customer.customerId, emiNumber: emi.emiNumber }
+      });
+      alert(`EMI #${emi.emiNumber} payment deleted. Status reset to Pending.`);
+      fetchCustomerDetails();
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || 'Failed to delete payment.');
+    }
   };
 
   const openReceipt = (emi) => {
@@ -314,13 +328,16 @@ export default function CustomerDetails() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 text-slate-700 dark:text-slate-300">
               {customer.emiSchedule.map((emi) => {
+                const isRequesting = emi.status !== 'Paid' && customer.requestingEmi === emi.emiNumber;
+
                 let statusColor = 'bg-slate-50 text-slate-500 border-slate-200';
                 if (emi.status === 'Paid') statusColor = 'bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/20';
+                else if (isRequesting) statusColor = 'bg-amber-50 text-amber-600 border-amber-300/50 dark:bg-amber-950/20 animate-pulse';
                 else if (emi.status === 'Overdue') statusColor = 'bg-red-50 text-red-600 border-red-200/50 dark:bg-red-950/20 animate-pulse';
                 else if (emi.status === 'Due Soon') statusColor = 'bg-orange-50 text-orange-600 border-orange-200/50 dark:bg-orange-950/20';
 
                 return (
-                  <tr key={emi.emiNumber} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors">
+                  <tr key={emi.emiNumber} className={`hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors ${isRequesting ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''}`}>
                     <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">#{emi.emiNumber}</td>
                     <td className="px-6 py-4">{formatDate(emi.dueDate)}</td>
                     <td className="px-6 py-4 text-right font-semibold">{formatCurrency(emi.emiAmount)}</td>
@@ -332,26 +349,37 @@ export default function CustomerDetails() {
                     <td className="px-6 py-4 text-right text-slate-500">{formatCurrency(emi.remainingBalance)}</td>
                     <td className="px-6 py-4 text-center">
                       <span className={`px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase border ${statusColor}`}>
-                        {emi.status}
+                        {isRequesting ? 'Requesting' : emi.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       {emi.status !== 'Paid' ? (
-                        <button
-                          onClick={() => openMarkModal(emi)}
-                          className="inline-flex items-center space-x-1 text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 bg-teal-50 dark:bg-teal-950/40 border border-teal-200/30 px-2.5 py-1.5 rounded-xl transition-all"
-                        >
-                          <CreditCard className="w-3 h-3" />
-                          <span>Mark Paid</span>
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => openMarkModal(emi)}
+                            className="inline-flex items-center space-x-1 text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 bg-teal-50 dark:bg-teal-950/40 border border-teal-200/30 px-2.5 py-1.5 rounded-xl transition-all"
+                          >
+                            <CreditCard className="w-3 h-3" />
+                            <span>{isRequesting ? 'Verify & Pay' : 'Mark Paid'}</span>
+                          </button>
+                        </div>
                       ) : (
-                        <button
-                          onClick={() => openReceipt(emi)}
-                          className="inline-flex items-center space-x-1 text-[10px] font-bold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-slate-100 dark:bg-slate-850 border border-slate-200/50 dark:border-slate-800 px-2.5 py-1.5 rounded-xl transition-all"
-                        >
-                          <Printer className="w-3 h-3" />
-                          <span>Receipt</span>
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => openReceipt(emi)}
+                            className="inline-flex items-center space-x-1 text-[10px] font-bold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-slate-100 dark:bg-slate-850 border border-slate-200/50 dark:border-slate-800 px-2.5 py-1.5 rounded-xl transition-all"
+                          >
+                            <Printer className="w-3 h-3" />
+                            <span>Receipt</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeletePayment(emi)}
+                            title="Delete this payment (reset to Pending)"
+                            className="inline-flex items-center text-[10px] font-bold text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-950/30 border border-red-200/40 p-1.5 rounded-xl transition-all"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
