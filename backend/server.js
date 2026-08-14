@@ -128,4 +128,12 @@ app.listen(PORT, '0.0.0.0', async () => {
   } catch (err) {
     console.error('Failed to create uploads directory:', err);
   }
+
+  // Self-Ping Keep-Alive Job to prevent Render free instance sleeping
+  setInterval(() => {
+    try {
+      const httpModule = PORT === 443 ? require('https') : require('http');
+      httpModule.get(`http://127.0.0.1:${PORT}/api/health`, () => {}).on('error', () => {});
+    } catch (e) {}
+  }, 10 * 60 * 1000); // Self-ping every 10 minutes
 });

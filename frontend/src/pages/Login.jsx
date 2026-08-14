@@ -58,7 +58,11 @@ export default function Login() {
       }
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      if (!err.response) {
+        setError('Server is initializing. Retrying automatically, please wait a moment...');
+      } else {
+        setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }

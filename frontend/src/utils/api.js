@@ -24,18 +24,31 @@ api.interceptors.request.use(
   }
 );
 
-// Response Interceptor: Catch auth errors
+// Response Interceptor: Catch auth errors and auto-retry cold starts / network glitches
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+  async (error) => {
+    const { config, response } = error;
+
+    if (response && (response.status === 401 || response.status === 403)) {
       // Clear storage and trigger logout event if unauthorized or forbidden
       localStorage.removeItem('mrs_solar_token');
       localStorage.removeItem('mrs_solar_user');
-      
-      // Dispatch event so AuthContext knows to log out
       window.dispatchEvent(new Event('auth-expired'));
+      return Promise.reject(error);
     }
+
+    // Auto-retry network errors or 502/503/504 gateway timeouts (up to 3 retries)
+    if (config && (!response || (response.status >= 500 && response.status <= 504))) {
+      config.__retryCount = config.__retryCount || 0;
+      if (config.__retryCount < 3) {
+        config.__retryCount += 1;
+        const delay = config.__retryCount * 1500;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return api(config);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
