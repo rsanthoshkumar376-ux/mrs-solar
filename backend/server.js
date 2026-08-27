@@ -118,14 +118,13 @@ cron.schedule('0 0 * * *', async () => {
   }
 });
 
-// Start Server — connect to MongoDB first, then listen
+// Start Server — listen on port immediately for Render port-scan, then connect to MongoDB
 async function startServer() {
-  // 1. Connect to MongoDB Atlas
-  await connectDB();
-
-  // 2. Start HTTP server
   app.listen(PORT, '0.0.0.0', async () => {
     console.log(`[Server] MRS SOLAR backend listening on port ${PORT}`);
+    
+    // Connect to MongoDB Atlas (non-blocking fallback)
+    await connectDB();
     await seedAdmin();
 
     // Make sure upload folders exist
@@ -148,6 +147,6 @@ async function startServer() {
 
 startServer().catch(err => {
   console.error('Failed to start server:', err);
-  process.exit(1);
 });
+
 
