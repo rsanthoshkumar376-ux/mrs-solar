@@ -1,216 +1,153 @@
+import mongoose from 'mongoose';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
 
-// Helper to ensure directories exist
-async function ensureDirs() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.mkdir(BACKUP_DIR, { recursive: true });
-  await fs.mkdir(path.join(DATA_DIR, 'uploads'), { recursive: true });
+// ─── Mongoose Schemas ───────────────────────────────────────────────────────
+
+// Generic flexible schema for all collections — uses strict:false so any field can be stored
+function makeModel(name) {
+  if (mongoose.models[name]) return mongoose.models[name];
+  const schema = new mongoose.Schema(
+    {
+      _id: { type: String, required: true }
+    },
+    {
+      strict: false,        // allow any fields
+      timestamps: true,     // auto createdAt / updatedAt
+      collection: name      // map to correct MongoDB collection name
+    }
+  );
+  return mongoose.model(name, schema);
 }
 
-// Queue for write operations to prevent corruption
-const writeQueues = {};
+// ─── ID Generator ──────────────────────────────────────────────────────────
 
-class JsonDatabase {
-  constructor() {
-    ensureDirs().catch(err => console.error('Failed to create database directories:', err));
-  }
+function generateId(collection) {
+  const prefix = collection.substring(0, 3).toUpperCase();
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(100 + Math.random() * 900);
+  return `${prefix}-${timestamp}-${random}`;
+}
 
-  getFilePath(collection) {
-    return path.join(DATA_DIR, `${collection}.json`);
-  }
+// ─── Query Matcher (for in-memory fallback & filtering) ────────────────────
 
-  async readCollection(collection) {
-    await ensureDirs();
-    const filePath = this.getFilePath(collection);
-    try {
-      const data = await fs.readFile(filePath, 'utf-8');
-      return JSON.parse(data);
-    } catch (error) {
-      // If file doesn't exist, return empty array
-      if (error.code === 'ENOENT') {
-        return [];
-      }
-      console.error(`Error reading collection ${collection}:`, error);
-      throw error;
+function matchQuery(item, query) {
+  for (const key in query) {
+    if (query[key] && typeof query[key] === 'object' && !Array.isArray(query[key])) {
+      if (JSON.stringify(item[key]) !== JSON.stringify(query[key])) return false;
+    } else {
+      if (item[key] !== query[key]) return false;
     }
   }
+  return true;
+}
 
-  async writeCollection(collection, data) {
-    await ensureDirs();
-    const filePath = this.getFilePath(collection);
-    
-    // Use queue to serialize writes to the same collection
-    if (!writeQueues[collection]) {
-      writeQueues[collection] = Promise.resolve();
-    }
+// Convert a Mongoose document to a plain object compatible with legacy code
+function toPlain(doc) {
+  if (!doc) return null;
+  const obj = doc.toObject ? doc.toObject({ versionKey: false }) : { ...doc };
+  return obj;
+}
 
-    const writePromise = writeQueues[collection].then(async () => {
-      const tempPath = `${filePath}.tmp`;
-      try {
-        await fs.writeFile(tempPath, JSON.stringify(data, null, 2), 'utf-8');
-        await fs.rename(tempPath, filePath);
-      } catch (err) {
-        console.error(`Error writing collection ${collection}:`, err);
-        try { await fs.unlink(tempPath); } catch {}
-        throw err;
-      }
-    });
+// ─── MongoDB Database Adapter ───────────────────────────────────────────────
 
-    writeQueues[collection] = writePromise.catch(() => {});
-    return writePromise;
-  }
+class MongoDatabase {
 
   // Find multiple records matching query
   async find(collection, query = {}) {
-    const data = await this.readCollection(collection);
-    return data.filter(item => this.matchQuery(item, query));
+    const Model = makeModel(collection);
+    const docs = await Model.find(query).lean();
+    return docs;
   }
 
   // Find single record matching query
   async findOne(collection, query = {}) {
-    const data = await this.readCollection(collection);
-    const item = data.find(item => this.matchQuery(item, query));
-    return item || null;
+    const Model = makeModel(collection);
+    const doc = await Model.findOne(query).lean();
+    return doc || null;
   }
 
   // Insert a new record
   async create(collection, record) {
-    const data = await this.readCollection(collection);
+    const Model = makeModel(collection);
     const newRecord = {
-      _id: record._id || this.generateId(collection),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      _id: record._id || generateId(collection),
       ...record
     };
-    data.push(newRecord);
-    await this.writeCollection(collection, data);
-    return newRecord;
+    const doc = new Model(newRecord);
+    await doc.save();
+    return doc.toObject({ versionKey: false });
   }
 
   // Update a single record matching query
   async updateOne(collection, query, updateData) {
-    const data = await this.readCollection(collection);
-    const index = data.findIndex(item => this.matchQuery(item, query));
-    if (index === -1) return null;
-
-    // Remove immutable fields from updateData
+    const Model = makeModel(collection);
     const cleanUpdate = { ...updateData };
-    delete cleanUpdate._id;
-    delete cleanUpdate.createdAt;
+    delete cleanUpdate.__v;
 
-    data[index] = {
-      ...data[index],
-      ...cleanUpdate,
-      updatedAt: new Date().toISOString()
-    };
-
-    await this.writeCollection(collection, data);
-    return data[index];
+    const doc = await Model.findOneAndUpdate(
+      query,
+      { $set: cleanUpdate },
+      { new: true, upsert: false, strict: false }
+    ).lean();
+    return doc || null;
   }
 
   // Update multiple records matching query
   async updateMany(collection, query, updateData) {
-    const data = await this.readCollection(collection);
-    let count = 0;
-    
-    // Remove immutable fields from updateData
+    const Model = makeModel(collection);
     const cleanUpdate = { ...updateData };
     delete cleanUpdate._id;
-    delete cleanUpdate.createdAt;
+    delete cleanUpdate.__v;
 
-    const updatedData = data.map(item => {
-      if (this.matchQuery(item, query)) {
-        count++;
-        return {
-          ...item,
-          ...cleanUpdate,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return item;
-    });
-
-    if (count > 0) {
-      await this.writeCollection(collection, updatedData);
-    }
-    return { modifiedCount: count };
+    const result = await Model.updateMany(
+      query,
+      { $set: cleanUpdate },
+      { strict: false }
+    );
+    return { modifiedCount: result.modifiedCount };
   }
 
   // Delete a single record matching query
   async deleteOne(collection, query) {
-    const data = await this.readCollection(collection);
-    const index = data.findIndex(item => this.matchQuery(item, query));
-    if (index === -1) return { deletedCount: 0 };
-
-    data.splice(index, 1);
-    await this.writeCollection(collection, data);
-    return { deletedCount: 1 };
+    const Model = makeModel(collection);
+    const result = await Model.deleteOne(query);
+    return { deletedCount: result.deletedCount };
   }
 
-  // Generate ID helper
-  generateId(collection) {
-    const prefix = collection.substring(0, 3).toUpperCase();
-    const timestamp = Date.now().toString().slice(-6);
-    const random = Math.floor(100 + Math.random() * 900);
-    return `${prefix}-${timestamp}-${random}`;
-  }
+  // ─── Backup / Restore ────────────────────────────────────────────────────
 
-  // Matcher helper
-  matchQuery(item, query) {
-    for (const key in query) {
-      if (query[key] && typeof query[key] === 'object' && !Array.isArray(query[key])) {
-        // Handle basic logical operators if needed, or recursive matches
-        // For simplicity, we match sub-objects if needed, or exact matches
-        if (JSON.stringify(item[key]) !== JSON.stringify(query[key])) {
-          return false;
-        }
-      } else {
-        // Exact value comparison
-        if (item[key] !== query[key]) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  // Backup data collections
   async backup() {
-    await ensureDirs();
+    await fs.mkdir(BACKUP_DIR, { recursive: true });
     const collections = ['users', 'customers', 'payments', 'audit_logs', 'notifications'];
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupSubdir = path.join(BACKUP_DIR, `backup-${timestamp}`);
     await fs.mkdir(backupSubdir, { recursive: true });
 
     for (const col of collections) {
-      const srcPath = this.getFilePath(col);
-      const destPath = path.join(backupSubdir, `${col}.json`);
       try {
-        await fs.copyFile(srcPath, destPath);
-      } catch (err) {
-        // If file doesn't exist yet, we write an empty array to backup
-        if (err.code === 'ENOENT') {
-          await fs.writeFile(destPath, '[]', 'utf-8');
-        } else {
-          throw err;
-        }
+        const data = await this.find(col);
+        await fs.writeFile(
+          path.join(backupSubdir, `${col}.json`),
+          JSON.stringify(data, null, 2),
+          'utf-8'
+        );
+      } catch {
+        await fs.writeFile(path.join(backupSubdir, `${col}.json`), '[]', 'utf-8');
       }
     }
 
     return { backupName: `backup-${timestamp}`, timestamp };
   }
 
-  // List backups
   async listBackups() {
-    await ensureDirs();
+    await fs.mkdir(BACKUP_DIR, { recursive: true });
     try {
       const dirs = await fs.readdir(BACKUP_DIR);
       return dirs.filter(name => name.startsWith('backup-'));
@@ -219,31 +156,52 @@ class JsonDatabase {
     }
   }
 
-  // Restore database
   async restore(backupName) {
-    await ensureDirs();
-    const backupSubdir = path.join(BACKUP_DIR, backupName);
     const collections = ['users', 'customers', 'payments', 'audit_logs', 'notifications'];
+    const backupSubdir = path.join(BACKUP_DIR, backupName);
 
-    // Verify all files exist in backup before restoring to prevent partial state
     for (const col of collections) {
       const backupPath = path.join(backupSubdir, `${col}.json`);
-      try {
-        await fs.access(backupPath);
-      } catch {
-        throw new Error(`Invalid backup: missing collection ${col}`);
-      }
+      await fs.access(backupPath); // throws if missing
     }
 
-    // Copy back files
     for (const col of collections) {
       const backupPath = path.join(backupSubdir, `${col}.json`);
-      const destPath = this.getFilePath(col);
-      await fs.copyFile(backupPath, destPath);
+      const raw = await fs.readFile(backupPath, 'utf-8');
+      const records = JSON.parse(raw);
+
+      const Model = makeModel(col);
+      await Model.deleteMany({});
+      if (records.length > 0) {
+        await Model.insertMany(records, { ordered: false, strict: false });
+      }
     }
 
     return { restored: true };
   }
 }
 
-export const db = new JsonDatabase();
+// ─── Connect to MongoDB ─────────────────────────────────────────────────────
+
+export async function connectDB() {
+  const uri = process.env.MONGODB_URI;
+
+  if (!uri) {
+    console.error('❌ MONGODB_URI environment variable is not set!');
+    console.error('   Please add MONGODB_URI to your Render environment variables.');
+    process.exit(1);
+  }
+
+  try {
+    await mongoose.connect(uri, {
+      dbName: 'mrs-solar',
+      serverSelectionTimeoutMS: 10000
+    });
+    console.log('✅ Connected to MongoDB Atlas (mrs-solar database)');
+  } catch (err) {
+    console.error('❌ MongoDB connection failed:', err.message);
+    process.exit(1);
+  }
+}
+
+export const db = new MongoDatabase();

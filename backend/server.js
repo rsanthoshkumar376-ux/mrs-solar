@@ -8,13 +8,14 @@ import cron from 'node-cron';
 import dotenv from 'dotenv';
 
 // Import local modules
-import { db } from './database/db.js';
+import { db, connectDB } from './database/db.js';
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import customerRoutes from './routes/customer.js';
 import { runDailyInterestAndPenaltyCheck } from './utils/scheduler.js';
 
 dotenv.config();
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -117,23 +118,36 @@ cron.schedule('0 0 * * *', async () => {
   }
 });
 
-// Start Server - Bind to 0.0.0.0 for Render cloud hosting compatibility
-app.listen(PORT, '0.0.0.0', async () => {
-  console.log(`[Server] MRS SOLAR backend listening on port ${PORT}`);
-  await seedAdmin();
-  
-  // Make sure upload folders exist
-  try {
-    await fs.mkdir(uploadsPath, { recursive: true });
-  } catch (err) {
-    console.error('Failed to create uploads directory:', err);
-  }
+// Start Server — connect to MongoDB first, then listen
+async function startServer() {
+  // 1. Connect to MongoDB Atlas
+  await connectDB();
 
-  // Self-Ping Keep-Alive Job to prevent Render free instance sleeping
-  setInterval(() => {
+  // 2. Start HTTP server
+  app.listen(PORT, '0.0.0.0', async () => {
+    console.log(`[Server] MRS SOLAR backend listening on port ${PORT}`);
+    await seedAdmin();
+
+    // Make sure upload folders exist
     try {
-      const httpModule = PORT === 443 ? require('https') : require('http');
-      httpModule.get(`http://127.0.0.1:${PORT}/api/health`, () => {}).on('error', () => {});
-    } catch (e) {}
-  }, 10 * 60 * 1000); // Self-ping every 10 minutes
+      await fs.mkdir(uploadsPath, { recursive: true });
+    } catch (err) {
+      console.error('Failed to create uploads directory:', err);
+    }
+
+    // Self-Ping Keep-Alive to prevent Render free instance sleeping
+    setInterval(() => {
+      try {
+        import('http').then(({ default: http }) => {
+          http.get(`http://127.0.0.1:${PORT}/api/health`, () => {}).on('error', () => {});
+        });
+      } catch (e) {}
+    }, 10 * 60 * 1000); // every 10 minutes
+  });
+}
+
+startServer().catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });
+

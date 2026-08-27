@@ -7,3 +7,5 @@ services:
     envVars:
       - key: PORT
         value: 10000
+      - key: MONGODB_URI
+        sync: false   # Set this manually in Render dashboard — never hardcode secrets
