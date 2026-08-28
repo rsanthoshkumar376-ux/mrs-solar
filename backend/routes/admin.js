@@ -630,28 +630,56 @@ router.get('/backup/export-csv', authenticateToken, authorizeRole(['admin']), as
   }
 });
 
-// 10d. Export Database as MDB File
+// Helper to escape XML special characters
+function escapeXml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+// 10d. Export Database for Microsoft Access (.xml / MS Access format)
 router.get('/backup/export-mdb', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
-    const collections = ['users', 'customers', 'payments', 'notifications', 'audit_logs'];
-    const exportData = {
-      databaseName: 'MRS_SOLAR_MDB',
-      exportedAt: new Date().toISOString(),
-      format: 'Microsoft Access MDB / JSON Database Dump',
-      collections: {}
-    };
+    const collections = ['customers', 'users', 'payments', 'notifications', 'audit_logs'];
+    const dataMap = {};
 
     for (const col of collections) {
-      exportData.collections[col] = await db.find(col);
+      dataMap[col] = await db.find(col);
     }
 
-    const mdbContent = JSON.stringify(exportData, null, 2);
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename=MRS_SOLAR_Backup_${Date.now()}.mdb`);
-    res.send(mdbContent);
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<dataroot xmlns:od="urn:schemas-microsoft-com:officedata" generated="${new Date().toISOString()}">\n`;
+
+    for (const [colName, records] of Object.entries(dataMap)) {
+      if (Array.isArray(records)) {
+        records.forEach(rec => {
+          xml += `  <${colName}>\n`;
+          for (const [key, val] of Object.entries(rec)) {
+            if (key === '__v') continue;
+            let displayVal = val;
+            if (typeof val === 'object' && val !== null) {
+              displayVal = JSON.stringify(val);
+            }
+            const cleanKey = key.replace(/[^a-zA-Z0-9_]/g, '_');
+            xml += `    <${cleanKey}>${escapeXml(displayVal)}</${cleanKey}>\n`;
+          }
+          xml += `  </${colName}>\n`;
+        });
+      }
+    }
+
+    xml += `</dataroot>\n`;
+
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Content-Disposition', `attachment; filename=MRS_SOLAR_Access_Backup_${Date.now()}.xml`);
+    res.send(xml);
   } catch (error) {
     console.error('MDB export error:', error);
-    res.status(500).json({ message: 'Failed to export MDB database backup' });
+    res.status(500).json({ message: 'Failed to export MS Access database backup' });
   }
 });
 

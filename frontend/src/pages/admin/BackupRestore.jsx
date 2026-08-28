@@ -44,14 +44,14 @@ export default function BackupRestore() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `MRS_SOLAR_Backup_${Date.now()}.mdb`);
+      link.setAttribute('download', `MRS_SOLAR_Access_Backup_${Date.now()}.xml`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Download MDB failed:', error);
-      alert('Failed to download database backup file.');
+      console.error('Download MS Access XML failed:', error);
+      alert('Failed to download MS Access database backup file.');
     }
   };
 
@@ -190,7 +190,7 @@ export default function BackupRestore() {
             className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all shadow outline-none cursor-pointer"
           >
             <Archive className="w-4 h-4 text-yellow-400" />
-            <span>Download .MDB</span>
+            <span>MS Access (XML)</span>
           </button>
 
           <button
