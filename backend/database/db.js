@@ -2,6 +2,14 @@ import mongoose from 'mongoose';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dns from 'dns';
+
+// Ensure reliable DNS resolution for MongoDB Atlas SRV connection strings
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+} catch (e) {
+  console.warn('Could not set custom DNS servers:', e.message);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -339,7 +347,7 @@ export async function connectDB() {
   const uri = process.env.MONGODB_URI;
 
   if (!uri) {
-    console.warn('⚠️ MONGODB_URI not found. Running with local JSON database fallback.');
+    console.warn('⚠️ MONGODB_URI not found in environment. Running with local database fallback.');
     return false;
   }
 
@@ -347,13 +355,14 @@ export async function connectDB() {
     console.log('🔄 Connecting to MongoDB Atlas...');
     await mongoose.connect(uri, {
       dbName: 'mrs-solar',
-      serverSelectionTimeoutMS: 5000
+      serverSelectionTimeoutMS: 15000,
+      family: 4
     });
     console.log('✅ Successfully connected to MongoDB Atlas (mrs-solar database)!');
     return true;
   } catch (err) {
     console.error('❌ MongoDB Atlas connection failed:', err.message);
-    console.warn('⚠️ Server will operate using local JSON DB fallback so website stays online.');
+    console.warn('⚠️ Server operating using local DB fallback so website stays online.');
     return false;
   }
 }
