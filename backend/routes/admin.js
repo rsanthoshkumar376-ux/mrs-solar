@@ -666,7 +666,7 @@ router.get('/backups', authenticateToken, authorizeRole(['admin']), async (req, 
   }
 });
 
-// 12. Restore DB
+// 12. Restore DB from server recovery point
 router.post('/backup/restore', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   const { backupName } = req.body;
   if (!backupName) {
@@ -680,6 +680,62 @@ router.post('/backup/restore', authenticateToken, authorizeRole(['admin']), asyn
   } catch (error) {
     console.error('Restore error:', error);
     res.status(500).json({ message: `Restore failed: ${error.message}` });
+  }
+});
+
+// 13. Import & Restore Database from local JSON File
+router.post('/backup/import-json', authenticateToken, authorizeRole(['admin']), upload.single('backupFile'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No backup file uploaded' });
+    }
+
+    const filePath = req.file.path;
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    let parsedData;
+    
+    try {
+      parsedData = JSON.parse(fileContent);
+    } catch {
+      await fs.unlink(filePath).catch(() => {});
+      return res.status(400).json({ message: 'Invalid file format. Please upload a valid JSON backup file.' });
+    }
+
+    const collections = parsedData.collections || parsedData;
+    const targetCollections = ['users', 'customers', 'payments', 'notifications', 'audit_logs'];
+
+    let restoredStats = {};
+    for (const col of targetCollections) {
+      if (Array.isArray(collections[col])) {
+        const items = collections[col];
+        for (const item of items) {
+          if (item._id) {
+            const existing = await db.findOne(col, { _id: item._id });
+            if (existing) {
+              await db.updateOne(col, { _id: item._id }, item);
+            } else {
+              await db.create(col, item);
+            }
+          } else {
+            await db.create(col, item);
+          }
+        }
+        restoredStats[col] = items.length;
+      }
+    }
+
+    // Clean up temporary file
+    await fs.unlink(filePath).catch(() => {});
+
+    await logAdminAction(req.user.username, 'IMPORT_BACKUP_FILE', req.file.originalname, restoredStats);
+
+    res.json({
+      message: 'Database backup imported successfully into MongoDB Atlas!',
+      details: restoredStats
+    });
+  } catch (error) {
+    console.error('Import JSON backup error:', error);
+    res.status(500).json({ message: `Failed to import JSON backup: ${error.message}` });
   }
 });
 

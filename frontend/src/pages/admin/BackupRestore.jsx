@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../../utils/api.js';
 import { formatDate } from '../../utils/format.js';
-import { Database, PlusCircle, RefreshCw, CheckCircle, Clock, Archive } from 'lucide-react';
+import { Database, PlusCircle, RefreshCw, CheckCircle, Clock, Archive, UploadCloud } from 'lucide-react';
 
 export default function BackupRestore() {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const fetchBackups = async () => {
     try {
@@ -106,6 +107,39 @@ export default function BackupRestore() {
     }
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.json')) {
+      alert('Please select a valid .json backup file.');
+      return;
+    }
+
+    if (!confirm(`Import backup file "${file.name}" into MongoDB Atlas?\nThis will update/merge customer ledgers, payments, and users.`)) {
+      e.target.value = '';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('backupFile', file);
+
+    setActionLoading(true);
+    try {
+      const response = await api.post('/admin/backup/import-json', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      alert(response.data.message || 'Backup file imported successfully!');
+      fetchBackups();
+    } catch (error) {
+      console.error('File backup import failed:', error);
+      alert(`Failed to import backup file: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setActionLoading(false);
+      e.target.value = '';
+    }
+  };
+
   return (
     <div className="space-y-6">
       
@@ -117,6 +151,24 @@ export default function BackupRestore() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Hidden File Input for JSON Backup Import */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".json"
+            className="hidden"
+          />
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={actionLoading}
+            className="px-3 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all shadow outline-none cursor-pointer"
+          >
+            <UploadCloud className="w-4 h-4 text-teal-200" />
+            <span>Upload & Restore JSON</span>
+          </button>
+
           <button
             onClick={handleDownloadJson}
             className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all shadow outline-none cursor-pointer"
