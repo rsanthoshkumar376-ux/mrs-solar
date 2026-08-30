@@ -2,18 +2,26 @@
   {
     "_id": "USE-032808-154",
     "createdAt": "2026-07-22T03:13:52.808Z",
-    "updatedAt": "2026-08-28T15:50:19.067Z",
+    "updatedAt": "2026-08-30T12:50:17.616Z",
     "username": "MRSassociates",
-    "password": "$2a$10$5A6e2od0xraEDghGn0oYeeGMbmuHia7PTi63uoI0KfOpzpa92M1f6",
+    "password": "$2a$10$VhuOYjLiQXFXw6Qhi9PKquXMg6XELchBGnNIZtl4uDLkQ8bVcdCZq",
     "role": "admin"
   },
   {
     "_id": "USE-809374-392",
     "createdAt": "2026-08-10T02:43:29.374Z",
-    "updatedAt": "2026-08-28T15:50:19.317Z",
+    "updatedAt": "2026-08-30T12:50:17.773Z",
     "username": "deepi",
     "customerId": "SOL-1001",
-    "password": "$2a$10$1hNgGix84jXwEsd1R4/Jq.qeDNxDY7/cRAVGVeblSzz5EaEiGIwtW",
+    "password": "$2a$10$RvRgNF1kn/bgZNVuKL2jWuh7FLIuhZfG8UyhphlygY1/YOez.xVFS",
     "role": "customer"
+  },
+  {
+    "_id": "USE-104008-422",
+    "createdAt": "2026-08-30T17:15:04.189Z",
+    "updatedAt": "2026-08-30T17:15:04.191Z",
+    "username": "MRSassociates",
+    "password": "$2a$10$3b.eJQq9ru8jRw14ShVUDOtGtCb7n/W3fr/ulZdJT.4RVezkVuTzy",
+    "role": "admin"
   }
 ]

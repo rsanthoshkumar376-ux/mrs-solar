@@ -342,6 +342,37 @@ class HybridDatabase {
   }
 }
 
+// ─── Auto-Sync Local Data to MongoDB Atlas ──────────────────────────────────
+export async function syncLocalDataToMongo() {
+  if (!isMongoConnected()) return;
+  const collections = ['users', 'customers', 'payments', 'notifications', 'audit_logs'];
+
+  for (const col of collections) {
+    try {
+      const localItems = await jsonDb.find(col);
+      if (localItems && localItems.length > 0) {
+        const Model = getModel(col);
+        let syncedCount = 0;
+        for (const item of localItems) {
+          if (item._id) {
+            const exists = await Model.findOne({ _id: item._id }).lean();
+            if (!exists) {
+              const doc = new Model(item);
+              await doc.save();
+              syncedCount++;
+            }
+          }
+        }
+        if (syncedCount > 0) {
+          console.log(`✅ Auto-synced ${syncedCount} ${col} record(s) from local storage to MongoDB Atlas.`);
+        }
+      }
+    } catch (err) {
+      console.error(`Auto-sync error for ${col}:`, err.message);
+    }
+  }
+}
+
 // ─── Non-Blocking MongoDB Connection ───────────────────────────────────────
 export async function connectDB() {
   const uri = process.env.MONGODB_URI;
@@ -359,6 +390,9 @@ export async function connectDB() {
       family: 4
     });
     console.log('✅ Successfully connected to MongoDB Atlas (mrs-solar database)!');
+    
+    // Auto-migrate any local customers/users into MongoDB Atlas
+    await syncLocalDataToMongo();
     return true;
   } catch (err) {
     console.error('❌ MongoDB Atlas connection failed:', err.message);
