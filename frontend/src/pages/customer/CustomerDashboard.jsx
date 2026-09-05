@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
 import { formatCurrency, formatDate } from '../../utils/format.js';
 import { 
-  Sun, DollarSign, Calendar, ShieldCheck, Zap, X,
-  QrCode, Landmark, User, FileText, Info, Calculator
+  Sun, DollarSign, Calendar, ShieldCheck, Zap, X, Edit3, CheckCircle,
+  QrCode, Landmark, User, FileText, Info, Calculator, Save, Phone, Mail, MapPin, Briefcase
 } from 'lucide-react';
 
 export default function CustomerDashboard() {
@@ -11,6 +11,12 @@ export default function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
   const [showQrModal, setShowQrModal] = useState(false);
   const [selectedEmi, setSelectedEmi] = useState(null);
+
+  // Customer Edit Profile Modal States
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
+  const [editLoading, setEditLoading] = useState(false);
+  const [editMessage, setEditMessage] = useState({ type: '', text: '' });
   
   // Amortisation Calculator States (Live EMI Calculator)
   const [calcCost, setCalcCost] = useState(150000);
@@ -80,25 +86,74 @@ export default function CustomerDashboard() {
     setShowQrModal(true);
   };
 
+  const handleOpenEditModal = () => {
+    setEditFormData({
+      fullName: customer.fullName || '',
+      mobileNumber: customer.mobileNumber || '',
+      alternateNumber: customer.alternateNumber || '',
+      email: customer.email || '',
+      address: customer.address || '',
+      city: customer.city || '',
+      district: customer.district || '',
+      state: customer.state || '',
+      pinCode: customer.pinCode || '',
+      occupation: customer.occupation || '',
+      nomineeDetails: customer.nomineeDetails || ''
+    });
+    setEditMessage({ type: '', text: '' });
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+    setEditMessage({ type: '', text: '' });
+
+    try {
+      const res = await api.put('/customer/profile', editFormData);
+      setCustomer(res.data.customer);
+      setEditMessage({ type: 'success', text: 'Profile updated successfully!' });
+      setTimeout(() => {
+        setShowEditModal(false);
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      setEditMessage({ type: 'error', text: err.response?.data?.message || 'Failed to update profile.' });
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8 pb-12">
       
-      {/* HEADER BANNER */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-teal-700 to-emerald-600 dark:from-teal-950 dark:to-emerald-950 rounded-3xl p-6 md:p-8 shadow-lg shadow-teal-700/10 text-white">
-        <div className="absolute top-0 right-0 -mt-6 -mr-6 w-36 h-36 bg-yellow-300/10 rounded-full blur-xl animate-pulse-soft"></div>
+      {/* HEADER BANNER - Solar Amber Theme */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 dark:from-amber-950 dark:via-orange-950 dark:to-slate-900 rounded-3xl p-6 md:p-8 shadow-xl shadow-orange-500/10 text-white">
+        <div className="absolute top-0 right-0 -mt-6 -mr-6 w-44 h-44 bg-yellow-300/20 rounded-full blur-2xl animate-pulse-soft"></div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-teal-200 bg-teal-800/50 px-3 py-1 rounded-full">Active Financing</span>
+            <div className="flex items-center space-x-3">
+              <span className="text-xs font-bold uppercase tracking-widest text-amber-100 bg-amber-800/60 px-3 py-1 rounded-full border border-amber-400/30">
+                ☀️ Solar Financing Account
+              </span>
+              <button
+                onClick={handleOpenEditModal}
+                className="flex items-center space-x-1.5 text-xs font-bold text-slate-900 bg-amber-300 hover:bg-yellow-300 px-3 py-1.5 rounded-full transition-all shadow-sm hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit My Profile</span>
+              </button>
+            </div>
             <h2 className="text-3xl font-extrabold mt-3">Welcome, {customer.fullName}</h2>
-            <p className="text-sm text-teal-100 mt-1">Customer ID: {customer.customerId} | Installation Date: {formatDate(customer.installationDate)}</p>
+            <p className="text-sm text-amber-100 mt-1">Customer ID: {customer.customerId} | Mobile: {customer.mobileNumber} | Email: {customer.email || 'Not provided'}</p>
           </div>
           <div className="flex gap-4">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/10 text-center">
-              <p className="text-xs text-teal-200">Total Outstanding</p>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/15 text-center">
+              <p className="text-xs text-amber-100">Total Outstanding</p>
               <p className="text-2xl font-black mt-1">{formatCurrency(outstandingAmount)}</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/10 text-center">
-              <p className="text-xs text-teal-200">Next EMI Date</p>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/15 text-center">
+              <p className="text-xs text-amber-100">Next EMI Date</p>
               <p className="text-2xl font-black mt-1">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : 'Completed'}</p>
             </div>
           </div>
@@ -476,6 +531,186 @@ export default function CustomerDashboard() {
             >
               I Have Completed Payment
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PROFILE MODAL */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl relative animate-in fade-in zoom-in duration-200 my-8">
+            <button 
+              onClick={() => setShowEditModal(false)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-11 h-11 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center border border-amber-500/20">
+                <User className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Edit Profile Details</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Update your personal contact & address details</p>
+              </div>
+            </div>
+
+            {editMessage.text && (
+              <div className={`p-4 rounded-xl text-xs font-semibold mb-6 flex items-center space-x-2 ${
+                editMessage.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200' 
+                  : 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200'
+              }`}>
+                {editMessage.type === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Info className="w-4 h-4 text-red-600" />}
+                <span>{editMessage.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.fullName}
+                    onChange={(e) => setEditFormData({ ...editFormData, fullName: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 dark:text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Mobile Number</label>
+                  <input
+                    type="tel"
+                    required
+                    value={editFormData.mobileNumber}
+                    onChange={(e) => setEditFormData({ ...editFormData, mobileNumber: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 dark:text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Alternate Number</label>
+                  <input
+                    type="tel"
+                    value={editFormData.alternateNumber}
+                    onChange={(e) => setEditFormData({ ...editFormData, alternateNumber: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 dark:text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    value={editFormData.email}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    placeholder="customer@example.com"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 dark:text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Residential Address</label>
+                <textarea
+                  rows="2"
+                  value={editFormData.address}
+                  onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 dark:text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                ></textarea>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">City</label>
+                  <input
+                    type="text"
+                    value={editFormData.city}
+                    onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">District</label>
+                  <input
+                    type="text"
+                    value={editFormData.district}
+                    onChange={(e) => setEditFormData({ ...editFormData, district: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">State</label>
+                  <input
+                    type="text"
+                    value={editFormData.state}
+                    onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">PIN Code</label>
+                  <input
+                    type="text"
+                    value={editFormData.pinCode}
+                    onChange={(e) => setEditFormData({ ...editFormData, pinCode: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Occupation</label>
+                  <input
+                    type="text"
+                    value={editFormData.occupation}
+                    onChange={(e) => setEditFormData({ ...editFormData, occupation: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 dark:text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Nominee Details</label>
+                  <input
+                    type="text"
+                    value={editFormData.nomineeDetails}
+                    onChange={(e) => setEditFormData({ ...editFormData, nomineeDetails: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 dark:text-white outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end space-x-3 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-500/20 transition-all flex items-center space-x-2"
+                >
+                  {editLoading ? (
+                    <span>Saving...</span>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
