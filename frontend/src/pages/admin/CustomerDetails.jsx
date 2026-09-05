@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../utils/api.js';
 import { formatCurrency, formatDate } from '../../utils/format.js';
+import { openWhatsAppReceipt } from '../../utils/whatsapp.js';
 import { 
   User, Compass, Zap, Landmark, Award, ShieldCheck, 
   ArrowLeft, Edit, FileText, CheckCircle, Clock, AlertTriangle, 
-  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2
+  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2, Send
 } from 'lucide-react';
 
 export default function CustomerDetails() {
@@ -371,6 +372,26 @@ export default function CustomerDetails() {
                           >
                             <Printer className="w-3 h-3" />
                             <span>Receipt</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              const matchingPayment = payments.find(p => p.emiNumber === emi.emiNumber);
+                              openWhatsAppReceipt({
+                                mobileNumber: customer.mobileNumber,
+                                customerName: customer.fullName,
+                                customerId: customer.customerId,
+                                receiptId: matchingPayment ? matchingPayment.receiptId : `REC-EMI-${emi.emiNumber}`,
+                                emiNumber: emi.emiNumber,
+                                paidAmount: emi.paidAmount || (emi.emiAmount + (emi.lateFee || 0)),
+                                paymentDate: emi.paidDate || new Date().toISOString().split('T')[0],
+                                remainingBalance: customer.totalOutstandingAmount
+                              });
+                            }}
+                            title="Send Receipt via WhatsApp"
+                            className="inline-flex items-center space-x-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300/50 dark:border-emerald-800 px-2.5 py-1.5 rounded-xl hover:bg-emerald-100 transition-all cursor-pointer"
+                          >
+                            <Send className="w-3 h-3 text-emerald-600" />
+                            <span>WhatsApp</span>
                           </button>
                           <button
                             onClick={() => handleDeletePayment(emi)}

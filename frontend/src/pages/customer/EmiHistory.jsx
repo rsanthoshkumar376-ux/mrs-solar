@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
 import { formatCurrency, formatDate } from '../../utils/format.js';
-import { History, Download, Printer, Sun, CheckCircle, HelpCircle } from 'lucide-react';
+import { openWhatsAppReceipt } from '../../utils/whatsapp.js';
+import { History, Download, Printer, Sun, CheckCircle, HelpCircle, Send } from 'lucide-react';
 
 export default function EmiHistory() {
   const [payments, setPayments] = useState([]);
@@ -94,13 +95,32 @@ export default function EmiHistory() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => setSelectedReceipt(payment)}
-                        className="inline-flex items-center space-x-1 text-xs font-bold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 bg-teal-50 dark:bg-teal-950/40 border border-teal-200/30 px-3 py-1.5 rounded-xl transition-all"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Download</span>
-                      </button>
+                      <div className="flex items-center justify-center space-x-1.5">
+                        <button
+                          onClick={() => setSelectedReceipt(payment)}
+                          className="inline-flex items-center space-x-1 text-xs font-bold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 bg-teal-50 dark:bg-teal-950/40 border border-teal-200/30 px-3 py-1.5 rounded-xl transition-all"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download</span>
+                        </button>
+                        <button
+                          onClick={() => openWhatsAppReceipt({
+                            mobileNumber: payment.customerMobile,
+                            customerName: payment.customerName,
+                            customerId: payment.customerId,
+                            receiptId: payment.receiptId,
+                            emiNumber: payment.emiNumber,
+                            paidAmount: payment.paidAmount,
+                            paymentDate: payment.paymentDate,
+                            remainingBalance: 0
+                          })}
+                          className="inline-flex items-center space-x-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300/50 dark:border-emerald-800 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-all"
+                          title="Share Receipt on WhatsApp"
+                        >
+                          <Send className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>WhatsApp</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -116,7 +136,24 @@ export default function EmiHistory() {
           <div className="w-full max-w-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-2xl relative space-y-6 receipt-modal-container">
             
             {/* Modal Actions */}
-            <div className="absolute top-4 right-4 flex space-x-2 no-print">
+            <div className="absolute top-4 right-4 flex items-center space-x-2 no-print">
+              <button
+                onClick={() => openWhatsAppReceipt({
+                  mobileNumber: selectedReceipt.customerMobile,
+                  customerName: selectedReceipt.customerName,
+                  customerId: selectedReceipt.customerId,
+                  receiptId: selectedReceipt.receiptId,
+                  emiNumber: selectedReceipt.emiNumber,
+                  paidAmount: selectedReceipt.paidAmount,
+                  paymentDate: selectedReceipt.paymentDate,
+                  remainingBalance: 0
+                })}
+                className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
+                title="Send via WhatsApp"
+              >
+                <Send className="w-4 h-4" />
+                <span>WhatsApp</span>
+              </button>
               <button 
                 onClick={handlePrint}
                 className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition-colors"
