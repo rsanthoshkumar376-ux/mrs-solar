@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Sun, Moon, Lock, User, ShieldAlert } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext.jsx';
+import { Sun, Moon, Lock, User, ShieldAlert, Globe } from 'lucide-react';
 
 export default function Login() {
+  const { lang, setLang, t, availableLanguages } = useLanguage();
   const [roleTab, setRoleTab] = useState('customer'); // 'customer' or 'admin'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -81,14 +83,32 @@ export default function Login() {
         ? 'bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-slate-100 dark:from-amber-950/40 dark:via-slate-900 dark:to-slate-950'
         : 'bg-gradient-to-br from-teal-500/10 via-slate-900/10 to-slate-100 dark:from-teal-950/40 dark:via-slate-900 dark:to-slate-950'
     }`}>
-      {/* Dark mode switcher in corner */}
-      <button 
-        onClick={() => setDarkMode(!darkMode)}
-        className="absolute top-4 right-4 p-2.5 rounded-full glass border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors shadow-sm"
-        aria-label="Toggle theme"
-      >
-        {darkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
-      </button>
+      {/* Top Controls: Language Switcher & Dark Mode */}
+      <div className="absolute top-4 right-4 flex items-center space-x-2">
+        <div className="flex items-center bg-white/80 dark:bg-slate-800/90 backdrop-blur-md rounded-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <Globe className="w-4 h-4 text-amber-500 mr-1.5" />
+          <select
+            value={lang}
+            onChange={(e) => setLang(e.target.value)}
+            className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+            aria-label="Select Language"
+          >
+            {availableLanguages.map(l => (
+              <option key={l.code} value={l.code} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">
+                {l.flag} {l.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button 
+          onClick={() => setDarkMode(!darkMode)}
+          className="p-2 rounded-full glass border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors shadow-sm"
+          aria-label="Toggle theme"
+        >
+          {darkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
+        </button>
+      </div>
 
       <div className="w-full max-w-md">
         {/* LOGO */}
@@ -113,7 +133,7 @@ export default function Login() {
                 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
                 : 'bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-300 dark:border-teal-800'
             }`}>
-              {roleTab === 'customer' ? 'Customer Self-Service Portal' : 'Owner / Admin Portal'}
+              {roleTab === 'customer' ? t('customerLoginTitle') : t('ownerAdminLoginTitle')}
             </span>
           </div>
         </div>
@@ -139,7 +159,7 @@ export default function Login() {
               }`}
             >
               <User className="w-4 h-4" />
-              <span>Customer Login</span>
+              <span>{t('customerLogin')}</span>
             </button>
             <button
               onClick={() => selectTab('admin')}
@@ -150,7 +170,7 @@ export default function Login() {
               }`}
             >
               <Lock className="w-4 h-4" />
-              <span>Owner / Admin</span>
+              <span>{t('ownerAdminLogin')}</span>
             </button>
           </div>
 
@@ -165,7 +185,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                {roleTab === 'customer' ? 'Customer Name or Customer ID' : 'Admin Username'}
+                {roleTab === 'customer' ? t('usernameOrId') : 'Admin Username'}
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 dark:text-slate-500">
@@ -187,7 +207,7 @@ export default function Login() {
 
             <div>
               <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Password
+                {t('password')}
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 dark:text-slate-500">
@@ -222,7 +242,7 @@ export default function Login() {
                   <span>Logging in...</span>
                 </div>
               ) : (
-                <span>Sign In as {roleTab === 'customer' ? 'Customer' : 'Owner'}</span>
+                <span>{roleTab === 'customer' ? t('signInAsCustomer') : t('signInAsOwner')}</span>
               )}
             </button>
           </form>

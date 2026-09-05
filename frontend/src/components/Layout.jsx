@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 import api from '../utils/api.js';
 import { 
   Sun, Moon, LogOut, Menu, X, Bell, LayoutDashboard, 
   Users, DollarSign, History, Calculator, ShieldAlert,
-  FolderLock, Database, CheckCircle
+  FolderLock, Database, CheckCircle, Globe
 } from 'lucide-react';
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
+  const { lang, setLang, t, availableLanguages } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -81,8 +83,8 @@ export default function Layout({ children }) {
   ];
 
   const customerLinks = [
-    { label: 'My Dashboard', path: '/customer', icon: LayoutDashboard },
-    { label: 'Payment History', path: '/customer/payments', icon: History }
+    { label: t('dashboard'), path: '/customer', icon: LayoutDashboard },
+    { label: t('paymentHistory'), path: '/customer/payments', icon: History }
   ];
 
   const links = user?.role === 'admin' ? adminLinks : customerLinks;
@@ -197,13 +199,30 @@ export default function Layout({ children }) {
                 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
                 : 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30'
             }`}>
-              {user?.role === 'admin' ? '🛡️ Owner / Admin Portal' : '☀️ Customer Account Portal'}
+              {user?.role === 'admin' ? t('ownerPortal') : t('customerPortal')}
             </span>
           </div>
 
           {/* Right Header items */}
           <div className="flex items-center space-x-3">
             
+            {/* Language Selector Dropdown */}
+            <div className="relative flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl px-2.5 py-1 border border-slate-200/60 dark:border-slate-700/60">
+              <Globe className="w-4 h-4 text-amber-500 mr-1.5 flex-shrink-0" />
+              <select
+                value={lang}
+                onChange={(e) => setLang(e.target.value)}
+                className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer pr-1"
+                aria-label="Select Language"
+              >
+                {availableLanguages.map(l => (
+                  <option key={l.code} value={l.code} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">
+                    {l.flag} {l.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Theme Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}

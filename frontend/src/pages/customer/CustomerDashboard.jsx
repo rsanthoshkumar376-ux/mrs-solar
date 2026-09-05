@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
 import { formatCurrency, formatDate } from '../../utils/format.js';
+import { useLanguage } from '../../context/LanguageContext.jsx';
 import { 
   Sun, DollarSign, Calendar, ShieldCheck, Zap, X, Edit3, CheckCircle,
-  QrCode, Landmark, User, FileText, Info, Calculator, Save, Phone, Mail, MapPin, Briefcase
+  QrCode, Landmark, User, FileText, Info, Calculator, Save, Phone, Mail, MapPin, Briefcase, Globe
 } from 'lucide-react';
 
 export default function CustomerDashboard() {
+  const { t, lang, setLang, availableLanguages } = useLanguage();
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -132,29 +134,45 @@ export default function CustomerDashboard() {
         <div className="absolute top-0 right-0 -mt-6 -mr-6 w-44 h-44 bg-yellow-300/20 rounded-full blur-2xl animate-pulse-soft"></div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-widest text-amber-100 bg-amber-800/60 px-3 py-1 rounded-full border border-amber-400/30">
-                ☀️ Solar Financing Account
+                {t('activeFinancing')}
               </span>
               <button
                 onClick={handleOpenEditModal}
                 className="flex items-center space-x-1.5 text-xs font-bold text-slate-900 bg-amber-300 hover:bg-yellow-300 px-3 py-1.5 rounded-full transition-all shadow-sm hover:scale-105 active:scale-95 cursor-pointer"
               >
                 <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit My Profile</span>
+                <span>{t('editProfile')}</span>
               </button>
+
+              {/* Quick Language Selector Pill */}
+              <div className="flex items-center bg-black/20 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 text-xs">
+                <Globe className="w-3.5 h-3.5 text-yellow-300 mr-1" />
+                <select
+                  value={lang}
+                  onChange={(e) => setLang(e.target.value)}
+                  className="bg-transparent text-white font-bold outline-none cursor-pointer text-xs"
+                >
+                  {availableLanguages.map(l => (
+                    <option key={l.code} value={l.code} className="bg-slate-900 text-white">
+                      {l.flag} {l.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <h2 className="text-3xl font-extrabold mt-3">Welcome, {customer.fullName}</h2>
-            <p className="text-sm text-amber-100 mt-1">Customer ID: {customer.customerId} | Mobile: {customer.mobileNumber} | Email: {customer.email || 'Not provided'}</p>
+            <h2 className="text-3xl font-extrabold mt-3">{t('welcome')}, {customer.fullName}</h2>
+            <p className="text-sm text-amber-100 mt-1">{t('customerId')}: {customer.customerId} | {t('mobile')}: {customer.mobileNumber} | {t('email')}: {customer.email || t('notProvided')}</p>
           </div>
           <div className="flex gap-4">
             <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/15 text-center">
-              <p className="text-xs text-amber-100">Total Outstanding</p>
+              <p className="text-xs text-amber-100">{t('totalOutstanding')}</p>
               <p className="text-2xl font-black mt-1">{formatCurrency(outstandingAmount)}</p>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/15 text-center">
-              <p className="text-xs text-amber-100">Next EMI Date</p>
-              <p className="text-2xl font-black mt-1">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : 'Completed'}</p>
+              <p className="text-xs text-amber-100">{t('nextEmiDate')}</p>
+              <p className="text-2xl font-black mt-1">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : t('completed')}</p>
             </div>
           </div>
         </div>
