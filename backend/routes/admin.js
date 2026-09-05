@@ -9,6 +9,7 @@ import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { generateAmortizationSchedule, recalculateCustomerEmiStatus } from '../utils/calculations.js';
 import { logAdminAction } from '../utils/logger.js';
 import { runDailyInterestAndPenaltyCheck } from '../utils/scheduler.js';
+import { sendPaymentReceiptEmail } from '../utils/email.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -451,6 +452,22 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       type: 'Payment_Received_Admin',
       read: false
     });
+
+    // Send payment confirmation email & printable receipt to customer's email address
+    sendPaymentReceiptEmail({
+      toEmail: customer.email,
+      customerName: customer.fullName,
+      customerId: customer.customerId,
+      receiptId,
+      emiNumber: Number(emiNumber),
+      paidAmount: emi.emiAmount + penalty,
+      baseEmiAmount: emi.emiAmount,
+      lateFeePaid: penalty,
+      paymentDate: paidDate.toISOString().split('T')[0],
+      remainingBalance: updatedCustomer.totalOutstandingAmount,
+      totalLoanAmount: updatedCustomer.loanAmount,
+      solarCapacity: updatedCustomer.solarCapacity
+    }).catch(err => console.error('[Payment Receipt Email Dispatch Error]:', err));
 
     res.json({ message: `EMI #${emiNumber} marked as Paid successfully`, payment: paymentRecord });
   } catch (error) {

@@ -1,5 +1,6 @@
 import { db } from '../database/db.js';
 import { recalculateCustomerEmiStatus } from './calculations.js';
+import { sendOverdueReminderEmail } from './email.js';
 
 /**
  * Checks all customers, updates overdue penalties, and triggers alerts.
@@ -115,6 +116,20 @@ async function processCustomerNotifications(customerId, oldCustomer, newCustomer
           emiNumber: emi.emiNumber,
           read: false
         });
+
+        // Dispatch email reminder for overdue EMI
+        if (daysOverdue === 1 || daysOverdue % 7 === 0) { // On day 1 overdue and weekly
+          sendOverdueReminderEmail({
+            toEmail: newCustomer.email,
+            customerName: newCustomer.fullName,
+            customerId: newCustomer.customerId,
+            emiNumber: emi.emiNumber,
+            emiAmount: emi.emiAmount,
+            dueDate: emi.dueDate,
+            lateFee: emi.lateFee,
+            daysOverdue
+          }).catch(err => console.error('[Overdue Email Dispatch Error]:', err));
+        }
       }
     }
   }
