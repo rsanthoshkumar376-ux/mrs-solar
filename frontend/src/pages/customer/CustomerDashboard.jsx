@@ -1,24 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
 import { formatCurrency, formatDate } from '../../utils/format.js';
-import { useLanguage } from '../../context/LanguageContext.jsx';
 import { 
-  Sun, DollarSign, Calendar, ShieldCheck, Zap, X, Edit3, CheckCircle,
-  QrCode, Landmark, User, FileText, Info, Calculator, Save, Phone, Mail, MapPin, Briefcase, Globe
+  Sun, DollarSign, Calendar, ShieldCheck, Zap, X,
+  QrCode, Landmark, User, FileText, Info, Calculator
 } from 'lucide-react';
 
 export default function CustomerDashboard() {
-  const { t, lang, setLang, availableLanguages } = useLanguage();
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showQrModal, setShowQrModal] = useState(false);
   const [selectedEmi, setSelectedEmi] = useState(null);
-
-  // Customer Edit Profile Modal States
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editFormData, setEditFormData] = useState({});
-  const [editLoading, setEditLoading] = useState(false);
-  const [editMessage, setEditMessage] = useState({ type: '', text: '' });
   
   // Amortisation Calculator States (Live EMI Calculator)
   const [calcCost, setCalcCost] = useState(150000);
@@ -88,84 +80,26 @@ export default function CustomerDashboard() {
     setShowQrModal(true);
   };
 
-  const handleOpenEditModal = () => {
-    setEditFormData({
-      fullName: customer.fullName || '',
-      mobileNumber: customer.mobileNumber || '',
-      alternateNumber: customer.alternateNumber || '',
-      email: customer.email || '',
-      address: customer.address || '',
-      city: customer.city || '',
-      district: customer.district || '',
-      state: customer.state || '',
-      pinCode: customer.pinCode || '',
-      occupation: customer.occupation || '',
-      nomineeDetails: customer.nomineeDetails || ''
-    });
-    setEditMessage({ type: '', text: '' });
-    setShowEditModal(true);
-  };
-
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
-    setEditLoading(true);
-    setEditMessage({ type: '', text: '' });
-
-    try {
-      const res = await api.put('/customer/profile', editFormData);
-      setCustomer(res.data.customer);
-      setEditMessage({ type: 'success', text: 'Profile updated successfully!' });
-      setTimeout(() => {
-        setShowEditModal(false);
-      }, 1000);
-    } catch (err) {
-      console.error(err);
-      setEditMessage({ type: 'error', text: err.response?.data?.message || 'Failed to update profile.' });
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
   return (
     <div className="space-y-8 pb-12">
       
-      {/* HEADER BANNER - Solar Amber Theme */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 dark:from-amber-950 dark:via-orange-950 dark:to-slate-900 rounded-3xl p-6 md:p-8 shadow-xl shadow-orange-500/10 text-white">
-        <div className="absolute top-0 right-0 -mt-6 -mr-6 w-44 h-44 bg-yellow-300/20 rounded-full blur-2xl animate-pulse-soft"></div>
+      {/* HEADER BANNER */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-teal-700 to-emerald-600 dark:from-teal-950 dark:to-emerald-950 rounded-3xl p-6 md:p-8 shadow-lg shadow-teal-700/10 text-white">
+        <div className="absolute top-0 right-0 -mt-6 -mr-6 w-36 h-36 bg-yellow-300/10 rounded-full blur-xl animate-pulse-soft"></div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-widest text-amber-100 bg-amber-800/60 px-3 py-1 rounded-full border border-amber-400/30">
-                {t('activeFinancing')}
-              </span>
-
-              {/* Quick Language Selector Pill */}
-              <div className="flex items-center bg-black/20 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 text-xs">
-                <Globe className="w-3.5 h-3.5 text-yellow-300 mr-1" />
-                <select
-                  value={lang}
-                  onChange={(e) => setLang(e.target.value)}
-                  className="bg-transparent text-white font-bold outline-none cursor-pointer text-xs"
-                >
-                  {availableLanguages.map(l => (
-                    <option key={l.code} value={l.code} className="bg-slate-900 text-white">
-                      {l.flag} {l.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <h2 className="text-3xl font-extrabold mt-3">{t('welcome')}, {customer.fullName}</h2>
-            <p className="text-sm text-amber-100 mt-1">{t('customerId')}: {customer.customerId} | {t('mobile')}: {customer.mobileNumber} | {t('email')}: {customer.email || t('notProvided')}</p>
+            <span className="text-xs font-bold uppercase tracking-widest text-teal-200 bg-teal-800/50 px-3 py-1 rounded-full">Active Financing</span>
+            <h2 className="text-3xl font-extrabold mt-3">Welcome, {customer.fullName}</h2>
+            <p className="text-sm text-teal-100 mt-1">Customer ID: {customer.customerId} | Installation Date: {formatDate(customer.installationDate)}</p>
           </div>
           <div className="flex gap-4">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/15 text-center">
-              <p className="text-xs text-amber-100">{t('totalOutstanding')}</p>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/10 text-center">
+              <p className="text-xs text-teal-200">Total Outstanding</p>
               <p className="text-2xl font-black mt-1">{formatCurrency(outstandingAmount)}</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/15 text-center">
-              <p className="text-xs text-amber-100">{t('nextEmiDate')}</p>
-              <p className="text-2xl font-black mt-1">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : t('completed')}</p>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/10 text-center">
+              <p className="text-xs text-teal-200">Next EMI Date</p>
+              <p className="text-2xl font-black mt-1">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : 'Completed'}</p>
             </div>
           </div>
         </div>

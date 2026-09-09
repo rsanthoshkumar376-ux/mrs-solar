@@ -4,12 +4,12 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
+import ExcelJS from 'exceljs';
 import { db } from '../database/db.js';
 import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { generateAmortizationSchedule, recalculateCustomerEmiStatus } from '../utils/calculations.js';
 import { logAdminAction } from '../utils/logger.js';
 import { runDailyInterestAndPenaltyCheck } from '../utils/scheduler.js';
-import { sendPaymentReceiptEmail } from '../utils/email.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -453,22 +453,6 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       read: false
     });
 
-    // Send payment confirmation email & printable receipt to customer's email address
-    sendPaymentReceiptEmail({
-      toEmail: customer.email,
-      customerName: customer.fullName,
-      customerId: customer.customerId,
-      receiptId,
-      emiNumber: Number(emiNumber),
-      paidAmount: emi.emiAmount + penalty,
-      baseEmiAmount: emi.emiAmount,
-      lateFeePaid: penalty,
-      paymentDate: paidDate.toISOString().split('T')[0],
-      remainingBalance: updatedCustomer.totalOutstandingAmount,
-      totalLoanAmount: updatedCustomer.loanAmount,
-      solarCapacity: updatedCustomer.solarCapacity
-    }).catch(err => console.error('[Payment Receipt Email Dispatch Error]:', err));
-
     res.json({ message: `EMI #${emiNumber} marked as Paid successfully`, payment: paymentRecord });
   } catch (error) {
     console.error('Mark payment paid error:', error);
@@ -647,58 +631,190 @@ router.get('/backup/export-csv', authenticateToken, authorizeRole(['admin']), as
   }
 });
 
-// Helper to escape XML special characters
-function escapeXml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-// 10d. Export Database for Microsoft Access (.xml / MS Access format)
+// 10d. Export Database as proper Excel (.xlsx) with multiple sheets
 router.get('/backup/export-mdb', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
-    const collections = ['customers', 'users', 'payments', 'notifications', 'audit_logs'];
-    const dataMap = {};
+    const customers = await db.find('customers');
+    const payments  = await db.find('payments');
+    const notifications = await db.find('notifications');
 
-    for (const col of collections) {
-      dataMap[col] = await db.find(col);
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'MRS SOLAR System';
+    workbook.created = new Date();
+
+    // Helper: style a header row teal
+    function styleHeader(sheet, columns) {
+      sheet.columns = columns;
+      const headerRow = sheet.getRow(1);
+      headerRow.eachCell(cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D9488' } };
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = {
+          top: { style: 'thin' }, bottom: { style: 'thin' },
+          left: { style: 'thin' }, right: { style: 'thin' }
+        };
+      });
+      headerRow.height = 22;
     }
 
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<dataroot xmlns:od="urn:schemas-microsoft-com:officedata" generated="${new Date().toISOString()}">\n`;
+    // ── Sheet 1: Customer Ledger ──────────────────────────────────────
+    const sheet1 = workbook.addWorksheet('Customer Ledger');
+    styleHeader(sheet1, [
+      { header: 'Customer ID',        key: 'customerId',       width: 14 },
+      { header: 'Full Name',          key: 'fullName',         width: 22 },
+      { header: 'Mobile',             key: 'mobileNumber',     width: 14 },
+      { header: 'Aadhaar',            key: 'aadhaarNumber',    width: 16 },
+      { header: 'PAN',                key: 'panNumber',        width: 13 },
+      { header: 'Address',            key: 'address',          width: 30 },
+      { header: 'Solar kW',           key: 'solarCapacity',    width: 10 },
+      { header: 'Solar Brand',        key: 'solarBrand',       width: 14 },
+      { header: 'Solar Cost (₹)',     key: 'solarCost',        width: 14 },
+      { header: 'Down Payment (₹)',   key: 'downPayment',      width: 16 },
+      { header: 'Loan Amount (₹)',    key: 'loanAmount',       width: 16 },
+      { header: 'Interest Rate (%)',  key: 'interestRate',     width: 16 },
+      { header: 'EMI Duration (mo)',  key: 'emiDuration',      width: 16 },
+      { header: 'Monthly EMI (₹)',    key: 'monthlyEmi',       width: 16 },
+      { header: 'Loan Start',         key: 'loanStartDate',    width: 13 },
+      { header: 'Loan End',           key: 'loanEndDate',      width: 13 },
+      { header: 'Payment Status',     key: 'paymentStatus',    width: 15 },
+      { header: 'Loan Status',        key: 'loanStatus',       width: 12 },
+      { header: 'Outstanding (₹)',    key: 'totalOutstanding', width: 16 },
+    ]);
+    customers.forEach(c => {
+      const row = sheet1.addRow({
+        customerId:      c.customerId || '',
+        fullName:        c.fullName || '',
+        mobileNumber:    c.mobileNumber || '',
+        aadhaarNumber:   c.aadhaarNumber || '',
+        panNumber:       c.panNumber || '',
+        address:         c.address || '',
+        solarCapacity:   c.solarCapacity || 0,
+        solarBrand:      c.solarBrand || '',
+        solarCost:       c.solarCost || 0,
+        downPayment:     c.downPayment || 0,
+        loanAmount:      c.loanAmount || 0,
+        interestRate:    c.interestRate || 0,
+        emiDuration:     c.emiDuration || 0,
+        monthlyEmi:      c.monthlyEmi || 0,
+        loanStartDate:   c.loanStartDate || '',
+        loanEndDate:     c.loanEndDate || '',
+        paymentStatus:   c.paymentStatus || 'Pending',
+        loanStatus:      c.loanStatus || 'Active',
+        totalOutstanding: c.totalOutstandingAmount || 0,
+      });
+      // Colour status cell
+      const statusCell = row.getCell('paymentStatus');
+      if (c.paymentStatus === 'Paid')    statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
+      else if (c.paymentStatus === 'Overdue') statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+    });
 
-    for (const [colName, records] of Object.entries(dataMap)) {
-      if (Array.isArray(records)) {
-        records.forEach(rec => {
-          xml += `  <${colName}>\n`;
-          for (const [key, val] of Object.entries(rec)) {
-            if (key === '__v') continue;
-            let displayVal = val;
-            if (typeof val === 'object' && val !== null) {
-              displayVal = JSON.stringify(val);
-            }
-            const cleanKey = key.replace(/[^a-zA-Z0-9_]/g, '_');
-            xml += `    <${cleanKey}>${escapeXml(displayVal)}</${cleanKey}>\n`;
-          }
-          xml += `  </${colName}>\n`;
+    // ── Sheet 2: EMI Repayment Schedule ──────────────────────────────
+    const sheet2 = workbook.addWorksheet('EMI Schedule');
+    styleHeader(sheet2, [
+      { header: 'Customer ID',   key: 'customerId',  width: 14 },
+      { header: 'Customer Name', key: 'fullName',    width: 22 },
+      { header: 'EMI #',        key: 'emiNumber',   width: 8  },
+      { header: 'Due Date',      key: 'dueDate',     width: 13 },
+      { header: 'EMI Amount (₹)',key: 'emiAmount',   width: 15 },
+      { header: 'Principal (₹)', key: 'principal',   width: 15 },
+      { header: 'Interest (₹)',  key: 'interest',    width: 14 },
+      { header: 'Late Fee (₹)',  key: 'lateFee',     width: 13 },
+      { header: 'Paid Amount (₹)',key:'paidAmount',  width: 15 },
+      { header: 'Paid Date',     key: 'paidDate',    width: 13 },
+      { header: 'Remaining (₹)', key: 'remaining',   width: 14 },
+      { header: 'Status',        key: 'status',      width: 12 },
+    ]);
+    customers.forEach(c => {
+      (c.emiSchedule || []).forEach(emi => {
+        const row = sheet2.addRow({
+          customerId: c.customerId,
+          fullName:   c.fullName,
+          emiNumber:  emi.emiNumber,
+          dueDate:    emi.dueDate || '',
+          emiAmount:  emi.emiAmount || 0,
+          principal:  emi.principalPaid || 0,
+          interest:   emi.interestPaid || 0,
+          lateFee:    emi.lateFee || 0,
+          paidAmount: emi.paidAmount || 0,
+          paidDate:   emi.paidDate || '',
+          remaining:  emi.remainingBalance || 0,
+          status:     emi.status || 'Pending',
         });
-      }
-    }
+        const sc = row.getCell('status');
+        if (emi.status === 'Paid')   sc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
+        else if (emi.status === 'Overdue') sc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+      });
+    });
 
-    xml += `</dataroot>\n`;
+    // ── Sheet 3: Payment Receipts ─────────────────────────────────────
+    const sheet3 = workbook.addWorksheet('Payment Receipts');
+    styleHeader(sheet3, [
+      { header: 'Receipt ID',    key: 'receiptId',    width: 20 },
+      { header: 'Customer ID',   key: 'customerId',   width: 14 },
+      { header: 'Customer Name', key: 'customerName', width: 22 },
+      { header: 'EMI #',        key: 'emiNumber',    width: 8  },
+      { header: 'Payment Date',  key: 'paymentDate',  width: 14 },
+      { header: 'Paid Amount (₹)',key:'paidAmount',   width: 15 },
+      { header: 'Base EMI (₹)', key: 'baseEmi',      width: 14 },
+      { header: 'Interest (₹)', key: 'interest',     width: 13 },
+      { header: 'Late Fee (₹)', key: 'lateFee',      width: 13 },
+      { header: 'Days Late',    key: 'daysLate',     width: 11 },
+      { header: 'Remarks',      key: 'remarks',      width: 25 },
+    ]);
+    payments.forEach(p => {
+      sheet3.addRow({
+        receiptId:    p.receiptId || '',
+        customerId:   p.customerId || '',
+        customerName: p.customerName || '',
+        emiNumber:    p.emiNumber || '',
+        paymentDate:  p.paymentDate || '',
+        paidAmount:   p.paidAmount || 0,
+        baseEmi:      p.baseEmiAmount || 0,
+        interest:     p.interestPaid || 0,
+        lateFee:      p.lateFeePaid || 0,
+        daysLate:     p.daysLate || 0,
+        remarks:      p.remarks || '',
+      });
+    });
 
-    res.setHeader('Content-Type', 'application/xml');
-    res.setHeader('Content-Disposition', `attachment; filename=MRS_SOLAR_Access_Backup_${Date.now()}.xml`);
-    res.send(xml);
+    // ── Sheet 4: Notifications ────────────────────────────────────────
+    const sheet4 = workbook.addWorksheet('Notifications');
+    styleHeader(sheet4, [
+      { header: 'Customer ID', key: 'customerId', width: 14 },
+      { header: 'Role',        key: 'role',       width: 10 },
+      { header: 'Title',       key: 'title',      width: 30 },
+      { header: 'Message',     key: 'message',    width: 50 },
+      { header: 'Type',        key: 'type',       width: 22 },
+      { header: 'Read',        key: 'read',       width: 8  },
+      { header: 'Created At',  key: 'createdAt',  width: 20 },
+    ]);
+    notifications.forEach(n => {
+      sheet4.addRow({
+        customerId: n.customerId || '',
+        role:       n.role || '',
+        title:      n.title || '',
+        message:    n.message || '',
+        type:       n.type || '',
+        read:       n.read ? 'Yes' : 'No',
+        createdAt:  n.createdAt || n.updatedAt || '',
+      });
+    });
+
+    // Stream as .xlsx download
+    const filename = `MRS_SOLAR_Database_${new Date().toISOString().slice(0,10)}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    await workbook.xlsx.write(res);
+    res.end();
+
   } catch (error) {
-    console.error('MDB export error:', error);
-    res.status(500).json({ message: 'Failed to export MS Access database backup' });
+    console.error('Excel export error:', error);
+    res.status(500).json({ message: 'Failed to generate Excel database export: ' + error.message });
   }
 });
+
+
 
 // 11. List Backups
 router.get('/backups', authenticateToken, authorizeRole(['admin']), async (req, res) => {

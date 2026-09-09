@@ -2,7 +2,6 @@ import express from 'express';
 import { db } from '../database/db.js';
 import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { recalculateCustomerEmiStatus } from '../utils/calculations.js';
-import { sendPaymentSubmissionAckEmail } from '../utils/email.js';
 
 const router = express.Router();
 
@@ -117,14 +116,6 @@ router.post('/notify-payment', authenticateToken, authorizeRole(['customer']), a
       read: false,
       createdAt: new Date().toISOString()
     });
-
-    // Send email notification acknowledgement to customer
-    sendPaymentSubmissionAckEmail({
-      toEmail: customer.email,
-      customerName: customer.fullName,
-      customerId: customer.customerId,
-      emiNumber: Number(emiNumber)
-    }).catch(err => console.error('[Payment Notification Email Dispatch Error]:', err));
 
     res.json({ message: 'Payment notification successfully sent to administrator for verification.' });
   } catch (error) {

@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useLanguage } from '../context/LanguageContext.jsx';
 import api from '../utils/api.js';
 import { 
   Sun, Moon, LogOut, Menu, X, Bell, LayoutDashboard, 
   Users, DollarSign, History, Calculator, ShieldAlert,
-  FolderLock, Database, CheckCircle, Globe
+  FolderLock, Database, CheckCircle
 } from 'lucide-react';
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
-  const { lang, setLang, t, availableLanguages } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -83,8 +81,8 @@ export default function Layout({ children }) {
   ];
 
   const customerLinks = [
-    { label: t('dashboard'), path: '/customer', icon: LayoutDashboard },
-    { label: t('paymentHistory'), path: '/customer/payments', icon: History }
+    { label: 'My Dashboard', path: '/customer', icon: LayoutDashboard },
+    { label: 'Payment History', path: '/customer/payments', icon: History }
   ];
 
   const links = user?.role === 'admin' ? adminLinks : customerLinks;
@@ -109,13 +107,11 @@ export default function Layout({ children }) {
         {/* Sidebar Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-slate-200 dark:border-slate-800">
           <Link to={user?.role === 'admin' ? '/admin' : '/customer'} className="flex items-center space-x-2">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-md ${
-              user?.role === 'customer' ? 'bg-gradient-to-tr from-amber-500 to-orange-500' : 'bg-gradient-to-tr from-teal-600 to-emerald-600'
-            }`}>
-              <Sun className="w-5 h-5 text-yellow-200" />
+            <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center shadow-md">
+              <Sun className="w-5 h-5 text-yellow-300" />
             </div>
-            <span className="font-extrabold text-lg text-slate-800 dark:text-white">
-              MRS <span className={user?.role === 'customer' ? 'text-amber-500 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400'}>SOLAR</span>
+            <span className="font-bold text-lg text-slate-800 dark:text-white">
+              MRS <span className="text-teal-600 dark:text-teal-400">SOLAR</span>
             </span>
           </Link>
           <button 
@@ -131,19 +127,15 @@ export default function Layout({ children }) {
           {links.map((link) => {
             const Icon = link.icon;
             const isActive = location.pathname === link.path;
-            const activeColor = user?.role === 'customer'
-              ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-bold border-r-4 border-amber-500'
-              : 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 font-bold border-r-4 border-teal-500';
-
             return (
               <Link
                 key={link.path}
                 to={link.path}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-sm transition-all duration-200 ${
+                className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
                   isActive
-                    ? activeColor
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
+                    ? 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -156,13 +148,11 @@ export default function Layout({ children }) {
         {/* Sidebar Footer User Info */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40">
           <div className="flex items-center space-x-3 px-2 py-2">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm ${
-              user?.role === 'customer' ? 'bg-gradient-to-tr from-amber-500 to-orange-500' : 'bg-gradient-to-tr from-teal-600 to-emerald-600'
-            }`}>
+            <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
               {user?.fullName?.charAt(0) || user?.role?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
+              <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
                 {user?.fullName || 'MRS Solar User'}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
@@ -186,7 +176,7 @@ export default function Layout({ children }) {
         {/* HEADER */}
         <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md flex items-center justify-between px-6 z-30">
           
-          {/* Hamburger toggle & Role Tag */}
+          {/* Hamburger toggle */}
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -194,35 +184,14 @@ export default function Layout({ children }) {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className={`hidden md:inline text-xs font-bold px-3 py-1.5 rounded-full border shadow-xs ${
-              user?.role === 'customer'
-                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                : 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30'
-            }`}>
-              {user?.role === 'admin' ? t('ownerPortal') : t('customerPortal')}
+            <span className="hidden md:inline text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full border border-slate-200/50 dark:border-slate-700/50">
+              Role: {user?.role === 'admin' ? 'Owner Portal' : 'Customer Portal'}
             </span>
           </div>
 
           {/* Right Header items */}
           <div className="flex items-center space-x-3">
             
-            {/* Language Selector Dropdown */}
-            <div className="relative flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl px-2.5 py-1 border border-slate-200/60 dark:border-slate-700/60">
-              <Globe className="w-4 h-4 text-amber-500 mr-1.5 flex-shrink-0" />
-              <select
-                value={lang}
-                onChange={(e) => setLang(e.target.value)}
-                className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer pr-1"
-                aria-label="Select Language"
-              >
-                {availableLanguages.map(l => (
-                  <option key={l.code} value={l.code} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white">
-                    {l.flag} {l.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Theme Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
