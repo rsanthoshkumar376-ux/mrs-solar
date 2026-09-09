@@ -10,6 +10,8 @@ import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { generateAmortizationSchedule, recalculateCustomerEmiStatus } from '../utils/calculations.js';
 import { logAdminAction } from '../utils/logger.js';
 import { runDailyInterestAndPenaltyCheck } from '../utils/scheduler.js';
+import { sendReceiptEmail } from '../utils/email.js';
+
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -453,12 +455,78 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       read: false
     });
 
+    // Automatically send receipt to customer's email if provided
+    if (customer.email) {
+      sendReceiptEmail(paymentRecord, customer).catch(err => {
+        console.error('[Email] Background receipt delivery failed:', err.message);
+      });
+    }
+
     res.json({ message: `EMI #${emiNumber} marked as Paid successfully`, payment: paymentRecord });
   } catch (error) {
     console.error('Mark payment paid error:', error);
     res.status(500).json({ message: 'Error marking payment as paid' });
   }
 });
+
+// 7b. Send / Resend Receipt via Email
+router.post('/payments/send-receipt-email', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  const { customerId, emiNumber, email } = req.body;
+  if (!customerId || !emiNumber) {
+    return res.status(400).json({ message: 'Customer ID and EMI Number are required' });
+  }
+
+  try {
+    const customer = await db.findOne('customers', { customerId });
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    const allPayments = await db.find('payments');
+    let payment = allPayments.find(p => p.customerId === customerId && Number(p.emiNumber) === Number(emiNumber));
+    
+    // If not in payments collection, build from emiSchedule
+    if (!payment && customer.emiSchedule) {
+      const emi = customer.emiSchedule.find(e => Number(e.emiNumber) === Number(emiNumber));
+      if (emi && emi.status === 'Paid') {
+        payment = {
+          receiptId: `REC-${Date.now().toString().slice(-6)}`,
+          customerId,
+          customerName: customer.fullName,
+          emiNumber: Number(emiNumber),
+          paymentDate: emi.paidDate || new Date().toISOString().split('T')[0],
+          paidAmount: emi.paidAmount || (emi.emiAmount + (emi.lateFee || 0)),
+          baseEmiAmount: emi.emiAmount,
+          interestPaid: emi.interestPaid,
+          principalPaid: emi.principalPaid,
+          lateFeePaid: emi.lateFee || 0,
+          remarks: emi.remarks || 'Standard payment'
+        };
+      }
+    }
+
+    if (!payment) {
+      return res.status(404).json({ message: `No paid payment record found for EMI #${emiNumber}` });
+    }
+
+    const recipient = email || customer.email;
+    if (!recipient) {
+      return res.status(400).json({ message: 'No email address found for this customer. Please enter an email address.' });
+    }
+
+    const result = await sendReceiptEmail(payment, customer, recipient);
+    if (result.success) {
+      await logAdminAction(req.user.username, 'SEND_RECEIPT_EMAIL', customerId, { emiNumber, recipient });
+      res.json({ message: `Receipt successfully sent to ${recipient}!` });
+    } else {
+      res.status(500).json({ message: `Failed to send email: ${result.error || result.reason}` });
+    }
+  } catch (error) {
+    console.error('Send receipt email error:', error);
+    res.status(500).json({ message: 'Error sending receipt email' });
+  }
+});
+
 
 // 8. Delete / Undo a Payment (Reverse Paid → Pending)
 router.delete('/payments/delete-payment', authenticateToken, authorizeRole(['admin']), async (req, res) => {

@@ -5,7 +5,7 @@ import { formatCurrency, formatDate } from '../../utils/format.js';
 import { 
   User, Compass, Zap, Landmark, Award, ShieldCheck, 
   ArrowLeft, Edit, FileText, CheckCircle, Clock, AlertTriangle, 
-  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2
+  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2, Mail
 } from 'lucide-react';
 
 export default function CustomerDetails() {
@@ -25,6 +25,7 @@ export default function CustomerDetails() {
 
   // Receipt printable view state
   const [activeReceipt, setActiveReceipt] = useState(null);
+  const [emailSending, setEmailSending] = useState(false);
 
   const fetchCustomerDetails = async () => {
     try {
@@ -105,6 +106,27 @@ export default function CustomerDetails() {
       _id: emi.paidDate || 'LOCAL'
     };
     setActiveReceipt(receipt);
+  };
+
+  const handleSendEmailReceipt = async (emiNumber) => {
+    const defaultEmail = customer?.email || '';
+    const targetEmail = prompt(`Send Receipt for EMI #${emiNumber} to email:`, defaultEmail);
+    if (!targetEmail) return;
+
+    setEmailSending(true);
+    try {
+      const response = await api.post('/admin/payments/send-receipt-email', {
+        customerId: customer.customerId,
+        emiNumber: emiNumber,
+        email: targetEmail
+      });
+      alert(response.data.message || `Receipt email successfully sent to ${targetEmail}!`);
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to send receipt email.');
+    } finally {
+      setEmailSending(false);
+    }
   };
 
   const handlePrint = () => {
@@ -373,6 +395,13 @@ export default function CustomerDetails() {
                             <span>Receipt</span>
                           </button>
                           <button
+                            onClick={() => handleSendEmailReceipt(emi.emiNumber)}
+                            title="Send Receipt to Customer Gmail"
+                            className="inline-flex items-center space-x-1 text-[10px] font-bold text-teal-600 hover:text-teal-800 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/30 border border-teal-200/40 px-2 py-1.5 rounded-xl transition-all"
+                          >
+                            <Mail className="w-3 h-3" />
+                          </button>
+                          <button
                             onClick={() => handleDeletePayment(emi)}
                             title="Delete this payment (reset to Pending)"
                             className="inline-flex items-center text-[10px] font-bold text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-950/30 border border-red-200/40 p-1.5 rounded-xl transition-all"
@@ -477,7 +506,16 @@ export default function CustomerDetails() {
           <div className="w-full max-w-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-2xl relative space-y-6 receipt-modal-container">
             
             {/* Modal Actions */}
-            <div className="absolute top-4 right-4 flex space-x-2 no-print">
+            <div className="absolute top-4 right-4 flex items-center space-x-2 no-print">
+              <button 
+                onClick={() => handleSendEmailReceipt(activeReceipt.emiNumber)}
+                disabled={emailSending}
+                className="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl transition-colors flex items-center space-x-1.5 text-xs font-bold shadow shadow-teal-500/10"
+                title="Email Receipt to Customer"
+              >
+                <Mail className="w-4 h-4" />
+                <span>{emailSending ? 'Sending...' : 'Email Receipt'}</span>
+              </button>
               <button 
                 onClick={handlePrint}
                 className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition-colors"
