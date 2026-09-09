@@ -370,7 +370,7 @@ export default function CustomerDetails() {
                     </td>
                     <td className="px-6 py-4 text-right text-slate-500">{formatCurrency(emi.remainingBalance)}</td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase border ${statusColor}`}>
+                      <span className={`inline-flex items-center justify-center whitespace-nowrap px-3 py-1 rounded-full font-bold text-[10px] tracking-wide uppercase border ${statusColor}`}>
                         {isRequesting ? 'Requesting' : emi.status}
                       </span>
                     </td>

@@ -136,7 +136,12 @@ export async function sendReceiptEmail(payment, customer, recipientEmail = null)
     console.log(`[Email] Receipt sent to ${targetEmail}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (err) {
-    console.error(`[Email] Failed to send receipt to ${targetEmail}:`, err.message);
-    return { success: false, error: err.message };
+    let friendlyError = err.message;
+    if (err.message.includes('534-5.7.9') || err.message.includes('Application-specific password') || err.message.includes('Invalid login')) {
+      friendlyError = 'Google blocked login: An App Password is required for mrsassociates19@gmail.com. Please generate a 16-character App Password at myaccount.google.com/apppasswords and set EMAIL_PASS in Render Environment Variables.';
+    }
+    console.error(`[Email] Failed to send receipt to ${targetEmail}:`, friendlyError);
+    return { success: false, error: friendlyError };
   }
 }
+
