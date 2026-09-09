@@ -145,14 +145,14 @@ async function startServer() {
       console.error('Failed to create uploads directory:', err);
     }
 
-    // Self-Ping Keep-Alive to prevent Render free instance sleeping
+    // Self-Ping Keep-Alive to prevent Render free instance sleeping (ping every 4 minutes)
     setInterval(() => {
       try {
         import('http').then(({ default: http }) => {
           http.get(`http://127.0.0.1:${PORT}/api/health`, () => {}).on('error', () => {});
         });
       } catch (e) {}
-    }, 10 * 60 * 1000); // every 10 minutes
+    }, 4 * 60 * 1000); // every 4 minutes (Render sleeps after ~15 min)
   });
 }
 
