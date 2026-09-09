@@ -2,6 +2,8 @@
   "name": "mrs-solar",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
+  "main": "server.js",
   "scripts": {
     "build": "npm install --prefix frontend --include=dev && npm run build --prefix frontend && npm install --prefix backend",
     "start": "node backend/server.js"
