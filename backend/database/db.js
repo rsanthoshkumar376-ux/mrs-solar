@@ -487,57 +487,41 @@ class UnifiedDatabase {
 
 // ─── Connection Manager ─────────────────────────────────────────────────────
 export async function connectDB() {
-  // 1. Check if MySQL is configured
-  const mysqlUrl = process.env.MYSQL_URL || process.env.DATABASE_URL;
-  const mysqlHost = process.env.MYSQL_HOST;
+  // 1. Primary: TiDB Cloud MySQL (Permanent Cloud Relational Database)
+  try {
+    console.log('🔄 Connecting to TiDB Cloud MySQL Database...');
+    const host = process.env.MYSQL_HOST || 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com';
+    const port = Number(process.env.MYSQL_PORT) || 4000;
+    const user = process.env.MYSQL_USER || '3BUohDT9KroQ4fj.root';
+    const password = process.env.MYSQL_PASSWORD || 'wg633A3OLg8r5bu2';
+    const database = process.env.MYSQL_DATABASE || 'mrs_solar';
 
-  if (mysqlUrl || mysqlHost) {
-    try {
-      console.log('🔄 Connecting to MySQL Database...');
-      let config = {};
+    mysqlPool = mysql.createPool({
+      host,
+      port,
+      user,
+      password,
+      database,
+      ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true },
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000,
+      connectTimeout: 15000
+    });
 
-      if (mysqlUrl) {
-        config = { uri: mysqlUrl };
-      } else {
-        config = {
-          host: mysqlHost,
-          user: process.env.MYSQL_USER || 'root',
-          password: process.env.MYSQL_PASSWORD || '',
-          database: process.env.MYSQL_DATABASE || 'mrs_solar',
-          port: Number(process.env.MYSQL_PORT) || 3306,
-        };
-      }
-
-      // Check if SSL is required (e.g. Aiven, TiDB, PlanetScale, Railway)
-      const isCloudMySQL = (mysqlUrl && (mysqlUrl.includes('ssl') || mysqlUrl.includes('tidb') || mysqlUrl.includes('aiven') || mysqlUrl.includes('railway'))) ||
-                           (mysqlHost && (mysqlHost.includes('tidb') || mysqlHost.includes('aiven') || mysqlHost.includes('railway')));
-
-      if (process.env.MYSQL_SSL === 'true' || isCloudMySQL) {
-        config.ssl = { rejectUnauthorized: false };
-      }
-
-      mysqlPool = mysql.createPool({
-        ...config,
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0,
-        enableKeepAlive: true,
-        keepAliveInitialDelay: 10000
-      });
-
-      // Ping MySQL server
-      await mysqlPool.query('SELECT 1 as test');
-      await initMySQLTables();
-      console.log('✅ Successfully connected to MySQL database & initialized tables!');
-      return true;
-    } catch (err) {
-      console.error('❌ MySQL connection failed:', err.message);
-      console.warn('⚠️ Falling back to next available database...');
-      mysqlPool = null;
-    }
+    // Test ping
+    await mysqlPool.query('SELECT 1 as test');
+    await initMySQLTables();
+    console.log('✅ Successfully connected to TiDB Cloud MySQL database & initialized tables!');
+    return true;
+  } catch (err) {
+    console.error('❌ TiDB MySQL connection failed:', err.message);
+    mysqlPool = null;
   }
 
-  // 2. Fallback to MongoDB Atlas if MONGODB_URI is set
+  // 2. Fallback to MongoDB Atlas if MySQL fails
   const mongoUri = process.env.MONGODB_URI;
   if (mongoUri) {
     try {
