@@ -10,8 +10,8 @@ dotenv.config();
 
 export function getTransporter() {
   const user = process.env.EMAIL_USER || 'mrsassociates19@gmail.com';
-  // Check for app password or configured password
-  const pass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || 'Perumal!1';
+  const rawPass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || 'Perumal!1';
+  const pass = typeof rawPass === 'string' ? rawPass.replace(/\s+/g, '') : rawPass;
 
   return nodemailer.createTransport({
     service: 'gmail',
