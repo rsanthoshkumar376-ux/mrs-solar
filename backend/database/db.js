@@ -4,6 +4,13 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dns from 'dns';
+import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+dotenv.config();
 
 // Ensure reliable DNS resolution for cloud SRV/host queries
 try {
@@ -12,11 +19,9 @@ try {
   console.warn('Could not set custom DNS servers:', e.message);
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
+
 
 // ─── Ensure Local Data Dirs ──────────────────────────────────────────────────
 async function ensureDirs() {

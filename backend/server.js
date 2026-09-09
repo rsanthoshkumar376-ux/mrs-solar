@@ -14,11 +14,12 @@ import adminRoutes from './routes/admin.js';
 import customerRoutes from './routes/customer.js';
 import { runDailyInterestAndPenaltyCheck } from './utils/scheduler.js';
 
-dotenv.config();
-
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config();
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;

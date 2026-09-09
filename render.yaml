@@ -9,3 +9,6 @@ services:
         value: 10000
       - key: MONGODB_URI
         sync: false   # Set this manually in Render dashboard — never hardcode secrets
+      - key: MYSQL_URL
+        sync: false   # Set this manually in Render dashboard — never hardcode secrets
+
