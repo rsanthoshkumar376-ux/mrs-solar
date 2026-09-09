@@ -108,14 +108,24 @@ async function seedAdmin() {
   }
 }
 
-// Scheduler Setup
-// Run every midnight (00:00:00) to update loan statuses & penalties
-cron.schedule('0 0 * * *', async () => {
+// Scheduler — Runs at 9:00 AM IST (03:30 UTC) every day
+// Sends due-date emails and updates loan statuses/penalties
+cron.schedule('30 3 * * *', async () => {
   try {
-    console.log('[Cron] Running daily midnight audit and late penalty checker...');
+    console.log('[Cron] Running morning 9 AM IST daily check — sending due-date emails...');
     await runDailyInterestAndPenaltyCheck(new Date());
   } catch (err) {
-    console.error('[Cron] Error running daily audit:', err);
+    console.error('[Cron] Error running morning daily audit:', err);
+  }
+});
+
+// Also run at midnight UTC (5:30 AM IST) for penalty updates
+cron.schedule('0 0 * * *', async () => {
+  try {
+    console.log('[Cron] Running midnight UTC penalty and status update...');
+    await runDailyInterestAndPenaltyCheck(new Date());
+  } catch (err) {
+    console.error('[Cron] Error running midnight audit:', err);
   }
 });
 

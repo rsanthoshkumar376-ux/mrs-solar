@@ -2,7 +2,7 @@
   {
     "_id": "CUS-809001-145",
     "createdAt": "2026-08-10T02:43:29.001Z",
-    "updatedAt": "2026-08-10T02:43:29.001Z",
+    "updatedAt": "2026-09-09T18:30:01.310Z",
     "customerId": "SOL-1001",
     "fullName": "deepi",
     "fatherName": "ganesh",
@@ -39,7 +39,7 @@
     "loanStartDate": "2026-08-09",
     "loanEndDate": "2027-08-09",
     "loanStatus": "Active",
-    "paymentStatus": "Pending",
+    "paymentStatus": "Paid",
     "remarks": "pay",
     "documents": {
       "aadhaarFile": null,
@@ -57,12 +57,12 @@
         "interestPaid": 10,
         "principalPaid": 37.28,
         "remainingBalance": 462.72,
-        "status": "Pending",
-        "paidAmount": 0,
-        "paidDate": null,
-        "lateFee": 0,
-        "totalOutstanding": 47.28,
-        "remarks": ""
+        "status": "Paid",
+        "paidAmount": null,
+        "paidDate": "2026-09-09",
+        "lateFee": null,
+        "totalOutstanding": 0,
+        "remarks": "Marked paid by admin"
       },
       {
         "emiNumber": 2,
@@ -71,12 +71,12 @@
         "interestPaid": 9.25,
         "principalPaid": 38.03,
         "remainingBalance": 424.69,
-        "status": "Pending",
-        "paidAmount": 0,
-        "paidDate": null,
-        "lateFee": 0,
-        "totalOutstanding": 47.28,
-        "remarks": ""
+        "status": "Paid",
+        "paidAmount": null,
+        "paidDate": "2026-09-09",
+        "lateFee": null,
+        "totalOutstanding": 0,
+        "remarks": "Marked paid by admin"
       },
       {
         "emiNumber": 3,
@@ -220,6 +220,9 @@
       }
     ],
     "latePaymentCharges": 0,
-    "totalOutstandingAmount": 567.3599999999999
+    "totalOutstandingAmount": 472.8,
+    "__v": 0,
+    "emiDueDate": "2026-11-09",
+    "remainingBalance": 424.69
   }
 ]

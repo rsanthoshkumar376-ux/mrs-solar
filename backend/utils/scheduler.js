@@ -1,5 +1,6 @@
 import { db } from '../database/db.js';
 import { recalculateCustomerEmiStatus } from './calculations.js';
+import { sendDueReminderEmail } from './email.js';
 
 /**
  * Checks all customers, updates overdue penalties, and triggers alerts.
@@ -33,9 +34,11 @@ export async function runDailyInterestAndPenaltyCheck(checkDate = new Date()) {
 }
 
 /**
- * Generates notification logs for customers and owner/admin.
+ * Generates notification logs and sends email alerts for customers.
  */
 async function processCustomerNotifications(customerId, oldCustomer, newCustomer, checkDate) {
+  const todayStr = checkDate.toISOString().split('T')[0];
+
   const tomorrow = new Date(checkDate);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split('T')[0];
@@ -48,7 +51,7 @@ async function processCustomerNotifications(customerId, oldCustomer, newCustomer
   for (const emi of newCustomer.emiSchedule) {
     if (emi.status === 'Paid') continue;
 
-    // 1. EMI due in 3 days -> Customer Reminder
+    // 1. EMI due in 3 days → Customer Reminder (notification + email)
     if (emi.dueDate === threeDaysLaterStr) {
       const exists = await db.findOne('notifications', {
         customerId,
@@ -60,15 +63,49 @@ async function processCustomerNotifications(customerId, oldCustomer, newCustomer
           customerId,
           role: 'customer',
           title: 'Upcoming EMI Reminder',
-          message: `Your EMI #${emi.emiNumber} of ₹${emi.emiAmount.toLocaleString('en-IN')} is due on ${emi.dueDate}.`,
+          message: `Your EMI #${emi.emiNumber} of ₹${emi.emiAmount.toLocaleString('en-IN')} is due in 3 days on ${emi.dueDate}. Please arrange payment in advance.`,
           type: 'EMI_Reminder_3d',
           emiNumber: emi.emiNumber,
           read: false
         });
+
+        // Send 3-day advance email reminder
+        if (newCustomer.email) {
+          sendDueReminderEmail(newCustomer, emi).catch(err =>
+            console.warn(`[Email] 3-day reminder failed for ${newCustomer.customerId}:`, err.message)
+          );
+        }
       }
     }
 
-    // 2. EMI due tomorrow -> Owner notification
+    // 2. EMI due today → Send "Due Today" email to customer + notify admin
+    if (emi.dueDate === todayStr) {
+      const existsToday = await db.findOne('notifications', {
+        customerId,
+        type: 'EMI_Due_Today',
+        emiNumber: emi.emiNumber
+      });
+      if (!existsToday) {
+        await db.create('notifications', {
+          customerId,
+          role: 'customer',
+          title: '⚠️ EMI Due Today',
+          message: `Your EMI #${emi.emiNumber} of ₹${emi.emiAmount.toLocaleString('en-IN')} is due TODAY (${emi.dueDate}). Please pay immediately to avoid late penalty.`,
+          type: 'EMI_Due_Today',
+          emiNumber: emi.emiNumber,
+          read: false
+        });
+
+        // Send "Due Today" email directly to customer's Gmail
+        if (newCustomer.email) {
+          sendDueReminderEmail(newCustomer, emi).catch(err =>
+            console.warn(`[Email] Due-today email failed for ${newCustomer.customerId}:`, err.message)
+          );
+        }
+      }
+    }
+
+    // 3. EMI due tomorrow → Owner/admin notification
     if (emi.dueDate === tomorrowStr) {
       const exists = await db.findOne('notifications', {
         customerId,
@@ -88,29 +125,27 @@ async function processCustomerNotifications(customerId, oldCustomer, newCustomer
       }
     }
 
-    // 3. Overdue -> Customer & Admin notifications
+    // 4. Overdue → Customer & Admin notifications (once per day)
     if (emi.status === 'Overdue') {
       const diffTime = checkDate.getTime() - new Date(emi.dueDate).getTime();
       const daysOverdue = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
 
       if (daysOverdue > 0) {
-        // Send notification to customer about late fee accumulation
         await db.create('notifications', {
           customerId,
           role: 'customer',
           title: 'Overdue EMI Alert',
-          message: `Your EMI #${emi.emiNumber} of ₹${emi.emiAmount.toLocaleString('en-IN')} is late by ${daysOverdue} days. Accumulating late penalty: ₹${emi.lateFee.toLocaleString('en-IN')}.`,
+          message: `Your EMI #${emi.emiNumber} of ₹${emi.emiAmount.toLocaleString('en-IN')} is late by ${daysOverdue} days. Late penalty: ₹${emi.lateFee.toLocaleString('en-IN')}.`,
           type: `Customer_Overdue_${daysOverdue}d`,
           emiNumber: emi.emiNumber,
           read: false
         });
 
-        // Send alert to admin
         await db.create('notifications', {
           role: 'admin',
           customerId,
           title: 'Customer Overdue Alert',
-          message: `Customer ${newCustomer.fullName} (ID: ${newCustomer.customerId}) is overdue on EMI #${emi.emiNumber} by ${daysOverdue} days. Current late fee: ₹${emi.lateFee.toLocaleString('en-IN')}.`,
+          message: `Customer ${newCustomer.fullName} (ID: ${newCustomer.customerId}) is overdue on EMI #${emi.emiNumber} by ${daysOverdue} days. Late fee: ₹${emi.lateFee.toLocaleString('en-IN')}.`,
           type: `Owner_Overdue_${daysOverdue}d`,
           emiNumber: emi.emiNumber,
           read: false
@@ -119,13 +154,13 @@ async function processCustomerNotifications(customerId, oldCustomer, newCustomer
     }
   }
 
-  // 4. Loan completion notification
+  // 5. Loan completion notification
   if (oldCustomer.loanStatus !== 'Completed' && newCustomer.loanStatus === 'Completed') {
     await db.create('notifications', {
       customerId,
       role: 'customer',
       title: 'Congratulations! Loan Completed',
-      message: `Your Solar Panel installation loan has been fully settled. Thank you for choosing MRS SOLARI!`,
+      message: `Your Solar Panel installation loan has been fully settled. Thank you for choosing MRS ASSOCIATES!`,
       type: 'Loan_Completed_Cust',
       read: false
     });
