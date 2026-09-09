@@ -394,6 +394,14 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       return res.status(400).json({ message: `EMI #${emiNumber} has already been marked as Paid` });
     }
 
+    // Enforce sequential payment order (EMI #1 must be paid before EMI #2, etc.)
+    const priorPending = customer.emiSchedule.find(e => e.emiNumber < Number(emiNumber) && e.status !== 'Paid');
+    if (priorPending) {
+      return res.status(400).json({ 
+        message: `Payments must be verified in order! Please verify EMI #${priorPending.emiNumber} before paying EMI #${emiNumber}.` 
+      });
+    }
+
     // Perform real-time late penalty checks relative to the marking date
     const paidDate = paymentDate ? new Date(paymentDate) : new Date();
     const { penalty, daysLate } = recalculateCustomerEmiStatus(customer, paidDate)
@@ -455,26 +463,19 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       read: false
     });
 
-    // Automatically send receipt directly to customer's email
-    let emailStatus = '';
+    // Send receipt email in background with safety timeout so response never hangs
     if (customer.email) {
-      try {
-        const emailRes = await sendReceiptEmail(paymentRecord, customer);
-        if (emailRes.success) {
-          emailStatus = ` Receipt sent directly to ${customer.email}.`;
-        } else {
-          emailStatus = ` (Email notice: ${emailRes.error || emailRes.reason})`;
-        }
-      } catch (err) {
-        console.error('[Email] Direct delivery error:', err.message);
-        emailStatus = ` (Email error: ${err.message})`;
-      }
+      Promise.race([
+        sendReceiptEmail(paymentRecord, customer),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000))
+      ]).catch(err => {
+        console.warn('[Email] Background delivery notice:', err.message);
+      });
     }
 
     res.json({ 
-      message: `EMI #${emiNumber} marked as Paid successfully!${emailStatus}`, 
-      payment: paymentRecord,
-      emailSent: Boolean(emailStatus && !emailStatus.includes('error') && !emailStatus.includes('notice'))
+      message: `EMI #${emiNumber} marked as Paid successfully! Receipt generated.`, 
+      payment: paymentRecord 
     });
   } catch (error) {
     console.error('Mark payment paid error:', error);

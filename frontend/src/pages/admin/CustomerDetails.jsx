@@ -5,7 +5,7 @@ import { formatCurrency, formatDate } from '../../utils/format.js';
 import { 
   User, Compass, Zap, Landmark, Award, ShieldCheck, 
   ArrowLeft, Edit, FileText, CheckCircle, Clock, AlertTriangle, 
-  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2, Mail
+  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2, Mail, Lock
 } from 'lucide-react';
 
 export default function CustomerDetails() {
@@ -351,43 +351,58 @@ export default function CustomerDetails() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 text-slate-700 dark:text-slate-300">
-              {customer.emiSchedule.map((emi) => {
-                const isRequesting = emi.status !== 'Paid' && customer.requestingEmi === emi.emiNumber;
+              {(() => {
+                const nextUnpaidEmi = customer.emiSchedule.find(e => e.status !== 'Paid');
+                return customer.emiSchedule.map((emi) => {
+                  const isRequesting = emi.status !== 'Paid' && customer.requestingEmi === emi.emiNumber;
+                  const isNextInOrder = nextUnpaidEmi && nextUnpaidEmi.emiNumber === emi.emiNumber;
 
-                let statusColor = 'bg-slate-50 text-slate-500 border-slate-200';
-                if (emi.status === 'Paid') statusColor = 'bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/20';
-                else if (isRequesting) statusColor = 'bg-amber-50 text-amber-600 border-amber-300/50 dark:bg-amber-950/20 animate-pulse';
-                else if (emi.status === 'Overdue') statusColor = 'bg-red-50 text-red-600 border-red-200/50 dark:bg-red-950/20 animate-pulse';
-                else if (emi.status === 'Due Soon') statusColor = 'bg-orange-50 text-orange-600 border-orange-200/50 dark:bg-orange-950/20';
+                  let statusColor = 'bg-slate-50 text-slate-500 border-slate-200';
+                  if (emi.status === 'Paid') statusColor = 'bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/20';
+                  else if (isRequesting) statusColor = 'bg-amber-50 text-amber-600 border-amber-300/50 dark:bg-amber-950/20 animate-pulse';
+                  else if (emi.status === 'Overdue') statusColor = 'bg-red-50 text-red-600 border-red-200/50 dark:bg-red-950/20 animate-pulse';
+                  else if (emi.status === 'Due Soon') statusColor = 'bg-orange-50 text-orange-600 border-orange-200/50 dark:bg-orange-950/20';
 
-                return (
-                  <tr key={emi.emiNumber} className={`hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors ${isRequesting ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''}`}>
-                    <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">#{emi.emiNumber}</td>
-                    <td className="px-6 py-4">{formatDate(emi.dueDate)}</td>
-                    <td className="px-6 py-4 text-right font-semibold">{formatCurrency(emi.emiAmount)}</td>
-                    <td className="px-6 py-4 text-right text-slate-500">{formatCurrency(emi.interestPaid)}</td>
-                    <td className="px-6 py-4 text-right text-slate-500">{formatCurrency(emi.principalPaid)}</td>
-                    <td className={`px-6 py-4 text-right font-medium ${emi.lateFee > 0 ? 'text-red-500' : 'text-slate-400'}`}>
-                      {emi.lateFee > 0 ? formatCurrency(emi.lateFee) : '—'}
-                    </td>
-                    <td className="px-6 py-4 text-right text-slate-500">{formatCurrency(emi.remainingBalance)}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center justify-center whitespace-nowrap px-3 py-1 rounded-full font-bold text-[10px] tracking-wide uppercase border ${statusColor}`}>
-                        {isRequesting ? 'Requesting' : emi.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {emi.status !== 'Paid' ? (
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => openMarkModal(emi)}
-                            className="inline-flex items-center space-x-1 text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 bg-teal-50 dark:bg-teal-950/40 border border-teal-200/30 px-2.5 py-1.5 rounded-xl transition-all"
-                          >
-                            <CreditCard className="w-3 h-3" />
-                            <span>{isRequesting ? 'Verify & Pay' : 'Mark Paid'}</span>
-                          </button>
-                        </div>
-                      ) : (
+                  return (
+                    <tr key={emi.emiNumber} className={`hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors ${isRequesting ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''}`}>
+                      <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">#{emi.emiNumber}</td>
+                      <td className="px-6 py-4">{formatDate(emi.dueDate)}</td>
+                      <td className="px-6 py-4 text-right font-semibold">{formatCurrency(emi.emiAmount)}</td>
+                      <td className="px-6 py-4 text-right text-slate-500">{formatCurrency(emi.interestPaid)}</td>
+                      <td className="px-6 py-4 text-right text-slate-500">{formatCurrency(emi.principalPaid)}</td>
+                      <td className={`px-6 py-4 text-right font-medium ${emi.lateFee > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                        {emi.lateFee > 0 ? formatCurrency(emi.lateFee) : '—'}
+                      </td>
+                      <td className="px-6 py-4 text-right text-slate-500">{formatCurrency(emi.remainingBalance)}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center justify-center whitespace-nowrap px-3 py-1 rounded-full font-bold text-[10px] tracking-wide uppercase border ${statusColor}`}>
+                          {isRequesting ? 'Requesting' : emi.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {emi.status !== 'Paid' ? (
+                          isNextInOrder ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => openMarkModal(emi)}
+                                className="inline-flex items-center space-x-1 text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 bg-teal-50 dark:bg-teal-950/40 border border-teal-200/30 px-2.5 py-1.5 rounded-xl transition-all shadow-sm shadow-teal-500/10"
+                              >
+                                <CreditCard className="w-3 h-3" />
+                                <span>{isRequesting ? 'Verify & Pay' : 'Mark Paid'}</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center">
+                              <span 
+                                className="inline-flex items-center space-x-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 bg-slate-100/70 dark:bg-slate-850/50 border border-slate-200/40 dark:border-slate-800 px-2.5 py-1.5 rounded-xl cursor-not-allowed select-none"
+                                title={`Sequential order: Please verify EMI #${nextUnpaidEmi?.emiNumber} first`}
+                              >
+                                <Lock className="w-3 h-3 text-slate-400" />
+                                <span>Pay #{nextUnpaidEmi?.emiNumber} First</span>
+                              </span>
+                            </div>
+                          )
+                        ) : (
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => openReceipt(emi)}
@@ -414,8 +429,9 @@ export default function CustomerDetails() {
                       )}
                     </td>
                   </tr>
-                );
-              })}
+                  );
+                });
+              })()}
             </tbody>
           </table>
         </div>
