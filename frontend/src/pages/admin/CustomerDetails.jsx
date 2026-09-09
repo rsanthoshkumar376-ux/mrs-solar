@@ -57,7 +57,7 @@ export default function CustomerDetails() {
         remarks: remarks
       });
       
-      alert(`EMI #${selectedEmi.emiNumber} marked as Paid!`);
+      alert(response.data?.message || `EMI #${selectedEmi.emiNumber} marked as Paid!`);
       setShowMarkModal(false);
       setRemarks('');
       fetchCustomerDetails();
@@ -109,9 +109,11 @@ export default function CustomerDetails() {
   };
 
   const handleSendEmailReceipt = async (emiNumber) => {
-    const defaultEmail = customer?.email || '';
-    const targetEmail = prompt(`Send Receipt for EMI #${emiNumber} to email:`, defaultEmail);
-    if (!targetEmail) return;
+    let targetEmail = customer?.email;
+    if (!targetEmail) {
+      targetEmail = prompt(`No email found for ${customer?.fullName}. Enter email to send receipt:`);
+      if (!targetEmail) return;
+    }
 
     setEmailSending(true);
     try {
@@ -120,7 +122,7 @@ export default function CustomerDetails() {
         emiNumber: emiNumber,
         email: targetEmail
       });
-      alert(response.data.message || `Receipt email successfully sent to ${targetEmail}!`);
+      alert(response.data.message || `Receipt email successfully sent directly to ${targetEmail}!`);
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || 'Failed to send receipt email.');

@@ -455,14 +455,27 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       read: false
     });
 
-    // Automatically send receipt to customer's email if provided
+    // Automatically send receipt directly to customer's email
+    let emailStatus = '';
     if (customer.email) {
-      sendReceiptEmail(paymentRecord, customer).catch(err => {
-        console.error('[Email] Background receipt delivery failed:', err.message);
-      });
+      try {
+        const emailRes = await sendReceiptEmail(paymentRecord, customer);
+        if (emailRes.success) {
+          emailStatus = ` Receipt sent directly to ${customer.email}.`;
+        } else {
+          emailStatus = ` (Email notice: ${emailRes.error || emailRes.reason})`;
+        }
+      } catch (err) {
+        console.error('[Email] Direct delivery error:', err.message);
+        emailStatus = ` (Email error: ${err.message})`;
+      }
     }
 
-    res.json({ message: `EMI #${emiNumber} marked as Paid successfully`, payment: paymentRecord });
+    res.json({ 
+      message: `EMI #${emiNumber} marked as Paid successfully!${emailStatus}`, 
+      payment: paymentRecord,
+      emailSent: Boolean(emailStatus && !emailStatus.includes('error') && !emailStatus.includes('notice'))
+    });
   } catch (error) {
     console.error('Mark payment paid error:', error);
     res.status(500).json({ message: 'Error marking payment as paid' });
