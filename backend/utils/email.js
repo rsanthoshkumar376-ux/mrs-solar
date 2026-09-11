@@ -10,8 +10,8 @@ dotenv.config();
 
 export function getTransporter() {
   const user = process.env.EMAIL_USER || 'mrsassociates19@gmail.com';
-  const rawPass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || 'Perumal!1';
-  const pass = typeof rawPass === 'string' ? rawPass.replace(/\s+/g, '') : rawPass;
+  const rawPass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || 'vapjyjdezglprkbp';
+  const pass = typeof rawPass === 'string' ? rawPass.replace(/\s+/g, '') : 'vapjyjdezglprkbp';
 
   return nodemailer.createTransport({
     service: 'gmail',

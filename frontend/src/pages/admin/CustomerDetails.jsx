@@ -26,6 +26,7 @@ export default function CustomerDetails() {
   // Receipt printable view state
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [emailSending, setEmailSending] = useState(false);
+  const [payEmail, setPayEmail] = useState('');
 
   const fetchCustomerDetails = async () => {
     try {
@@ -44,9 +45,33 @@ export default function CustomerDetails() {
     fetchCustomerDetails();
   }, [id]);
 
+  const handleUpdateCustomerEmail = async () => {
+    const currentEmail = customer?.email || '';
+    const newEmail = prompt(`Enter Email Address for ${customer?.fullName} (compulsory for bills and due-date alerts):`, currentEmail);
+    if (!newEmail || newEmail.trim() === currentEmail) return;
+
+    if (!newEmail.includes('@') || !newEmail.includes('.')) {
+      alert('Please enter a valid email address.');
+      return;
+    }
+
+    try {
+      const res = await api.put(`/admin/customers/${customer._id}/email`, { email: newEmail.trim().toLowerCase() });
+      alert(res.data?.message || 'Email updated successfully!');
+      fetchCustomerDetails();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update email.');
+    }
+  };
+
   const handleMarkPaidSubmit = async (e) => {
     e.preventDefault();
     if (!selectedEmi) return;
+
+    if (!payEmail || !payEmail.includes('@') || !payEmail.includes('.')) {
+      alert('A valid customer Email Address is compulsory so the receipt bill can be sent directly.');
+      return;
+    }
 
     setSubmitLoading(true);
     try {
@@ -54,7 +79,8 @@ export default function CustomerDetails() {
         customerId: customer.customerId,
         emiNumber: selectedEmi.emiNumber,
         paymentDate: payDate,
-        remarks: remarks
+        remarks: remarks,
+        email: payEmail.trim().toLowerCase()
       });
       
       alert(response.data?.message || `EMI #${selectedEmi.emiNumber} marked as Paid!`);
@@ -71,6 +97,7 @@ export default function CustomerDetails() {
 
   const openMarkModal = (emi) => {
     setSelectedEmi(emi);
+    setPayEmail(customer?.email || '');
     setShowMarkModal(true);
   };
 
@@ -206,6 +233,20 @@ export default function CustomerDetails() {
             <div className="flex justify-between">
               <span className="text-slate-500">Mobile</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.mobileNumber}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-500">Email Address</span>
+              <div className="flex items-center space-x-2">
+                <span className={`font-semibold ${customer.email ? 'text-slate-800 dark:text-slate-200' : 'text-amber-500 italic'}`}>
+                  {customer.email || 'Not Set (No Bill Sent)'}
+                </span>
+                <button
+                  onClick={handleUpdateCustomerEmail}
+                  className="text-[10px] text-teal-600 dark:text-teal-400 underline font-semibold hover:text-teal-800 dark:hover:text-teal-300"
+                >
+                  {customer.email ? 'Change' : '+ Add Email'}
+                </button>
+              </div>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Aadhaar Number</span>
@@ -483,6 +524,20 @@ export default function CustomerDetails() {
                   value={payDate}
                   onChange={(e) => setPayDate(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-500 mb-1">
+                  Customer Email Address <span className="text-red-500">*</span> <span className="text-teal-600 dark:text-teal-400 font-normal">(Receipt will be sent directly here)</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={payEmail}
+                  onChange={(e) => setPayEmail(e.target.value)}
+                  placeholder="e.g. customer@gmail.com"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white font-medium"
                 />
               </div>
 

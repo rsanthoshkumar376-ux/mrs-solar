@@ -178,8 +178,13 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
     const rawData = req.body;
 
     // Validate essential inputs
-    if (!rawData.fullName || !rawData.mobileNumber || !rawData.loanAmount || !rawData.interestRate || !rawData.emiDuration) {
-      return res.status(400).json({ message: 'Missing mandatory fields' });
+    if (!rawData.fullName || !rawData.mobileNumber || !rawData.email || !rawData.loanAmount || !rawData.interestRate || !rawData.emiDuration) {
+      return res.status(400).json({ message: 'Missing mandatory fields: Name, Mobile, Email Address, and Loan Details are required' });
+    }
+
+    const cleanEmail = String(rawData.email || '').trim().toLowerCase();
+    if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      return res.status(400).json({ message: 'A valid Email Address is compulsory for sending payment receipts and due-date alerts' });
     }
 
     // Auto-generate customer id
@@ -283,6 +288,27 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
   }
 });
 
+// 4b. Update Customer Email
+router.put('/customers/:id/email', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.includes('@') || !email.includes('.')) {
+      return res.status(400).json({ message: 'Valid email address is compulsory' });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const customer = (await db.findOne('customers', { _id: req.params.id })) || (await db.findOne('customers', { customerId: req.params.id }));
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    await db.updateOne('customers', { _id: customer._id }, { email: cleanEmail });
+    res.json({ message: `Customer email successfully updated to ${cleanEmail}`, email: cleanEmail });
+  } catch (error) {
+    console.error('Update email error:', error);
+    res.status(500).json({ message: 'Error updating customer email' });
+  }
+});
+
 // 5. Edit Customer Details
 router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload.fields(documentFields), async (req, res) => {
   try {
@@ -372,7 +398,7 @@ router.delete('/customers/:id', authenticateToken, authorizeRole(['admin']), asy
 
 // 7. Update Payment (Mark EMI as Paid)
 router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), async (req, res) => {
-  const { customerId, emiNumber, paymentDate, remarks } = req.body;
+  const { customerId, emiNumber, paymentDate, remarks, email } = req.body;
 
   if (!customerId || !emiNumber) {
     return res.status(400).json({ message: 'Customer ID and EMI Number are required' });
@@ -382,6 +408,17 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
     const customer = await db.findOne('customers', { customerId });
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    // If admin provided or updated customer email, update customer record immediately
+    let targetEmail = (customer.email || '').trim().toLowerCase();
+    if (email && email.trim() && email.includes('@')) {
+      const cleanEmail = email.trim().toLowerCase();
+      if (cleanEmail !== targetEmail) {
+        targetEmail = cleanEmail;
+        customer.email = targetEmail;
+        await db.updateOne('customers', { _id: customer._id }, { email: targetEmail });
+      }
     }
 
     const scheduleIndex = customer.emiSchedule.findIndex(e => e.emiNumber === Number(emiNumber));
@@ -463,19 +500,25 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       read: false
     });
 
-    // Send receipt email in background with safety timeout so response never hangs
-    if (customer.email) {
-      Promise.race([
-        sendReceiptEmail(paymentRecord, customer),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000))
-      ]).catch(err => {
-        console.warn('[Email] Background delivery notice:', err.message);
-      });
+    // Send receipt email reliably in background to customer's Gmail
+    if (targetEmail && targetEmail.includes('@')) {
+      sendReceiptEmail(paymentRecord, { ...customer, email: targetEmail }, targetEmail)
+        .then(result => {
+          if (result && result.success) {
+            console.log(`[Email] Receipt sent to ${targetEmail} for EMI #${emiNumber}: ${result.messageId}`);
+          } else {
+            console.warn(`[Email] Receipt delivery issue for ${targetEmail}:`, result?.error || result?.reason);
+          }
+        })
+        .catch(err => {
+          console.warn('[Email] Background delivery error:', err.message);
+        });
     }
 
     res.json({ 
-      message: `EMI #${emiNumber} marked as Paid successfully! Receipt generated.`, 
-      payment: paymentRecord 
+      message: `EMI #${emiNumber} marked as Paid successfully!${targetEmail ? ` Receipt sent to ${targetEmail}.` : ' (No customer email found)'}`, 
+      payment: paymentRecord,
+      recipientEmail: targetEmail
     });
   } catch (error) {
     console.error('Mark payment paid error:', error);

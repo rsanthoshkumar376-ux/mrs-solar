@@ -74,8 +74,14 @@ export default function CustomerManager() {
 
   const handleAddCustomerSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.mobileNumber || !formData.solarCost) {
-      alert('Please fill in all mandatory fields.');
+    if (!formData.fullName || !formData.mobileNumber || !formData.email || !formData.solarCost) {
+      alert('Please fill in all mandatory fields: Full Name, Mobile Number, Email Address, and Solar Cost are compulsory.');
+      return;
+    }
+
+    const cleanEmail = (formData.email || '').trim();
+    if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      alert('Please enter a valid Email Address (e.g. customer@gmail.com). Email is compulsory for sending payment receipts and due-date alerts.');
       return;
     }
 
@@ -387,8 +393,18 @@ export default function CustomerManager() {
                     <input type="text" name="alternateNumber" value={formData.alternateNumber} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Email Address</label>
-                    <input type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <label className="block font-semibold text-slate-500 mb-1">
+                      Email Address <span className="text-red-500">*</span> <span className="text-[10px] text-teal-600 dark:text-teal-400 font-normal">(Compulsory for receipts)</span>
+                    </label>
+                    <input 
+                      type="email" 
+                      name="email" 
+                      required 
+                      value={formData.email} 
+                      onChange={handleInputChange} 
+                      placeholder="e.g. customer@gmail.com"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" 
+                    />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block font-semibold text-slate-500 mb-1">Permanent Address</label>
