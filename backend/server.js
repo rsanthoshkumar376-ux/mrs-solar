@@ -145,14 +145,16 @@ async function startServer() {
       console.error('Failed to create uploads directory:', err);
     }
 
-    // Self-Ping Keep-Alive to prevent Render free instance sleeping (ping every 4 minutes)
+    // Public HTTPS Keep-Alive Ping (Resets Render edge proxy 15-minute inactivity timer)
     setInterval(() => {
       try {
-        import('http').then(({ default: http }) => {
-          http.get(`http://127.0.0.1:${PORT}/api/health`, () => {}).on('error', () => {});
+        import('https').then(({ default: https }) => {
+          ['https://mrs-solar1.onrender.com/api/health', 'https://mrs-solar.onrender.com/api/health'].forEach(url => {
+            https.get(url, () => {}).on('error', () => {});
+          });
         });
       } catch (e) {}
-    }, 4 * 60 * 1000); // every 4 minutes (Render sleeps after ~15 min)
+    }, 3 * 60 * 1000); // every 3 minutes
   });
 }
 
