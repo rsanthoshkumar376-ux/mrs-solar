@@ -8,14 +8,48 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 dotenv.config();
 
+let cachedTransporter = null;
+
 export function getTransporter() {
   const user = process.env.EMAIL_USER || 'mrsassociates19@gmail.com';
   const rawPass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || 'vapjyjdezglprkbp';
   const pass = typeof rawPass === 'string' ? rawPass.replace(/\s+/g, '') : 'vapjyjdezglprkbp';
 
+  if (!cachedTransporter) {
+    cachedTransporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, // Direct SSL
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 100,
+      family: 4, // Explicitly force IPv4 to eliminate cloud IPv6 timeout
+      auth: { user, pass },
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 12000,
+      tls: { rejectUnauthorized: false }
+    });
+  }
+
+  return cachedTransporter;
+}
+
+export function getFallbackTransporter() {
+  const user = process.env.EMAIL_USER || 'mrsassociates19@gmail.com';
+  const rawPass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || 'vapjyjdezglprkbp';
+  const pass = typeof rawPass === 'string' ? rawPass.replace(/\s+/g, '') : 'vapjyjdezglprkbp';
+
   return nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass }
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    family: 4, // Force IPv4
+    auth: { user, pass },
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 12000,
+    tls: { rejectUnauthorized: false }
   });
 }
 
@@ -136,15 +170,28 @@ export async function sendReceiptEmail(payment, customer, recipientEmail = null)
       subject: `Official Payment Receipt: EMI #${payment.emiNumber} - ₹${paidAmount.toLocaleString('en-IN')} [${payment.receiptId}]`,
       html: htmlContent
     });
-    console.log(`[Email] Receipt sent to ${targetEmail}: ${info.messageId}`);
+    console.log(`[Email] Receipt delivered to ${targetEmail}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (err) {
-    let friendlyError = err.message;
-    if (err.message.includes('534-5.7.9') || err.message.includes('Application-specific password') || err.message.includes('Invalid login')) {
-      friendlyError = 'Google blocked login: An App Password is required for mrsassociates19@gmail.com. Please generate a 16-character App Password at myaccount.google.com/apppasswords and set EMAIL_PASS in Render Environment Variables.';
+    console.warn(`[Email] Primary Port 465 SSL failed (${err.message}). Retrying immediately via Port 587 IPv4...`);
+    try {
+      const fallback = getFallbackTransporter();
+      const info = await fallback.sendMail({
+        from: `"MRS Associates Solar" <${process.env.EMAIL_USER || 'mrsassociates19@gmail.com'}>`,
+        to: targetEmail,
+        subject: `Official Payment Receipt: EMI #${payment.emiNumber} - ₹${paidAmount.toLocaleString('en-IN')} [${payment.receiptId}]`,
+        html: htmlContent
+      });
+      console.log(`[Email] Receipt delivered via Port 587 fallback to ${targetEmail}: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (retryErr) {
+      let friendlyError = retryErr.message;
+      if (retryErr.message.includes('534-5.7.9') || retryErr.message.includes('Application-specific password') || retryErr.message.includes('Invalid login')) {
+        friendlyError = 'Google blocked login: An App Password is required.';
+      }
+      console.error(`[Email] Failed to send receipt to ${targetEmail}:`, friendlyError);
+      return { success: false, error: friendlyError };
     }
-    console.error(`[Email] Failed to send receipt to ${targetEmail}:`, friendlyError);
-    return { success: false, error: friendlyError };
   }
 }
 
@@ -258,7 +305,22 @@ export async function sendDueReminderEmail(customer, emi) {
     console.log(`[Email] Due reminder sent to ${targetEmail}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (err) {
-    console.error(`[Email] Failed to send due reminder to ${targetEmail}:`, err.message);
-    return { success: false, error: err.message };
+    console.warn(`[Email] Primary Port 465 SSL failed for reminder (${err.message}). Retrying on Port 587 IPv4...`);
+    try {
+      const fallback = getFallbackTransporter();
+      const info = await fallback.sendMail({
+        from: `"MRS Associates Solar" <${process.env.EMAIL_USER || 'mrsassociates19@gmail.com'}>`,
+        to: targetEmail,
+        subject: isToday
+          ? `⚠️ EMI #${emi.emiNumber} Due TODAY — ₹${emiAmount.toLocaleString('en-IN')} | MRS Associates`
+          : `📅 EMI Reminder: ₹${emiAmount.toLocaleString('en-IN')} due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''} (EMI #${emi.emiNumber}) | MRS Associates`,
+        html: htmlContent
+      });
+      console.log(`[Email] Due reminder delivered via Port 587 fallback to ${targetEmail}: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (retryErr) {
+      console.error(`[Email] Failed to send due reminder to ${targetEmail}:`, retryErr.message);
+      return { success: false, error: retryErr.message };
+    }
   }
 }
