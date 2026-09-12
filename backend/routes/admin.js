@@ -439,16 +439,19 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       });
     }
 
-    // Perform real-time late penalty checks relative to the marking date
+    // Calculate late fee and total paid amount accurately
     const paidDate = paymentDate ? new Date(paymentDate) : new Date();
-    const { penalty, daysLate } = recalculateCustomerEmiStatus(customer, paidDate)
-      .emiSchedule[scheduleIndex]; // Get penalty calculated at paid date
+    const recalculated = recalculateCustomerEmiStatus(customer, paidDate);
+    const emiAtPaidDate = recalculated.emiSchedule[scheduleIndex];
+    const lateFee = Number(emiAtPaidDate?.lateFee || 0);
+    const baseEmi = Number(emi.emiAmount || 0);
+    const totalPaidAmount = Math.round((baseEmi + lateFee) * 100) / 100;
 
     // Mark paid in schedule
     customer.emiSchedule[scheduleIndex].status = 'Paid';
-    customer.emiSchedule[scheduleIndex].paidAmount = emi.emiAmount + penalty;
+    customer.emiSchedule[scheduleIndex].paidAmount = totalPaidAmount;
     customer.emiSchedule[scheduleIndex].paidDate = paidDate.toISOString().split('T')[0];
-    customer.emiSchedule[scheduleIndex].lateFee = penalty;
+    customer.emiSchedule[scheduleIndex].lateFee = lateFee;
     customer.emiSchedule[scheduleIndex].totalOutstanding = 0;
     customer.emiSchedule[scheduleIndex].remarks = remarks || 'Marked paid by admin';
 
@@ -464,12 +467,12 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       customerName: customer.fullName,
       emiNumber: Number(emiNumber),
       paymentDate: paidDate.toISOString().split('T')[0],
-      paidAmount: emi.emiAmount + penalty,
-      baseEmiAmount: emi.emiAmount,
-      interestPaid: emi.interestPaid,
-      principalPaid: emi.principalPaid,
-      lateFeePaid: penalty,
-      daysLate,
+      paidAmount: totalPaidAmount,
+      baseEmiAmount: baseEmi,
+      interestPaid: Number(emi.interestPaid || 0),
+      principalPaid: Number(emi.principalPaid || 0),
+      lateFeePaid: lateFee,
+      daysLate: Number(emiAtPaidDate?.daysLate || 0),
       status: 'Paid',
       remarks: remarks || 'Standard payment'
     });
@@ -477,7 +480,7 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
     // Create log
     await logAdminAction(req.user.username, 'MARK_EMI_PAID', customerId, {
       emiNumber,
-      paidAmount: emi.emiAmount + penalty,
+      paidAmount: totalPaidAmount,
       receiptId
     });
 
@@ -564,6 +567,22 @@ router.post('/payments/send-receipt-email', authenticateToken, authorizeRole(['a
 
     if (!payment) {
       return res.status(404).json({ message: `No paid payment record found for EMI #${emiNumber}` });
+    }
+
+    // Ensure payment amounts are positive valid numbers
+    const emiInSchedule = customer.emiSchedule?.find(e => Number(e.emiNumber) === Number(emiNumber));
+    const baseAmount = Number(payment.baseEmiAmount || emiInSchedule?.emiAmount || 0);
+    const lateFee = Number(payment.lateFeePaid || emiInSchedule?.lateFee || 0);
+    let validPaidAmount = Number(payment.paidAmount);
+    if (!validPaidAmount || isNaN(validPaidAmount) || validPaidAmount <= 0) {
+      validPaidAmount = Math.round((baseAmount + lateFee) * 100) / 100;
+    }
+    payment.paidAmount = validPaidAmount;
+    payment.baseEmiAmount = baseAmount;
+    payment.lateFeePaid = lateFee;
+    if (emiInSchedule) {
+      payment.interestPaid = Number(emiInSchedule.interestPaid || payment.interestPaid || 0);
+      payment.principalPaid = Number(emiInSchedule.principalPaid || payment.principalPaid || 0);
     }
 
     const recipient = email || customer.email;

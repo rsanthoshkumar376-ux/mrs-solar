@@ -30,9 +30,12 @@ export async function sendReceiptEmail(payment, customer, recipientEmail = null)
   }
 
   const transporter = getTransporter();
-  const emiAmount = Number(payment.baseEmiAmount || payment.paidAmount || 0);
-  const paidAmount = Number(payment.paidAmount || 0);
-  const lateFee = Number(payment.lateFeePaid || 0);
+  const emiAmount = Number(payment.baseEmiAmount || payment.emiAmount || 0);
+  const lateFee = Number(payment.lateFeePaid || payment.lateFee || 0);
+  let paidAmount = Number(payment.paidAmount);
+  if (!paidAmount || isNaN(paidAmount) || paidAmount <= 0) {
+    paidAmount = Math.round((emiAmount + lateFee) * 100) / 100;
+  }
   const interest = Number(payment.interestPaid || 0);
   const principal = Number(payment.principalPaid || 0);
 
