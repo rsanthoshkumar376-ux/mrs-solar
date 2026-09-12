@@ -49,7 +49,9 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p release-output
-          cp android/app/build/outputs/apk/debug/app-debug.apk release-output/MRS-SOLAR.apk
+          APK_PATH=$(find android -name "*.apk" | head -n 1)
+          echo "Found APK at: $APK_PATH"
+          cp "$APK_PATH" release-output/MRS-SOLAR.apk
           echo "APK build complete:"
           ls -lh release-output/MRS-SOLAR.apk
 
