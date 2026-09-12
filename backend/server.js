@@ -46,6 +46,15 @@ app.use('/api/customer', customerRoutes);
 
 // Serve Frontend Static Production Build
 const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
+
+// Serve Service Worker with no-cache and root scope allowed
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.sendFile(path.join(frontendDistPath, 'sw.js'));
+});
+
 app.use(express.static(frontendDistPath));
 
 // API Health Check

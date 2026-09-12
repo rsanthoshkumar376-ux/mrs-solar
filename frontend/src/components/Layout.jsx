@@ -7,6 +7,7 @@ import {
   Users, DollarSign, History, Calculator, ShieldAlert,
   FolderLock, Database, CheckCircle, Mail
 } from 'lucide-react';
+import InstallAppBanner from './InstallAppBanner.jsx';
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
@@ -193,6 +194,9 @@ export default function Layout({ children }) {
           {/* Right Header items */}
           <div className="flex items-center space-x-3">
             
+            {/* Install Mobile/Desktop App Button */}
+            <InstallAppBanner compact={true} />
+
             {/* Theme Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}

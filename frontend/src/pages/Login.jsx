@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Sun, Moon, Lock, User, ShieldAlert } from 'lucide-react';
+import InstallAppBanner from '../components/InstallAppBanner.jsx';
 
 export default function Login() {
   const [roleTab, setRoleTab] = useState('customer'); // 'customer' or 'admin'
@@ -96,6 +97,11 @@ export default function Login() {
             MRS <span className="text-teal-600 dark:text-teal-400">SOLAR</span>
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Solar Loan Management Portal</p>
+        </div>
+
+        {/* INSTALL APP PROMPT */}
+        <div className="mb-4">
+          <InstallAppBanner />
         </div>
 
         {/* LOGIN CONTAINER */}
