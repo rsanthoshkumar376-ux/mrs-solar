@@ -31,10 +31,13 @@ api.interceptors.response.use(
     const { config, response } = error;
 
     if (response && (response.status === 401 || response.status === 403)) {
-      // Clear storage and trigger logout event if unauthorized or forbidden
-      localStorage.removeItem('mrs_solar_token');
-      localStorage.removeItem('mrs_solar_user');
-      window.dispatchEvent(new Event('auth-expired'));
+      // Do not trigger 'auth-expired' on login attempts — show the real credential error instead
+      const isLoginRequest = config?.url && config.url.includes('/auth/login');
+      if (!isLoginRequest) {
+        localStorage.removeItem('mrs_solar_token');
+        localStorage.removeItem('mrs_solar_user');
+        window.dispatchEvent(new Event('auth-expired'));
+      }
       return Promise.reject(error);
     }
 
