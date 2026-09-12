@@ -5,7 +5,7 @@ import api from '../utils/api.js';
 import { 
   Sun, Moon, LogOut, Menu, X, Bell, LayoutDashboard, 
   Users, DollarSign, History, Calculator, ShieldAlert,
-  FolderLock, Database, CheckCircle
+  FolderLock, Database, CheckCircle, Mail
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -77,7 +77,8 @@ export default function Layout({ children }) {
     { label: 'Customers', path: '/admin/customers', icon: Users },
     { label: 'EMI Management', path: '/admin/emis', icon: DollarSign },
     { label: 'Audit Logs', path: '/admin/audits', icon: FolderLock },
-    { label: 'Database Backup', path: '/admin/backup', icon: Database }
+    { label: 'Database Backup', path: '/admin/backup', icon: Database },
+    { label: 'Email Settings', path: '/admin/email-settings', icon: Mail }
   ];
 
   const customerLinks = [

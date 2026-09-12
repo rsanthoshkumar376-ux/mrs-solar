@@ -10,7 +10,7 @@ import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { generateAmortizationSchedule, recalculateCustomerEmiStatus } from '../utils/calculations.js';
 import { logAdminAction } from '../utils/logger.js';
 import { runDailyInterestAndPenaltyCheck } from '../utils/scheduler.js';
-import { sendReceiptEmail } from '../utils/email.js';
+import { sendReceiptEmail, testEmailConnection, getEmailConfig } from '../utils/email.js';
 
 
 const router = express.Router();
@@ -177,14 +177,14 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
   try {
     const rawData = req.body;
 
-    // Validate essential inputs
-    if (!rawData.fullName || !rawData.mobileNumber || !rawData.email || !rawData.loanAmount || !rawData.interestRate || !rawData.emiDuration) {
-      return res.status(400).json({ message: 'Missing mandatory fields: Name, Mobile, Email Address, and Loan Details are required' });
+    // Validate essential inputs (Email is optional)
+    if (!rawData.fullName || !rawData.mobileNumber || !rawData.loanAmount || !rawData.interestRate || !rawData.emiDuration) {
+      return res.status(400).json({ message: 'Missing mandatory fields: Customer Name, Mobile Number, and Loan Details are required' });
     }
 
     const cleanEmail = String(rawData.email || '').trim().toLowerCase();
-    if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-      return res.status(400).json({ message: 'A valid Email Address is compulsory for sending payment receipts and due-date alerts' });
+    if (cleanEmail && (!cleanEmail.includes('@') || !cleanEmail.includes('.'))) {
+      return res.status(400).json({ message: 'If provided, Email Address must be a valid email (e.g. customer@gmail.com)' });
     }
 
     // Auto-generate customer id
@@ -220,7 +220,7 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
       motherName: rawData.motherName || '',
       mobileNumber: rawData.mobileNumber,
       alternateNumber: rawData.alternateNumber || '',
-      email: rawData.email || '',
+      email: cleanEmail || '',
       address: rawData.address || '',
       city: rawData.city || '',
       district: rawData.district || '',
@@ -695,6 +695,91 @@ router.get('/audit-logs', authenticateToken, authorizeRole(['admin']), async (re
   } catch (error) {
     console.error('Audit logs fetch error:', error);
     res.status(500).json({ message: 'Error loading audit logs' });
+  }
+});
+
+// 9b. Email Settings & Diagnostics
+router.get('/email-settings', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const config = await getEmailConfig();
+    const isRender = process.env.RENDER === 'true' || !!process.env.RENDER_SERVICE_ID || !!process.env.RENDER_EXTERNAL_URL;
+
+    res.json({
+      activeMethod: config.activeMethod,
+      relayUrl: config.relayUrl,
+      brevoApiKeyMasked: config.brevoApiKey ? `${config.brevoApiKey.slice(0, 8)}...${config.brevoApiKey.slice(-4)}` : '',
+      resendApiKeyMasked: config.resendApiKey ? `${config.resendApiKey.slice(0, 8)}...${config.resendApiKey.slice(-4)}` : '',
+      senderEmail: config.senderEmail,
+      isRender
+    });
+  } catch (err) {
+    console.error('Fetch email settings error:', err);
+    res.status(500).json({ message: 'Failed to fetch email settings' });
+  }
+});
+
+router.post('/email-settings', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { relayUrl, brevoApiKey, resendApiKey, senderEmail } = req.body;
+    let existing = await db.findOne('settings', { key: 'email' });
+
+    const updatedData = {
+      key: 'email',
+      relayUrl: typeof relayUrl === 'string' ? relayUrl.trim() : (existing?.relayUrl || ''),
+      brevoApiKey: typeof brevoApiKey === 'string' ? brevoApiKey.trim() : (existing?.brevoApiKey || ''),
+      resendApiKey: typeof resendApiKey === 'string' ? resendApiKey.trim() : (existing?.resendApiKey || ''),
+      senderEmail: typeof senderEmail === 'string' ? senderEmail.trim() : (existing?.senderEmail || 'mrsassociates19@gmail.com')
+    };
+
+    if (existing) {
+      await db.updateOne('settings', { _id: existing._id }, updatedData);
+    } else {
+      await db.create('settings', updatedData);
+    }
+
+    await logAdminAction(req.user.username, 'UPDATE_EMAIL_SETTINGS', 'SYSTEM', {
+      hasRelay: !!updatedData.relayUrl,
+      hasBrevo: !!updatedData.brevoApiKey
+    });
+
+    const refreshedConfig = await getEmailConfig();
+    res.json({ 
+      message: 'Email settings successfully updated and applied!',
+      activeMethod: refreshedConfig.activeMethod
+    });
+  } catch (err) {
+    console.error('Save email settings error:', err);
+    res.status(500).json({ message: 'Failed to save email settings' });
+  }
+});
+
+router.post('/email-settings/test', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  const { targetEmail } = req.body;
+  const emailToSend = String(targetEmail || 'rsanthoshkumar376@gmail.com').trim();
+
+  if (!emailToSend || !emailToSend.includes('@') || !emailToSend.includes('.')) {
+    return res.status(400).json({ message: 'Please provide a valid destination email address for testing' });
+  }
+
+  try {
+    const diagnostic = await testEmailConnection(emailToSend);
+    if (diagnostic.success) {
+      await logAdminAction(req.user.username, 'TEST_EMAIL_SUCCESS', 'SYSTEM', { targetEmail: emailToSend, method: diagnostic.method });
+      res.json({
+        success: true,
+        message: `Test email successfully delivered to ${emailToSend} via ${diagnostic.method} in ${diagnostic.durationMs}ms!`,
+        diagnostic
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: `Email delivery failed: ${diagnostic.error || diagnostic.reason}`,
+        diagnostic
+      });
+    }
+  } catch (err) {
+    console.error('Test email error:', err);
+    res.status(500).json({ message: `Test email error: ${err.message}` });
   }
 });
 

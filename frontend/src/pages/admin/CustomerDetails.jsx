@@ -68,8 +68,9 @@ export default function CustomerDetails() {
     e.preventDefault();
     if (!selectedEmi) return;
 
-    if (!payEmail || !payEmail.includes('@') || !payEmail.includes('.')) {
-      alert('A valid customer Email Address is compulsory so the receipt bill can be sent directly.');
+    const cleanEmail = payEmail ? payEmail.trim().toLowerCase() : '';
+    if (cleanEmail && (!cleanEmail.includes('@') || !cleanEmail.includes('.'))) {
+      alert('Please enter a valid customer email address format (e.g. customer@gmail.com) or leave it blank.');
       return;
     }
 
@@ -80,7 +81,7 @@ export default function CustomerDetails() {
         emiNumber: selectedEmi.emiNumber,
         paymentDate: payDate,
         remarks: remarks,
-        email: payEmail.trim().toLowerCase()
+        email: cleanEmail
       });
       
       alert(response.data?.message || `EMI #${selectedEmi.emiNumber} marked as Paid!`);
@@ -529,14 +530,13 @@ export default function CustomerDetails() {
 
               <div>
                 <label className="block font-semibold text-slate-500 mb-1">
-                  Customer Email Address <span className="text-red-500">*</span> <span className="text-teal-600 dark:text-teal-400 font-normal">(Receipt will be sent directly here)</span>
+                  Customer Email Address <span className="text-slate-400 font-normal text-xs">(Optional — receipt will be emailed if provided)</span>
                 </label>
                 <input
                   type="email"
-                  required
                   value={payEmail}
                   onChange={(e) => setPayEmail(e.target.value)}
-                  placeholder="e.g. customer@gmail.com"
+                  placeholder="e.g. customer@gmail.com (leave blank if none)"
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white font-medium"
                 />
               </div>

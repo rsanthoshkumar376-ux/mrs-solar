@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { db } from '../database/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,61 +10,245 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 dotenv.config();
 
 /**
- * Creates a clean, dedicated SMTP connection for an email request.
- * We do not use persistent pooling because Google terminates idle sockets
- * after a few minutes, which causes intermittent "Connection closed" errors.
+ * Retrieve dynamic email configurations from database settings with process.env fallback
  */
-export function createTransporter(port = 465, secure = true) {
-  const user = (process.env.EMAIL_USER || 'mrsassociates19@gmail.com').trim();
-  const rawPass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || 'vapjyjdezglprkbp';
-  const pass = typeof rawPass === 'string' ? rawPass.replace(/\s+/g, '') : 'vapjyjdezglprkbp';
+export async function getEmailConfig() {
+  let dbConfig = null;
+  try {
+    dbConfig = await db.findOne('settings', { key: 'email' });
+  } catch (e) {
+    // Database query fallback
+  }
 
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: port,
-    secure: secure,
-    family: 4, // Force IPv4 to eliminate cloud IPv6 timeouts
-    auth: { user, pass },
-    connectionTimeout: 8000,
-    greetingTimeout: 8000,
-    socketTimeout: 12000,
-    tls: { rejectUnauthorized: false }
-  });
+  const relayUrl = (dbConfig?.relayUrl || process.env.GMAIL_RELAY_URL || '').trim();
+  const brevoApiKey = (dbConfig?.brevoApiKey || process.env.BREVO_API_KEY || '').trim();
+  const resendApiKey = (dbConfig?.resendApiKey || process.env.RESEND_API_KEY || '').trim();
+  const senderEmail = (dbConfig?.senderEmail || process.env.EMAIL_USER || 'mrsassociates19@gmail.com').trim();
+  const rawPass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || 'vapjyjdezglprkbp';
+  const senderPass = typeof rawPass === 'string' ? rawPass.replace(/\s+/g, '') : 'vapjyjdezglprkbp';
+
+  let activeMethod = 'Direct Gmail SMTP';
+  if (relayUrl) activeMethod = 'Google Apps Script HTTPS Relay';
+  else if (brevoApiKey) activeMethod = 'Brevo HTTPS API';
+  else if (resendApiKey) activeMethod = 'Resend HTTPS API';
+
+  return {
+    relayUrl,
+    brevoApiKey,
+    resendApiKey,
+    senderEmail,
+    senderPass,
+    activeMethod
+  };
 }
 
 /**
- * Sends an email with automatic 3-tier retry across Port 465 SSL and Port 587 TLS
+ * Sends email via Google Apps Script Web App HTTPS Relay (Port 443 — Immune to Render firewall)
  */
-async function sendWithRetry(mailOptions, description = 'Email') {
-  const tiers = [
+async function sendViaGoogleRelay(relayUrl, mailOptions) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+  try {
+    const res = await fetch(relayUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: mailOptions.to,
+        subject: mailOptions.subject,
+        html: mailOptions.html,
+        name: 'MRS ASSOCIATES SOLAR'
+      }),
+      redirect: 'follow',
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    const text = await res.text();
+    let data = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw: text };
+    }
+
+    if (res.ok && (data.success || text.includes('success'))) {
+      return { success: true, method: 'Google Apps Script HTTPS Relay', messageId: data.messageId || 'GMAIL-APPS-SCRIPT' };
+    } else {
+      throw new Error(data.error || `Relay returned status ${res.status}: ${text.slice(0, 100)}`);
+    }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error('Google Apps Script relay timed out after 12s');
+    }
+    throw err;
+  }
+}
+
+/**
+ * Sends email via Brevo (Sendinblue) HTTP API (Port 443 — Free 300 emails/day)
+ */
+async function sendViaBrevo(apiKey, senderEmail, mailOptions) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': apiKey
+      },
+      body: JSON.stringify({
+        sender: { name: 'MRS Associates Solar', email: senderEmail || 'mrsassociates19@gmail.com' },
+        to: [{ email: mailOptions.to }],
+        subject: mailOptions.subject,
+        htmlContent: mailOptions.html
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 201 || res.status === 200) {
+      return { success: true, method: 'Brevo HTTPS API', messageId: data.messageId || 'BREVO-API' };
+    } else {
+      throw new Error(data.message || `Brevo returned HTTP ${res.status}`);
+    }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
+}
+
+/**
+ * Sends email via Resend HTTP API (Port 443)
+ */
+async function sendViaResend(apiKey, mailOptions) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'MRS Associates <onboarding@resend.dev>',
+        to: [mailOptions.to],
+        subject: mailOptions.subject,
+        html: mailOptions.html
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      return { success: true, method: 'Resend HTTPS API', messageId: data.id || 'RESEND-API' };
+    } else {
+      throw new Error(data.message || `Resend returned HTTP ${res.status}`);
+    }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
+}
+
+/**
+ * Sends email via Direct SMTP (Gmail) with short timeouts so it never freezes
+ */
+async function sendViaDirectSmtp(mailOptions, config) {
+  const attempts = [
     { port: 465, secure: true, name: 'Port 465 SSL' },
-    { port: 587, secure: false, name: 'Port 587 TLS' },
-    { port: 465, secure: true, name: 'Port 465 SSL (Final)' }
+    { port: 587, secure: false, name: 'Port 587 TLS' }
   ];
 
-  let lastError = null;
-  for (let attempt = 0; attempt < tiers.length; attempt++) {
-    const tier = tiers[attempt];
+  let lastErr = null;
+  for (const tier of attempts) {
     try {
-      const transporter = createTransporter(tier.port, tier.secure);
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: tier.port,
+        secure: tier.secure,
+        family: 4,
+        auth: { user: config.senderEmail, pass: config.senderPass },
+        connectionTimeout: 4000,
+        greetingTimeout: 4000,
+        socketTimeout: 5000,
+        tls: { rejectUnauthorized: false }
+      });
+
       const info = await transporter.sendMail(mailOptions);
-      console.log(`[Email] ${description} delivered to ${mailOptions.to} via ${tier.name}: ${info.messageId}`);
-      return { success: true, messageId: info.messageId };
+      return { success: true, method: `Direct SMTP (${tier.name})`, messageId: info.messageId };
     } catch (err) {
-      lastError = err;
-      console.warn(`[Email] ${description} attempt ${attempt + 1} (${tier.name}) error: ${err.message}`);
-      if (attempt < tiers.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+      lastErr = err;
+      console.warn(`[Email] Direct SMTP attempt (${tier.name}) error:`, err.message);
     }
   }
 
-  let friendlyError = lastError ? lastError.message : 'Unknown mail transport error';
-  if (friendlyError.includes('534-5.7.9') || friendlyError.includes('Application-specific password') || friendlyError.includes('Invalid login')) {
-    friendlyError = 'Google blocked login: An App Password is required.';
+  let errMsg = lastErr ? lastErr.message : 'SMTP connection failed';
+  if (errMsg.includes('timeout') || errMsg.includes('ETIMEDOUT') || errMsg.includes('ESOCKETTIMEDOUT')) {
+    errMsg = 'Cloud host (Render) blocked outbound SMTP ports 465/587. Please activate Google Apps Script HTTPS Relay or Brevo API in Email Settings.';
+  } else if (errMsg.includes('534-5.7.9') || errMsg.includes('Invalid login') || errMsg.includes('Username and Password not accepted')) {
+    errMsg = 'Google blocked login: 16-character App Password required.';
   }
-  console.error(`[Email] All retry attempts failed for ${mailOptions.to}:`, friendlyError);
-  return { success: false, error: friendlyError };
+
+  throw new Error(errMsg);
+}
+
+/**
+ * Universal dispatcher: routes email through the best available transport channel
+ */
+export async function sendEmail(mailOptions, description = 'Email') {
+  const config = await getEmailConfig();
+
+  // Channel 1: Google Apps Script Web App HTTPS Relay
+  if (config.relayUrl) {
+    try {
+      const res = await sendViaGoogleRelay(config.relayUrl, mailOptions);
+      console.log(`[Email] ${description} delivered to ${mailOptions.to} via Google Apps Script Relay`);
+      return res;
+    } catch (err) {
+      console.warn(`[Email] Google Apps Script relay failed: ${err.message}. Falling back to next channel...`);
+    }
+  }
+
+  // Channel 2: Brevo HTTPS API
+  if (config.brevoApiKey) {
+    try {
+      const res = await sendViaBrevo(config.brevoApiKey, config.senderEmail, mailOptions);
+      console.log(`[Email] ${description} delivered to ${mailOptions.to} via Brevo API`);
+      return res;
+    } catch (err) {
+      console.warn(`[Email] Brevo API failed: ${err.message}. Falling back to next channel...`);
+    }
+  }
+
+  // Channel 3: Resend HTTPS API
+  if (config.resendApiKey) {
+    try {
+      const res = await sendViaResend(config.resendApiKey, mailOptions);
+      console.log(`[Email] ${description} delivered to ${mailOptions.to} via Resend API`);
+      return res;
+    } catch (err) {
+      console.warn(`[Email] Resend API failed: ${err.message}. Falling back to next channel...`);
+    }
+  }
+
+  // Channel 4: Direct SMTP (Gmail)
+  try {
+    const res = await sendViaDirectSmtp(mailOptions, config);
+    console.log(`[Email] ${description} delivered to ${mailOptions.to} via Direct SMTP: ${res.messageId}`);
+    return res;
+  } catch (err) {
+    console.error(`[Email] Delivery failed for ${mailOptions.to}:`, err.message);
+    return { success: false, error: err.message };
+  }
 }
 
 /**
@@ -72,8 +257,8 @@ async function sendWithRetry(mailOptions, description = 'Email') {
 export async function sendReceiptEmail(payment, customer, recipientEmail = null) {
   const targetEmail = String(recipientEmail || customer?.email || '').trim().toLowerCase();
   if (!targetEmail || !targetEmail.includes('@') || !targetEmail.includes('.')) {
-    console.warn(`[Email] No valid email address found for customer ${customer?.fullName} (${customer?.customerId}). Skipping receipt email.`);
-    return { success: false, reason: 'No valid recipient email address' };
+    console.log(`[Email] No recipient email address provided for customer ${customer?.fullName || customer?.customerId}. Skipping email receipt.`);
+    return { success: false, reason: 'No recipient email address provided', skipped: true };
   }
 
   const emiAmount = Number(payment.baseEmiAmount || payment.emiAmount || 0);
@@ -182,7 +367,7 @@ export async function sendReceiptEmail(payment, customer, recipientEmail = null)
     html: htmlContent
   };
 
-  return await sendWithRetry(mailOptions, `Receipt (EMI #${payment.emiNumber})`);
+  return await sendEmail(mailOptions, `Receipt (EMI #${payment.emiNumber})`);
 }
 
 
@@ -291,5 +476,48 @@ export async function sendDueReminderEmail(customer, emi) {
     html: htmlContent
   };
 
-  return await sendWithRetry(mailOptions, `Due Reminder (EMI #${emi.emiNumber})`);
+  return await sendEmail(mailOptions, `Due Reminder (EMI #${emi.emiNumber})`);
 }
+
+/**
+ * Diagnostic test tool to verify email delivery and measure latency
+ */
+export async function testEmailConnection(targetEmail) {
+  const startTime = Date.now();
+  const config = await getEmailConfig();
+
+  const dummyPayment = {
+    receiptId: `TEST-${Date.now().toString().slice(-4)}`,
+    emiNumber: 1,
+    paymentDate: new Date().toISOString().split('T')[0],
+    paidAmount: 500,
+    baseEmiAmount: 500,
+    lateFeePaid: 0,
+    interestPaid: 10,
+    principalPaid: 490,
+    remarks: 'Diagnostic Verification Test'
+  };
+
+  const dummyCustomer = {
+    fullName: 'System Test User',
+    customerId: 'TEST-001',
+    email: targetEmail
+  };
+
+  const result = await sendReceiptEmail(dummyPayment, dummyCustomer, targetEmail);
+  const durationMs = Date.now() - startTime;
+
+  return {
+    ...result,
+    targetEmail,
+    durationMs,
+    configSummary: {
+      activeMethod: result.method || config.activeMethod,
+      senderEmail: config.senderEmail,
+      hasRelayUrl: !!config.relayUrl,
+      hasBrevoKey: !!config.brevoApiKey,
+      hasResendKey: !!config.resendApiKey
+    }
+  };
+}
+

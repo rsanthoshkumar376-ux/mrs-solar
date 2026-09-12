@@ -13,6 +13,7 @@ import CustomerDetails from './pages/admin/CustomerDetails.jsx';
 import EmiManagement from './pages/admin/EmiManagement.jsx';
 import AuditLogs from './pages/admin/AuditLogs.jsx';
 import BackupRestore from './pages/admin/BackupRestore.jsx';
+import EmailSettings from './pages/admin/EmailSettings.jsx';
 // Customer Portal
 import CustomerDashboard from './pages/customer/CustomerDashboard.jsx';
 import EmiHistory from './pages/customer/EmiHistory.jsx';
@@ -82,6 +83,16 @@ export default function App() {
               <ProtectedRoute allowedRoles={['admin']}>
                 <Layout>
                   <BackupRestore />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/email-settings"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <EmailSettings />
                 </Layout>
               </ProtectedRoute>
             }
