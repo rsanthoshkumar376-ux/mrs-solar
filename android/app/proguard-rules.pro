@@ -1,0 +1,1 @@
+# MRS SOLAR ProGuard Rules
