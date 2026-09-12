@@ -197,8 +197,7 @@ public class MainActivity extends AppCompatActivity {
                     webView.goBack();
                 } else {
                     if (backPressedTime + 2000 > System.currentTimeMillis()) {
-                        setEnabled(false);
-                        MainActivity.super.onBackPressed();
+                        finish();
                     } else {
                         Toast.makeText(MainActivity.this, "Press back again to exit", Toast.LENGTH_SHORT).show();
                     }
