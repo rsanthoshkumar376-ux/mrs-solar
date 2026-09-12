@@ -8,43 +8,21 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 dotenv.config();
 
-let cachedTransporter = null;
-
-export function getTransporter() {
-  const user = process.env.EMAIL_USER || 'mrsassociates19@gmail.com';
-  const rawPass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || 'vapjyjdezglprkbp';
-  const pass = typeof rawPass === 'string' ? rawPass.replace(/\s+/g, '') : 'vapjyjdezglprkbp';
-
-  if (!cachedTransporter) {
-    cachedTransporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true, // Direct SSL
-      pool: true,
-      maxConnections: 3,
-      maxMessages: 100,
-      family: 4, // Explicitly force IPv4 to eliminate cloud IPv6 timeout
-      auth: { user, pass },
-      connectionTimeout: 8000,
-      greetingTimeout: 8000,
-      socketTimeout: 12000,
-      tls: { rejectUnauthorized: false }
-    });
-  }
-
-  return cachedTransporter;
-}
-
-export function getFallbackTransporter() {
-  const user = process.env.EMAIL_USER || 'mrsassociates19@gmail.com';
+/**
+ * Creates a clean, dedicated SMTP connection for an email request.
+ * We do not use persistent pooling because Google terminates idle sockets
+ * after a few minutes, which causes intermittent "Connection closed" errors.
+ */
+export function createTransporter(port = 465, secure = true) {
+  const user = (process.env.EMAIL_USER || 'mrsassociates19@gmail.com').trim();
   const rawPass = process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || 'vapjyjdezglprkbp';
   const pass = typeof rawPass === 'string' ? rawPass.replace(/\s+/g, '') : 'vapjyjdezglprkbp';
 
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    family: 4, // Force IPv4
+    port: port,
+    secure: secure,
+    family: 4, // Force IPv4 to eliminate cloud IPv6 timeouts
     auth: { user, pass },
     connectionTimeout: 8000,
     greetingTimeout: 8000,
@@ -54,16 +32,50 @@ export function getFallbackTransporter() {
 }
 
 /**
+ * Sends an email with automatic 3-tier retry across Port 465 SSL and Port 587 TLS
+ */
+async function sendWithRetry(mailOptions, description = 'Email') {
+  const tiers = [
+    { port: 465, secure: true, name: 'Port 465 SSL' },
+    { port: 587, secure: false, name: 'Port 587 TLS' },
+    { port: 465, secure: true, name: 'Port 465 SSL (Final)' }
+  ];
+
+  let lastError = null;
+  for (let attempt = 0; attempt < tiers.length; attempt++) {
+    const tier = tiers[attempt];
+    try {
+      const transporter = createTransporter(tier.port, tier.secure);
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`[Email] ${description} delivered to ${mailOptions.to} via ${tier.name}: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (err) {
+      lastError = err;
+      console.warn(`[Email] ${description} attempt ${attempt + 1} (${tier.name}) error: ${err.message}`);
+      if (attempt < tiers.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  }
+
+  let friendlyError = lastError ? lastError.message : 'Unknown mail transport error';
+  if (friendlyError.includes('534-5.7.9') || friendlyError.includes('Application-specific password') || friendlyError.includes('Invalid login')) {
+    friendlyError = 'Google blocked login: An App Password is required.';
+  }
+  console.error(`[Email] All retry attempts failed for ${mailOptions.to}:`, friendlyError);
+  return { success: false, error: friendlyError };
+}
+
+/**
  * Sends a formal payment receipt email to the customer
  */
 export async function sendReceiptEmail(payment, customer, recipientEmail = null) {
-  const targetEmail = recipientEmail || customer?.email;
-  if (!targetEmail || !targetEmail.includes('@')) {
+  const targetEmail = String(recipientEmail || customer?.email || '').trim().toLowerCase();
+  if (!targetEmail || !targetEmail.includes('@') || !targetEmail.includes('.')) {
     console.warn(`[Email] No valid email address found for customer ${customer?.fullName} (${customer?.customerId}). Skipping receipt email.`);
     return { success: false, reason: 'No valid recipient email address' };
   }
 
-  const transporter = getTransporter();
   const emiAmount = Number(payment.baseEmiAmount || payment.emiAmount || 0);
   const lateFee = Number(payment.lateFeePaid || payment.lateFee || 0);
   let paidAmount = Number(payment.paidAmount);
@@ -163,36 +175,14 @@ export async function sendReceiptEmail(payment, customer, recipientEmail = null)
     </html>
   `;
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"MRS Associates Solar" <${process.env.EMAIL_USER || 'mrsassociates19@gmail.com'}>`,
-      to: targetEmail,
-      subject: `Official Payment Receipt: EMI #${payment.emiNumber} - ₹${paidAmount.toLocaleString('en-IN')} [${payment.receiptId}]`,
-      html: htmlContent
-    });
-    console.log(`[Email] Receipt delivered to ${targetEmail}: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
-  } catch (err) {
-    console.warn(`[Email] Primary Port 465 SSL failed (${err.message}). Retrying immediately via Port 587 IPv4...`);
-    try {
-      const fallback = getFallbackTransporter();
-      const info = await fallback.sendMail({
-        from: `"MRS Associates Solar" <${process.env.EMAIL_USER || 'mrsassociates19@gmail.com'}>`,
-        to: targetEmail,
-        subject: `Official Payment Receipt: EMI #${payment.emiNumber} - ₹${paidAmount.toLocaleString('en-IN')} [${payment.receiptId}]`,
-        html: htmlContent
-      });
-      console.log(`[Email] Receipt delivered via Port 587 fallback to ${targetEmail}: ${info.messageId}`);
-      return { success: true, messageId: info.messageId };
-    } catch (retryErr) {
-      let friendlyError = retryErr.message;
-      if (retryErr.message.includes('534-5.7.9') || retryErr.message.includes('Application-specific password') || retryErr.message.includes('Invalid login')) {
-        friendlyError = 'Google blocked login: An App Password is required.';
-      }
-      console.error(`[Email] Failed to send receipt to ${targetEmail}:`, friendlyError);
-      return { success: false, error: friendlyError };
-    }
-  }
+  const mailOptions = {
+    from: `"MRS Associates Solar" <${(process.env.EMAIL_USER || 'mrsassociates19@gmail.com').trim()}>`,
+    to: targetEmail,
+    subject: `Official Payment Receipt: EMI #${payment.emiNumber} - ₹${paidAmount.toLocaleString('en-IN')} [${payment.receiptId}]`,
+    html: htmlContent
+  };
+
+  return await sendWithRetry(mailOptions, `Receipt (EMI #${payment.emiNumber})`);
 }
 
 
@@ -200,12 +190,11 @@ export async function sendReceiptEmail(payment, customer, recipientEmail = null)
  * Sends an EMI due-date reminder email to the customer
  */
 export async function sendDueReminderEmail(customer, emi) {
-  const targetEmail = customer?.email;
-  if (!targetEmail || !targetEmail.includes('@')) {
+  const targetEmail = String(customer?.email || '').trim().toLowerCase();
+  if (!targetEmail || !targetEmail.includes('@') || !targetEmail.includes('.')) {
     return { success: false, reason: 'No valid recipient email address' };
   }
 
-  const transporter = getTransporter();
   const emiAmount = Number(emi.emiAmount || 0);
   const daysUntilDue = Math.ceil((new Date(emi.dueDate) - new Date()) / (1000 * 60 * 60 * 24));
   const isToday = daysUntilDue <= 0;
@@ -293,34 +282,14 @@ export async function sendDueReminderEmail(customer, emi) {
     </html>
   `;
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"MRS Associates Solar" <${process.env.EMAIL_USER || 'mrsassociates19@gmail.com'}>`,
-      to: targetEmail,
-      subject: isToday
-        ? `⚠️ EMI #${emi.emiNumber} Due TODAY — ₹${emiAmount.toLocaleString('en-IN')} | MRS Associates`
-        : `📅 EMI Reminder: ₹${emiAmount.toLocaleString('en-IN')} due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''} (EMI #${emi.emiNumber}) | MRS Associates`,
-      html: htmlContent
-    });
-    console.log(`[Email] Due reminder sent to ${targetEmail}: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
-  } catch (err) {
-    console.warn(`[Email] Primary Port 465 SSL failed for reminder (${err.message}). Retrying on Port 587 IPv4...`);
-    try {
-      const fallback = getFallbackTransporter();
-      const info = await fallback.sendMail({
-        from: `"MRS Associates Solar" <${process.env.EMAIL_USER || 'mrsassociates19@gmail.com'}>`,
-        to: targetEmail,
-        subject: isToday
-          ? `⚠️ EMI #${emi.emiNumber} Due TODAY — ₹${emiAmount.toLocaleString('en-IN')} | MRS Associates`
-          : `📅 EMI Reminder: ₹${emiAmount.toLocaleString('en-IN')} due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''} (EMI #${emi.emiNumber}) | MRS Associates`,
-        html: htmlContent
-      });
-      console.log(`[Email] Due reminder delivered via Port 587 fallback to ${targetEmail}: ${info.messageId}`);
-      return { success: true, messageId: info.messageId };
-    } catch (retryErr) {
-      console.error(`[Email] Failed to send due reminder to ${targetEmail}:`, retryErr.message);
-      return { success: false, error: retryErr.message };
-    }
-  }
+  const mailOptions = {
+    from: `"MRS Associates Solar" <${(process.env.EMAIL_USER || 'mrsassociates19@gmail.com').trim()}>`,
+    to: targetEmail,
+    subject: isToday
+      ? `⚠️ EMI #${emi.emiNumber} Due TODAY — ₹${emiAmount.toLocaleString('en-IN')} | MRS Associates`
+      : `📅 EMI Reminder: ₹${emiAmount.toLocaleString('en-IN')} due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''} (EMI #${emi.emiNumber}) | MRS Associates`,
+    html: htmlContent
+  };
+
+  return await sendWithRetry(mailOptions, `Due Reminder (EMI #${emi.emiNumber})`);
 }
