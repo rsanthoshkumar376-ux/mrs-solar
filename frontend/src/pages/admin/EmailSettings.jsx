@@ -101,15 +101,13 @@ export default function EmailSettings() {
     'function doPost(e) {',
     '  try {',
     '    var data = JSON.parse(e.postData.contents);',
-    '    MailApp.sendEmail({',
-    '      to: data.to,',
-    '      subject: data.subject,',
+    '    GmailApp.sendEmail(data.to, data.subject, "MRS SOLAR Official Receipt", {',
     '      htmlBody: data.html,',
-    '      name: "MRS ASSOCIATES SOLAR"',
+    '      name: "MRS Associates Solar"',
     '    });',
     '    return ContentService.createTextOutput(JSON.stringify({',
     '      success: true,',
-    '      message: "Delivered via Google Cloud"',
+    '      message: "Delivered via Gmail Cloud"',
     '    })).setMimeType(ContentService.MimeType.JSON);',
     '  } catch (err) {',
     '    return ContentService.createTextOutput(JSON.stringify({',
@@ -425,6 +423,49 @@ export default function EmailSettings() {
           <pre className="p-4 rounded-2xl bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto border border-slate-800">
             {scriptSnippet}
           </pre>
+        </div>
+      </div>
+
+      {/* 1-MINUTE BREVO API SETUP GUIDE (RECOMMENDED ALTERNATIVE) */}
+      <div className="bg-white dark:bg-slate-950 p-6 md:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-850 pb-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+              <span>🚀 1-Minute Brevo (Sendinblue) API Setup (Recommended • 100% Reliable)</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Brevo is 100% free (300 emails/day forever), operates on HTTPS (Port 443), and never gets blocked.
+            </p>
+          </div>
+          <a
+            href="https://app.brevo.com"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center space-x-1.5 text-xs text-teal-600 font-bold hover:underline self-start sm:self-auto"
+          >
+            <span>Open app.brevo.com</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 space-y-1">
+            <span className="w-6 h-6 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-xs mb-2">1</span>
+            <p className="font-bold text-slate-800 dark:text-white">Create Free Account</p>
+            <p className="text-slate-500">Go to <strong>brevo.com</strong> and create a free account (no credit card needed).</p>
+          </div>
+
+          <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 space-y-1">
+            <span className="w-6 h-6 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-xs mb-2">2</span>
+            <p className="font-bold text-slate-800 dark:text-white">Generate API Key</p>
+            <p className="text-slate-500">Go to <strong>SMTP &amp; API</strong> ➜ <strong>API Keys</strong> ➜ Click <strong>Generate a new API key</strong> and copy it.</p>
+          </div>
+
+          <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 space-y-1">
+            <span className="w-6 h-6 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-xs mb-2">3</span>
+            <p className="font-bold text-slate-800 dark:text-white">Paste Above &amp; Save</p>
+            <p className="text-slate-500">Paste the key (starts with <code>xkeysib-...</code>) into the Brevo field above and click <strong>Save</strong>!</p>
+          </div>
         </div>
       </div>
 

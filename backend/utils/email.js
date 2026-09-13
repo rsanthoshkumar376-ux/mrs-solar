@@ -2,7 +2,13 @@ import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dns from 'dns';
 import { db } from '../database/db.js';
+
+// Force IPv4 first to prevent ENETUNREACH errors on cloud host (Render)
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -75,7 +81,10 @@ async function sendViaGoogleRelay(relayUrl, mailOptions) {
     if (res.ok && (data.success || text.includes('success'))) {
       return { success: true, method: 'Google Apps Script HTTPS Relay', messageId: data.messageId || 'GMAIL-APPS-SCRIPT' };
     } else {
-      throw new Error(data.error || `Relay returned status ${res.status}: ${text.slice(0, 100)}`);
+      if (text.includes('Terms of Service') || text.includes('violation of our Terms of Service')) {
+        throw new Error('Google flagged this Apps Script URL (Terms of Service restriction). Use Brevo API Key instead or deploy new script with GmailApp.');
+      }
+      throw new Error(data.error || `Relay returned status ${res.status}: ${text.slice(0, 120)}`);
     }
   } catch (err) {
     clearTimeout(timeoutId);
@@ -192,8 +201,8 @@ async function sendViaDirectSmtp(mailOptions, config) {
   }
 
   let errMsg = lastErr ? lastErr.message : 'SMTP connection failed';
-  if (errMsg.includes('timeout') || errMsg.includes('ETIMEDOUT') || errMsg.includes('ESOCKETTIMEDOUT')) {
-    errMsg = 'Cloud host (Render) blocked outbound SMTP ports 465/587. Please activate Google Apps Script HTTPS Relay or Brevo API in Email Settings.';
+  if (errMsg.includes('timeout') || errMsg.includes('ETIMEDOUT') || errMsg.includes('ESOCKETTIMEDOUT') || errMsg.includes('ENETUNREACH')) {
+    errMsg = 'Cloud host (Render) blocked outbound SMTP (Ports 465/587). Please activate Brevo API or Google Apps Script in Email Settings.';
   } else if (errMsg.includes('534-5.7.9') || errMsg.includes('Invalid login') || errMsg.includes('Username and Password not accepted')) {
     errMsg = 'Google blocked login: 16-character App Password required.';
   }
@@ -206,6 +215,7 @@ async function sendViaDirectSmtp(mailOptions, config) {
  */
 export async function sendEmail(mailOptions, description = 'Email') {
   const config = await getEmailConfig();
+  const errors = [];
 
   // Channel 1: Google Apps Script Web App HTTPS Relay
   if (config.relayUrl) {
@@ -215,6 +225,7 @@ export async function sendEmail(mailOptions, description = 'Email') {
       return res;
     } catch (err) {
       console.warn(`[Email] Google Apps Script relay failed: ${err.message}. Falling back to next channel...`);
+      errors.push(`Google Relay: ${err.message}`);
     }
   }
 
@@ -226,6 +237,7 @@ export async function sendEmail(mailOptions, description = 'Email') {
       return res;
     } catch (err) {
       console.warn(`[Email] Brevo API failed: ${err.message}. Falling back to next channel...`);
+      errors.push(`Brevo API: ${err.message}`);
     }
   }
 
@@ -237,6 +249,7 @@ export async function sendEmail(mailOptions, description = 'Email') {
       return res;
     } catch (err) {
       console.warn(`[Email] Resend API failed: ${err.message}. Falling back to next channel...`);
+      errors.push(`Resend API: ${err.message}`);
     }
   }
 
@@ -246,8 +259,10 @@ export async function sendEmail(mailOptions, description = 'Email') {
     console.log(`[Email] ${description} delivered to ${mailOptions.to} via Direct SMTP: ${res.messageId}`);
     return res;
   } catch (err) {
+    errors.push(`Direct SMTP: ${err.message}`);
     console.error(`[Email] Delivery failed for ${mailOptions.to}:`, err.message);
-    return { success: false, error: err.message };
+    const combinedError = errors.join(' → ');
+    return { success: false, error: combinedError };
   }
 }
 

@@ -6,6 +6,12 @@ import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+// Enforce IPv4 first to prevent ENETUNREACH errors on cloud hosting (Render)
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 // Import local modules
 import { db, connectDB } from './database/db.js';
