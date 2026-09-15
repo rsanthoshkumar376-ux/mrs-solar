@@ -71,6 +71,17 @@ app.get('/api/health', (req, res) => {
 // SPA Fallback for Client-Side Routing (React Router)
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+    // If request contains /assets/ or ends with asset extensions, resolve directly from assets
+    if (req.path.includes('/assets/') || /\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff|woff2|ttf|map)$/i.test(req.path)) {
+      const fileName = path.basename(req.path);
+      const assetPath = path.join(frontendDistPath, 'assets', fileName);
+      return res.sendFile(assetPath, (err) => {
+        if (err) {
+          res.status(404).json({ message: 'Static asset not found' });
+        }
+      });
+    }
+
     const indexPath = path.join(frontendDistPath, 'index.html');
     res.sendFile(indexPath, (err) => {
       if (err) {

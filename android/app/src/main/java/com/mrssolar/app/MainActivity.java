@@ -145,6 +145,16 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
+
+        webView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
+            try {
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setData(Uri.parse(url));
+                startActivity(i);
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "Cannot download file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private boolean handleCustomUrl(String url) {
@@ -162,8 +172,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // Keep internal portal navigation inside WebView
-        if (url.contains("mrs-solar1.onrender.com")) {
+        // Keep internal portal navigation, blob exports, and data URLs inside WebView
+        if (url.contains("mrs-solar1.onrender.com") || url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("about:")) {
             return false;
         }
 
@@ -185,7 +195,8 @@ public class MainActivity extends AppCompatActivity {
     private void setupRetryButton() {
         retryButton.setOnClickListener(v -> {
             offlineLayout.setVisibility(View.GONE);
-            webView.reload();
+            progressBar.setVisibility(View.VISIBLE);
+            webView.loadUrl(APP_URL);
         });
     }
 
