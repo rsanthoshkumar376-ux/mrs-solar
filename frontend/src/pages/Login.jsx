@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Sun, Moon, Lock, User, ShieldAlert } from 'lucide-react';
+import { Sun, Moon, Lock, User, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import InstallAppBanner from '../components/InstallAppBanner.jsx';
 
 export default function Login() {
   const [roleTab, setRoleTab] = useState('customer'); // 'customer' or 'admin'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
@@ -73,6 +74,7 @@ export default function Login() {
     setRoleTab(tab);
     setUsername('');
     setPassword('');
+    setShowPassword(false);
     setError('');
   };
 
@@ -177,12 +179,25 @@ export default function Login() {
                   <Lock className="w-5 h-5" />
                 </span>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={roleTab === 'customer' ? 'Enter 10-digit mobile number' : '••••••••'}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 rounded-xl py-3 pl-10 pr-4 outline-none transition-all text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 text-sm"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 rounded-xl py-3 pl-10 pr-11 outline-none transition-all text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 text-sm"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 focus:outline-none transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
             </div>
 
