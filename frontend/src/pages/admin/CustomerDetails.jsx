@@ -5,8 +5,10 @@ import { formatCurrency, formatDate } from '../../utils/format.js';
 import { 
   User, Compass, Zap, Landmark, Award, ShieldCheck, 
   ArrowLeft, Edit, FileText, CheckCircle, Clock, AlertTriangle, 
-  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2, Mail, Lock
+  Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2, Mail, Lock,
+  MessageCircle, Send, Globe
 } from 'lucide-react';
+import { generateEmiReminderMessage, generatePaymentReceiptMessage, openWhatsApp } from '../../utils/whatsapp.js';
 
 export default function CustomerDetails() {
   const { id } = useParams();
@@ -27,6 +29,7 @@ export default function CustomerDetails() {
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [emailSending, setEmailSending] = useState(false);
   const [payEmail, setPayEmail] = useState('');
+  const [whatsappModal, setWhatsappModal] = useState(null); // { type: 'reminder'|'receipt', emi, customer, language: 'ta' }
 
   const fetchCustomerDetails = async () => {
     try {
@@ -231,9 +234,21 @@ export default function CustomerDetails() {
               <span className="text-slate-500">Mother's Name</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.motherName || '—'}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-slate-500">Mobile</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.mobileNumber}</span>
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.mobileNumber}</span>
+                {customer.mobileNumber && (
+                  <button
+                    type="button"
+                    onClick={() => openWhatsApp({ phone: customer.mobileNumber, message: `வணக்கம் ${customer.fullName}, MRS SOLAR-ல் இருந்து தொடர்பு கொள்கிறோம்.` })}
+                    title="Chat on WhatsApp"
+                    className="p-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-colors"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-500">Email Address</span>
@@ -432,9 +447,23 @@ export default function CustomerDetails() {
                                 <CreditCard className="w-3 h-3" />
                                 <span>{isRequesting ? 'Verify & Pay' : 'Mark Paid'}</span>
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => setWhatsappModal({
+                                  type: 'reminder',
+                                  emi,
+                                  customer,
+                                  language: 'ta'
+                                })}
+                                title="Send WhatsApp Payment Reminder"
+                                className="inline-flex items-center space-x-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 hover:text-white hover:bg-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300/40 px-2 py-1.5 rounded-xl transition-all"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                <span>Remind</span>
+                              </button>
                             </div>
                           ) : (
-                            <div className="flex items-center justify-center">
+                            <div className="flex items-center justify-center gap-1.5">
                               <span 
                                 className="inline-flex items-center space-x-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 bg-slate-100/70 dark:bg-slate-850/50 border border-slate-200/40 dark:border-slate-800 px-2.5 py-1.5 rounded-xl cursor-not-allowed select-none"
                                 title={`Sequential order: Please verify EMI #${nextUnpaidEmi?.emiNumber} first`}
@@ -442,6 +471,19 @@ export default function CustomerDetails() {
                                 <Lock className="w-3 h-3 text-slate-400" />
                                 <span>Pay #{nextUnpaidEmi?.emiNumber} First</span>
                               </span>
+                              <button
+                                type="button"
+                                onClick={() => setWhatsappModal({
+                                  type: 'reminder',
+                                  emi,
+                                  customer,
+                                  language: 'ta'
+                                })}
+                                title="Send WhatsApp Payment Reminder"
+                                className="inline-flex items-center space-x-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 hover:text-white hover:bg-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300/40 px-2 py-1.5 rounded-xl transition-all"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                              </button>
                             </div>
                           )
                         ) : (
@@ -452,6 +494,19 @@ export default function CustomerDetails() {
                           >
                             <Printer className="w-3 h-3" />
                             <span>Receipt</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setWhatsappModal({
+                              type: 'receipt',
+                              emi,
+                              customer,
+                              language: 'ta'
+                            })}
+                            title="Send Receipt via WhatsApp"
+                            className="inline-flex items-center space-x-1 text-[10px] font-bold text-emerald-600 hover:text-white hover:bg-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/40 px-2 py-1.5 rounded-xl transition-all"
+                          >
+                            <MessageCircle className="w-3 h-3" />
                           </button>
                           <button
                             onClick={() => handleSendEmailReceipt(emi.emiNumber)}
@@ -469,7 +524,7 @@ export default function CustomerDetails() {
                           </button>
                         </div>
                       )}
-                    </td>
+                      </td>
                   </tr>
                   );
                 });
@@ -580,6 +635,23 @@ export default function CustomerDetails() {
             
             {/* Modal Actions */}
             <div className="absolute top-4 right-4 flex items-center space-x-2 no-print">
+              <button 
+                type="button"
+                onClick={() => {
+                  const emi = customer?.emiSchedule?.find(e => e.emiNumber === activeReceipt.emiNumber) || activeReceipt;
+                  setWhatsappModal({
+                    type: 'receipt',
+                    emi,
+                    customer,
+                    language: 'ta'
+                  });
+                }}
+                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors flex items-center space-x-1.5 text-xs font-bold shadow shadow-emerald-500/10"
+                title="Send Receipt to Customer WhatsApp"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>WhatsApp</span>
+              </button>
               <button 
                 onClick={() => handleSendEmailReceipt(activeReceipt.emiNumber)}
                 disabled={emailSending}
@@ -696,6 +768,124 @@ export default function CustomerDetails() {
                 </div>
               </div>
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WHATSAPP MODAL (REMINDER OR RECEIPT) */}
+      {whatsappModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in no-print">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-up">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/30">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+                  <MessageCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-white text-sm">
+                    {whatsappModal.type === 'receipt' ? 'Send WhatsApp Payment Receipt' : 'Send WhatsApp EMI Reminder'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    To: {whatsappModal.customer?.fullName} ({whatsappModal.customer?.mobileNumber || 'No Mobile'})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setWhatsappModal(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Language Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Message Language
+                </label>
+                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setWhatsappModal(prev => ({ ...prev, language: 'ta' }))}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                      whatsappModal.language === 'ta'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    தமிழ் (Tamil)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWhatsappModal(prev => ({ ...prev, language: 'en' }))}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                      whatsappModal.language === 'en'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    English
+                  </button>
+                </div>
+              </div>
+
+              {/* Message Preview */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Message Preview
+                </label>
+                <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 font-mono text-xs whitespace-pre-wrap text-slate-800 dark:text-slate-200 max-h-56 overflow-y-auto leading-relaxed">
+                  {whatsappModal.type === 'receipt'
+                    ? generatePaymentReceiptMessage({
+                        customer: whatsappModal.customer,
+                        emi: whatsappModal.emi,
+                        language: whatsappModal.language
+                      })
+                    : generateEmiReminderMessage({
+                        customer: whatsappModal.customer,
+                        emi: whatsappModal.emi,
+                        language: whatsappModal.language
+                      })}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setWhatsappModal(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const message = whatsappModal.type === 'receipt'
+                      ? generatePaymentReceiptMessage({
+                          customer: whatsappModal.customer,
+                          emi: whatsappModal.emi,
+                          language: whatsappModal.language
+                        })
+                      : generateEmiReminderMessage({
+                          customer: whatsappModal.customer,
+                          emi: whatsappModal.emi,
+                          language: whatsappModal.language
+                        });
+                    openWhatsApp({
+                      phone: whatsappModal.customer?.mobileNumber,
+                      message
+                    });
+                    setWhatsappModal(null);
+                  }}
+                  className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Send via WhatsApp</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

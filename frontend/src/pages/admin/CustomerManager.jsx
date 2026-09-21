@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import api from '../../utils/api.js';
 import { formatCurrency } from '../../utils/format.js';
 import { 
-  Users, UserPlus, Search, SlidersHorizontal, DownloadCloud, Eye, Trash2, X, FileText 
+  Users, UserPlus, Search, SlidersHorizontal, DownloadCloud, Eye, Trash2, X, FileText, MessageCircle 
 } from 'lucide-react';
+import { openWhatsApp } from '../../utils/whatsapp.js';
 
 export default function CustomerManager() {
   const [customers, setCustomers] = useState([]);
@@ -294,7 +295,24 @@ export default function CustomerManager() {
                   <tr key={c._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors">
                     <td className="px-6 py-4 font-mono font-bold text-slate-800 dark:text-slate-200">{c.customerId}</td>
                     <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-200">{c.fullName}</td>
-                    <td className="px-6 py-4">{c.mobileNumber}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="font-mono">{c.mobileNumber}</span>
+                        {c.mobileNumber && (
+                          <button
+                            type="button"
+                            onClick={() => openWhatsApp({
+                              phone: c.mobileNumber,
+                              message: `வணக்கம் ${c.fullName}, MRS SOLAR-ல் இருந்து தொடர்பு கொள்கிறோம்.`
+                            })}
+                            title="Chat on WhatsApp"
+                            className="p-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-colors"
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4">{c.solarBrand} ({c.solarCapacity} kW)</td>
                     <td className="px-6 py-4 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(c.loanAmount, false)}</td>
                     <td className="px-6 py-4 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(c.monthlyEmi, false)}</td>

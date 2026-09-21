@@ -3,8 +3,9 @@ import api from '../../utils/api.js';
 import { formatCurrency, formatDate } from '../../utils/format.js';
 import { 
   Sun, DollarSign, Calendar, ShieldCheck, Zap, X,
-  QrCode, Landmark, User, FileText, Info, Calculator
+  QrCode, Landmark, User, FileText, Info, Calculator, MessageCircle
 } from 'lucide-react';
+import { openCustomerSupportChat } from '../../utils/whatsapp.js';
 
 export default function CustomerDashboard() {
   const [customer, setCustomer] = useState(null);
@@ -92,7 +93,7 @@ export default function CustomerDashboard() {
             <h2 className="text-3xl font-extrabold mt-3">Welcome, {customer.fullName}</h2>
             <p className="text-sm text-teal-100 mt-1">Customer ID: {customer.customerId} | Installation Date: {formatDate(customer.installationDate)}</p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-3 items-center">
             <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/10 text-center">
               <p className="text-xs text-teal-200">Total Outstanding</p>
               <p className="text-2xl font-black mt-1">{formatCurrency(outstandingAmount)}</p>
@@ -101,6 +102,15 @@ export default function CustomerDashboard() {
               <p className="text-xs text-teal-200">Next EMI Date</p>
               <p className="text-2xl font-black mt-1">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : 'Completed'}</p>
             </div>
+            <button
+              type="button"
+              onClick={() => openCustomerSupportChat({ customer })}
+              className="bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl px-4 py-3.5 border border-white/20 flex items-center space-x-2 text-xs font-bold shadow-lg transition-all"
+              title="Chat with MRS SOLAR support on WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>WhatsApp Support</span>
+            </button>
           </div>
         </div>
       </div>
@@ -479,6 +489,18 @@ export default function CustomerDashboard() {
           </div>
         </div>
       )}
+
+      {/* FLOATING WHATSAPP SUPPORT BUTTON */}
+      <button
+        type="button"
+        onClick={() => openCustomerSupportChat({ customer })}
+        className="fixed bottom-6 right-6 z-40 flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 px-4 rounded-full shadow-2xl shadow-emerald-600/40 hover:scale-105 active:scale-95 transition-all"
+        title="Chat with MRS SOLAR on WhatsApp"
+        aria-label="Chat with MRS SOLAR on WhatsApp"
+      >
+        <MessageCircle className="w-5 h-5 text-white" />
+        <span className="hidden sm:inline">WhatsApp Help</span>
+      </button>
 
     </div>
   );
