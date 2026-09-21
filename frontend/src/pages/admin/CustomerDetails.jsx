@@ -106,6 +106,12 @@ export default function CustomerDetails() {
   };
 
   const handleDeletePayment = async (emi) => {
+    const lastPaidEmi = [...(customer?.emiSchedule || [])].reverse().find(e => e.status === 'Paid');
+    if (lastPaidEmi && emi.emiNumber !== lastPaidEmi.emiNumber) {
+      alert(`Sequential Protection: You can only delete payments in reverse order (from the latest paid installment onwards).\nPlease delete EMI #${lastPaidEmi.emiNumber} before deleting EMI #${emi.emiNumber}.`);
+      return;
+    }
+
     if (!window.confirm(`Are you sure you want to DELETE payment for EMI #${emi.emiNumber}?\nThis will reset it back to Pending status.`)) return;
     try {
       await api.delete('/admin/payments/delete-payment', {
@@ -410,9 +416,11 @@ export default function CustomerDetails() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 text-slate-700 dark:text-slate-300">
               {(() => {
                 const nextUnpaidEmi = customer.emiSchedule.find(e => e.status !== 'Paid');
+                const lastPaidEmi = [...customer.emiSchedule].reverse().find(e => e.status === 'Paid');
                 return customer.emiSchedule.map((emi) => {
                   const isRequesting = emi.status !== 'Paid' && customer.requestingEmi === emi.emiNumber;
                   const isNextInOrder = nextUnpaidEmi && nextUnpaidEmi.emiNumber === emi.emiNumber;
+                  const isLastPaid = lastPaidEmi && lastPaidEmi.emiNumber === emi.emiNumber;
 
                   let statusColor = 'bg-slate-50 text-slate-500 border-slate-200';
                   if (emi.status === 'Paid') statusColor = 'bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/20';
@@ -515,13 +523,22 @@ export default function CustomerDetails() {
                           >
                             <Mail className="w-3 h-3" />
                           </button>
-                          <button
-                            onClick={() => handleDeletePayment(emi)}
-                            title="Delete this payment (reset to Pending)"
-                            className="inline-flex items-center text-[10px] font-bold text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-950/30 border border-red-200/40 p-1.5 rounded-xl transition-all"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                          {isLastPaid ? (
+                            <button
+                              onClick={() => handleDeletePayment(emi)}
+                              title="Delete latest payment (reset to Pending)"
+                              className="inline-flex items-center text-[10px] font-bold text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-950/30 border border-red-200/40 p-1.5 rounded-xl transition-all shadow-sm"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          ) : (
+                            <span
+                              title={`Sequential Protection: Only the latest paid installment (EMI #${lastPaidEmi?.emiNumber}) can be deleted first.`}
+                              className="inline-flex items-center text-[10px] font-bold text-slate-300 dark:text-slate-600 bg-slate-100/50 dark:bg-slate-900/40 border border-slate-200/30 dark:border-slate-800/30 p-1.5 rounded-xl cursor-not-allowed select-none"
+                            >
+                              <Lock className="w-3 h-3 text-slate-300 dark:text-slate-600" />
+                            </span>
+                          )}
                         </div>
                       )}
                       </td>

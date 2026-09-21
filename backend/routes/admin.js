@@ -628,6 +628,16 @@ router.delete('/payments/delete-payment', authenticateToken, authorizeRole(['adm
       return res.status(400).json({ message: `EMI #${emiNumber} is not marked as Paid — nothing to delete` });
     }
 
+    // Enforce reverse-sequential deletion order (only the latest paid installment can be deleted from last onwards)
+    const laterPaidEmi = customer.emiSchedule.find(
+      e => e.emiNumber > Number(emiNumber) && e.status === 'Paid'
+    );
+    if (laterPaidEmi) {
+      return res.status(400).json({
+        message: `Sequential Protection: Cannot delete EMI #${emiNumber} because later installment EMI #${laterPaidEmi.emiNumber} is already marked as Paid. Please delete EMI #${laterPaidEmi.emiNumber} first.`
+      });
+    }
+
     // Reset EMI back to Pending
     customer.emiSchedule[scheduleIndex].status = 'Pending';
     customer.emiSchedule[scheduleIndex].paidAmount = 0;
