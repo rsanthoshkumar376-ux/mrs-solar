@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../utils/api.js';
 import { formatCurrency, formatDate } from '../../utils/format.js';
-import { Calendar, ShieldAlert, CreditCard, ChevronRight, Eye, MessageCircle, X, Globe, Send } from 'lucide-react';
+import { Calendar, ShieldAlert, CreditCard, ChevronRight, Eye, MessageCircle, X, Globe, Send, DownloadCloud } from 'lucide-react';
 import { generateEmiReminderMessage, openWhatsApp } from '../../utils/whatsapp.js';
+import { exportEmisToCsv } from '../../utils/exportCsv.js';
 
 export default function EmiManagement() {
   const [emiList, setEmiList] = useState([]);
@@ -63,21 +64,35 @@ export default function EmiManagement() {
           <p className="text-sm text-slate-500">Track and monitor all unpaid or overdue installments across all customer profiles.</p>
         </div>
 
-        {/* Tab Filters */}
-        <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl text-xs font-semibold">
-          {['All', 'Overdue', 'Due Soon', 'Pending'].map((type) => (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`px-4 py-2 rounded-lg transition-all ${
-                filterType === type
-                  ? 'bg-white dark:bg-slate-700 text-teal-600 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              {type}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Export to Excel */}
+          <button
+            type="button"
+            onClick={() => exportEmisToCsv(filteredList)}
+            disabled={filteredList.length === 0}
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all border border-slate-200/50 dark:border-slate-700/50"
+            title="Download collection queue as Excel spreadsheet"
+          >
+            <DownloadCloud className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <span>Export Excel</span>
+          </button>
+
+          {/* Tab Filters */}
+          <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl text-xs font-semibold">
+            {['All', 'Overdue', 'Due Soon', 'Pending'].map((type) => (
+              <button
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`px-4 py-2 rounded-lg transition-all ${
+                  filterType === type
+                    ? 'bg-white dark:bg-slate-700 text-teal-600 dark:text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

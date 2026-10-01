@@ -5,9 +5,11 @@ import api from '../utils/api.js';
 import { 
   Sun, Moon, LogOut, Menu, X, Bell, LayoutDashboard, 
   Users, DollarSign, History, Calculator, ShieldAlert,
-  FolderLock, Database, CheckCircle, Mail, ChevronRight
+  FolderLock, Database, CheckCircle, Mail, ChevronRight,
+  Search, Languages, Mic
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
+import { getLanguage, setLanguage } from '../utils/translations.js';
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
@@ -23,6 +25,66 @@ export default function Layout({ children }) {
     return localStorage.getItem('theme') === 'dark' || 
       (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
+
+  // Language & Global Search States
+  const [lang, setLang] = useState(getLanguage);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+
+  // Global hotkey Ctrl+K / Cmd+K for fast search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const input = document.getElementById('global-search-input');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleSearchChange = async (val) => {
+    setSearchQuery(val);
+    if (!val.trim()) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      return;
+    }
+    setSearchOpen(true);
+    try {
+      const res = await api.get('/admin/customers', { params: { search: val.trim() } });
+      setSearchResults(res.data.slice(0, 6));
+    } catch (err) {
+      console.error('Search error:', err);
+    }
+  };
+
+  const toggleVoiceSearch = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Voice recognition is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = lang === 'ta' ? 'ta-IN' : 'en-IN';
+    recognition.interimResults = false;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognition.onresult = (e) => {
+      const spokenText = e.results[0][0].transcript;
+      handleSearchChange(spokenText);
+    };
+
+    recognition.start();
+  };
 
   // Toggle Dark Mode
   useEffect(() => {
@@ -225,9 +287,87 @@ export default function Layout({ children }) {
             </span>
           </div>
 
+          {/* Universal Fast Search Bar (Admin Mode) */}
+          {user?.role === 'admin' && (
+            <div className="relative flex-1 max-w-sm mx-4 hidden md:block">
+              <div className="relative flex items-center">
+                <Search className="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none" />
+                <input
+                  id="global-search-input"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => searchQuery.trim() && setSearchOpen(true)}
+                  placeholder="Quick Search (Ctrl+K)..."
+                  className="w-full pl-8 pr-8 py-1.5 bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={toggleVoiceSearch}
+                  className={`absolute right-2 p-1 rounded-lg transition-colors ${
+                    isListening ? 'text-red-500 animate-pulse' : 'text-slate-400 hover:text-teal-600 dark:hover:text-teal-400'
+                  }`}
+                  title={isListening ? 'Listening... Speak now' : 'Voice Search'}
+                >
+                  <Mic className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Floating Live Search Results Dropdown */}
+              {searchOpen && searchResults.length > 0 && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setSearchOpen(false)}></div>
+                  <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                    {searchResults.map((c) => (
+                      <button
+                        key={c._id}
+                        type="button"
+                        onClick={() => {
+                          setSearchOpen(false);
+                          setSearchQuery('');
+                          navigate(`/admin/customers/${c._id}`);
+                        }}
+                        className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-teal-50/60 dark:hover:bg-slate-900/60 transition-colors"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="font-bold text-xs text-slate-800 dark:text-white truncate">{c.fullName}</p>
+                          <p className="text-[10px] text-slate-500 font-mono">{c.customerId} • {c.mobileNumber}</p>
+                        </div>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase border shrink-0 ${
+                          c.paymentStatus === 'Paid'
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200/40'
+                            : c.paymentStatus === 'Overdue'
+                            ? 'bg-red-50 text-red-600 border-red-200/40'
+                            : 'bg-orange-50 text-orange-600 border-orange-200/40'
+                        }`}>
+                          {c.paymentStatus}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Right Header items */}
           <div className="flex items-center space-x-3">
             
+            {/* Language Switcher */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextLang = lang === 'en' ? 'ta' : 'en';
+                setLang(nextLang);
+                setLanguage(nextLang);
+              }}
+              className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Switch Language / மொழி மாற்றுக"
+            >
+              <Languages className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+              <span>{lang === 'en' ? 'தமிழ்' : 'English'}</span>
+            </button>
+
             {/* Install Mobile/Desktop App Button */}
             <InstallAppBanner compact={true} />
 

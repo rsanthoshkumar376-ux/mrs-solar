@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { generateEmiReminderMessage, generatePaymentReceiptMessage, openWhatsApp } from '../../utils/whatsapp.js';
 import SolarSiteMap from '../../components/SolarSiteMap.jsx';
+import LoanStatementModal from '../../components/LoanStatementModal.jsx';
 
 const DOC_CONFIGS = [
   { key: 'aadhaarFile', label: 'Aadhaar Identity Proof', desc: 'Government photo identity card' },
@@ -47,6 +48,7 @@ export default function CustomerDetails() {
   const [payEmail, setPayEmail] = useState('');
   const [whatsappModal, setWhatsappModal] = useState(null); // { type: 'reminder'|'receipt', emi, customer, language: 'ta' }
   const [previewDoc, setPreviewDoc] = useState(null); // { title, url, isPdf }
+  const [showStatementModal, setShowStatementModal] = useState(false);
 
   const fetchCustomerDetails = async () => {
     try {
@@ -223,6 +225,15 @@ export default function CustomerDetails() {
         </button>
 
         <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={() => setShowStatementModal(true)}
+            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold border border-teal-200/60 dark:border-teal-800/60 transition-colors shadow-sm"
+            title="Generate and print official loan amortization statement with stamp"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Official Statement (PDF)</span>
+          </button>
           <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase border ${
             customer.paymentStatus === 'Paid'
               ? 'bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/20'
@@ -1059,6 +1070,13 @@ export default function CustomerDetails() {
           </div>
         </div>
       )}
+
+      {/* OFFICIAL LOAN STATEMENT & CERTIFICATE MODAL */}
+      <LoanStatementModal
+        customer={customer}
+        isOpen={showStatementModal}
+        onClose={() => setShowStatementModal(false)}
+      />
 
     </div>
   );

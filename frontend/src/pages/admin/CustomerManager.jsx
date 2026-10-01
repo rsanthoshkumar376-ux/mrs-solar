@@ -6,6 +6,7 @@ import {
   Users, UserPlus, Search, SlidersHorizontal, DownloadCloud, Eye, Trash2, X, FileText, MessageCircle, MapPin, Crosshair 
 } from 'lucide-react';
 import { openWhatsApp } from '../../utils/whatsapp.js';
+import { exportCustomersToCsv } from '../../utils/exportCsv.js';
 
 export default function CustomerManager() {
   const [customers, setCustomers] = useState([]);
@@ -175,34 +176,10 @@ export default function CustomerManager() {
     }
   };
 
-  // Export customer list to CSV format
-  const exportToCsv = () => {
+  // Export customer list to CSV format (Excel compatible)
+  const handleExportToCsv = () => {
     if (customers.length === 0) return;
-    
-    // CSV Header row
-    const headers = [
-      'Customer ID', 'Full Name', 'Mobile Number', 'Solar Brand', 'Capacity (kW)', 
-      'Total Cost', 'Loan Amount', 'EMIs Duration', 'Monthly EMI', 'Loan Status', 'Payment Status'
-    ];
-
-    const rows = customers.map(c => [
-      c.customerId, c.fullName, c.mobileNumber, c.solarBrand || '', c.solarCapacity || 0,
-      c.solarCost || 0, c.loanAmount || 0, c.emiDuration || 0, c.monthlyEmi || 0, c.loanStatus, c.paymentStatus
-    ]);
-
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += headers.join(",") + "\n";
-    rows.forEach(r => {
-      csvContent += r.map(val => `"${val}"`).join(",") + "\n";
-    });
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "mrs_solar_customer_list.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportCustomersToCsv(customers);
   };
 
   return (
@@ -217,12 +194,14 @@ export default function CustomerManager() {
 
         <div className="flex items-center space-x-2">
           <button
-            onClick={exportToCsv}
+            type="button"
+            onClick={handleExportToCsv}
             disabled={customers.length === 0}
             className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl flex items-center space-x-2 text-sm font-bold transition-all border border-slate-200/50 dark:border-slate-700/50"
+            title="Download full customer spreadsheet (.CSV / Excel)"
           >
-            <DownloadCloud className="w-4 h-4" />
-            <span>Export CSV</span>
+            <DownloadCloud className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <span>Export to Excel</span>
           </button>
           
           <button

@@ -3,16 +3,30 @@ import api from '../../utils/api.js';
 import { formatCurrency, formatDate } from '../../utils/format.js';
 import { 
   Sun, DollarSign, Calendar, ShieldCheck, Zap, X,
-  QrCode, Landmark, User, FileText, Info, Calculator, MessageCircle
+  QrCode, Landmark, User, FileText, Info, Calculator, MessageCircle,
+  Copy, Check, Leaf, Printer
 } from 'lucide-react';
 import { openCustomerSupportChat } from '../../utils/whatsapp.js';
 import SolarSiteMap from '../../components/SolarSiteMap.jsx';
+import LoanStatementModal from '../../components/LoanStatementModal.jsx';
+import { translations, getLanguage } from '../../utils/translations.js';
 
 export default function CustomerDashboard() {
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showQrModal, setShowQrModal] = useState(false);
   const [selectedEmi, setSelectedEmi] = useState(null);
+  const [showStatementModal, setShowStatementModal] = useState(false);
+  const [copiedUpi, setCopiedUpi] = useState(false);
+  const [lang, setLang] = useState(getLanguage);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
   
   // Amortisation Calculator States (Live EMI Calculator)
   const [calcCost, setCalcCost] = useState(150000);
@@ -105,13 +119,66 @@ export default function CustomerDashboard() {
             </div>
             <button
               type="button"
+              onClick={() => setShowStatementModal(true)}
+              className="bg-white/20 hover:bg-white/30 text-white rounded-2xl px-4 py-3.5 border border-white/20 flex items-center space-x-2 text-xs font-bold shadow-lg transition-all"
+              title="View & Download official loan amortization statement with stamp"
+            >
+              <Printer className="w-4 h-4" />
+              <span>{lang === 'ta' ? 'கடன் அறிக்கை (PDF)' : 'Loan Statement (PDF)'}</span>
+            </button>
+            <button
+              type="button"
               onClick={() => openCustomerSupportChat({ customer })}
               className="bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl px-4 py-3.5 border border-white/20 flex items-center space-x-2 text-xs font-bold shadow-lg transition-all"
               title="Chat with MRS SOLAR support on WhatsApp"
             >
               <MessageCircle className="w-4 h-4" />
-              <span>WhatsApp Support</span>
+              <span>{t.whatsappHelp}</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* GREEN ENERGY GENERATION & EB BILL SAVINGS */}
+      <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-amber-500/10 border border-emerald-500/20 dark:border-emerald-500/20 rounded-3xl p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-500/20">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <Leaf className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 dark:text-white text-sm">{t.greenTitle}</h3>
+              <p className="text-[11px] text-slate-500">Live return-on-investment & clean solar power metrics</p>
+            </div>
+          </div>
+          <span className="px-3 py-1 bg-emerald-600 text-white text-[11px] font-bold rounded-full self-start sm:self-auto shadow-sm">
+            {t.subsidyEligible}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 text-xs">
+          <div className="bg-white/80 dark:bg-slate-900/80 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+            <span className="text-[10px] font-bold uppercase text-slate-400">{t.estGeneration}</span>
+            <p className="text-xl font-black text-slate-800 dark:text-white mt-0.5">
+              ~{Math.round((Number(customer.solarCapacity) || 3) * 120)} Units <span className="text-xs font-normal text-slate-400">/ mo</span>
+            </p>
+            <p className="text-[10px] text-slate-500 mt-1">Based on 4 kWh/kW daily sunshine in TN</p>
+          </div>
+
+          <div className="bg-white/80 dark:bg-slate-900/80 p-3.5 rounded-2xl border border-emerald-300/40 dark:border-emerald-800/40">
+            <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">{t.estSavings}</span>
+            <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+              {formatCurrency(Math.round((Number(customer.solarCapacity) || 3) * 120 * 6.5), false)} <span className="text-xs font-normal text-slate-400">/ mo</span>
+            </p>
+            <p className="text-[10px] text-slate-500 mt-1">Direct savings against commercial/residential TNEB bills</p>
+          </div>
+
+          <div className="bg-white/80 dark:bg-slate-900/80 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+            <span className="text-[10px] font-bold uppercase text-slate-400">{t.co2Offset}</span>
+            <p className="text-xl font-black text-teal-600 dark:text-teal-400 mt-0.5">
+              ~{Math.round((Number(customer.solarCapacity) || 3) * 120 * 0.82)} kg CO₂
+            </p>
+            <p className="text-[10px] text-slate-500 mt-1">Equivalent to planting ~{Math.round((Number(customer.solarCapacity) || 3) * 6)} trees per month</p>
           </div>
         </div>
       </div>
@@ -464,16 +531,72 @@ export default function CustomerDashboard() {
               <p className="text-[10px] text-slate-400 italic">UPI: rsanthoshkumar376@oksbi</p>
             </div>
 
-            {/* DIRECT UPI APP LINK BUTTONS FOR MOBILE */}
-            <div className="space-y-2">
-              <a
-                href={`upi://pay?pa=rsanthoshkumar376@oksbi&pn=MRS%20SOLAR&am=${selectedEmi.emiAmount + selectedEmi.lateFee}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
-                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2 text-sm"
+            {/* MULTI-APP UPI PAYMENT SELECTOR */}
+            <div className="space-y-2 pt-1">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
+                1-Tap Mobile Payment (Opens App Directly)
+              </p>
+
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={`gpay://upi/pay?pa=rsanthoshkumar376@oksbi&pn=MRS%20SOLAR&am=${selectedEmi.emiAmount + selectedEmi.lateFee}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
+                  className="py-2.5 px-3 bg-white hover:bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
+                  title="Open Google Pay"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                  <span>Google Pay</span>
+                </a>
+
+                <a
+                  href={`phonepe://pay?pa=rsanthoshkumar376@oksbi&pn=MRS%20SOLAR&am=${selectedEmi.emiAmount + selectedEmi.lateFee}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
+                  className="py-2.5 px-3 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
+                  title="Open PhonePe"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-white"></span>
+                  <span>PhonePe</span>
+                </a>
+
+                <a
+                  href={`paytmmp://pay?pa=rsanthoshkumar376@oksbi&pn=MRS%20SOLAR&am=${selectedEmi.emiAmount + selectedEmi.lateFee}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
+                  className="py-2.5 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
+                  title="Open Paytm"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-200"></span>
+                  <span>Paytm</span>
+                </a>
+
+                <a
+                  href={`upi://pay?pa=rsanthoshkumar376@oksbi&pn=MRS%20SOLAR&am=${selectedEmi.emiAmount + selectedEmi.lateFee}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
+                  className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
+                  title="Open Any UPI App"
+                >
+                  <Zap className="w-3.5 h-3.5 text-yellow-300 fill-current" />
+                  <span>Any UPI App</span>
+                </a>
+              </div>
+
+              {/* Copy UPI ID Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText('rsanthoshkumar376@oksbi');
+                  setCopiedUpi(true);
+                  setTimeout(() => setCopiedUpi(false), 2000);
+                }}
+                className="w-full py-1.5 px-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-[11px] text-slate-500 hover:text-teal-600 dark:hover:text-teal-400 flex items-center justify-center space-x-1.5 transition-colors"
               >
-                <Zap className="w-4 h-4 text-yellow-300 fill-current" />
-                <span>Pay via GPay / PhonePe / Paytm</span>
-              </a>
-              <p className="text-[10px] text-slate-400 text-center">Opens GPay/PhonePe directly with pre-filled amount {formatCurrency(selectedEmi.emiAmount + selectedEmi.lateFee)}</p>
+                {copiedUpi ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-600" />
+                    <span className="text-emerald-600 font-bold">UPI ID Copied to Clipboard!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy UPI ID (rsanthoshkumar376@oksbi)</span>
+                  </>
+                )}
+              </button>
             </div>
 
             <button
@@ -494,6 +617,13 @@ export default function CustomerDashboard() {
           </div>
         </div>
       )}
+
+      {/* OFFICIAL LOAN STATEMENT & CERTIFICATE MODAL */}
+      <LoanStatementModal
+        customer={customer}
+        isOpen={showStatementModal}
+        onClose={() => setShowStatementModal(false)}
+      />
 
       {/* FLOATING WHATSAPP SUPPORT BUTTON */}
       <button
