@@ -158,7 +158,8 @@ router.get('/customers', authenticateToken, authorizeRole(['admin']), async (req
 // 3. Customer Details
 router.get('/customers/:id', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
-    const customer = await db.findOne('customers', { _id: req.params.id });
+    const customer = (await db.findOne('customers', { _id: req.params.id })) || 
+                     (await db.findOne('customers', { customerId: req.params.id }));
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }

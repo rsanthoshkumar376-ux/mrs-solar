@@ -5,7 +5,7 @@ import api from '../utils/api.js';
 import { 
   Sun, Moon, LogOut, Menu, X, Bell, LayoutDashboard, 
   Users, DollarSign, History, Calculator, ShieldAlert,
-  FolderLock, Database, CheckCircle, Mail
+  FolderLock, Database, CheckCircle, Mail, ChevronRight
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 
@@ -64,6 +64,40 @@ export default function Layout({ children }) {
       setUnreadCount(0);
     } catch (error) {
       console.error('Error marking notifications read:', error);
+    }
+  };
+
+  const handleNotificationClick = async (n) => {
+    setNotificationsOpen(false);
+
+    // Mark single notification read
+    if (!n.read) {
+      try {
+        await api.post('/customer/notifications/read', { id: n._id });
+        setNotifications(prev => prev.map(item => item._id === n._id ? { ...item, read: true } : item));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      } catch (err) {
+        console.error('Error marking notification read:', err);
+      }
+    }
+
+    // Identify target customer ID if present in notification record or message
+    const targetCustomerId = n.customerId || n.message?.match(/SOL-\d+/)?.[0];
+
+    if (user?.role === 'admin') {
+      if (targetCustomerId) {
+        navigate(`/admin/customers/${targetCustomerId}`);
+      } else if (n.type?.includes('Payment') || n.type?.includes('Overdue') || n.type?.includes('Due')) {
+        navigate('/admin/emis');
+      } else {
+        navigate('/admin/customers');
+      }
+    } else {
+      if (n.type?.includes('Payment') || n.type?.includes('Receipt')) {
+        navigate('/customer/history');
+      } else {
+        navigate('/customer');
+      }
     }
   };
 
@@ -244,13 +278,15 @@ export default function Layout({ children }) {
                         notifications.map((n) => (
                           <div 
                             key={n._id} 
-                            className={`p-4 text-xs transition-colors ${
+                            onClick={() => handleNotificationClick(n)}
+                            title="Click to open file"
+                            className={`p-4 text-xs transition-all cursor-pointer group hover:bg-teal-50/70 dark:hover:bg-slate-900 ${
                               n.read 
                                 ? 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400' 
                                 : 'bg-teal-50/30 dark:bg-teal-950/20 text-slate-800 dark:text-slate-200 font-medium'
                             }`}
                           >
-                            <div className="flex items-start space-x-2">
+                            <div className="flex items-start space-x-2.5">
                               {n.type?.includes('Overdue') ? (
                                 <ShieldAlert className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
                               ) : n.type?.includes('Payment') ? (
@@ -259,11 +295,21 @@ export default function Layout({ children }) {
                                 <Sun className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-slate-800 dark:text-white">{n.title}</p>
+                                <div className="flex items-center justify-between">
+                                  <p className="font-semibold text-slate-800 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                                    {n.title}
+                                  </p>
+                                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                                </div>
                                 <p className="mt-0.5 leading-relaxed">{n.message}</p>
-                                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
-                                  {new Date(n.createdAt).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                                </p>
+                                <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-slate-100 dark:border-slate-850">
+                                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                                    {new Date(n.createdAt).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                  <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 group-hover:underline">
+                                    Open File →
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>

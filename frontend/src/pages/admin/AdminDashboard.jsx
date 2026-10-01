@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api.js';
 import { formatCurrency } from '../../utils/format.js';
 import { 
   Users, Zap, DollarSign, Wallet, ShieldAlert, Clock, 
-  TrendingUp, Activity, BellRing, PlayCircle, RefreshCw, CheckCircle
+  TrendingUp, Activity, BellRing, PlayCircle, RefreshCw, CheckCircle, ChevronRight
 } from 'lucide-react';
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -242,21 +244,40 @@ export default function AdminDashboard() {
               {notifications.length === 0 ? (
                 <p className="text-xs text-slate-400 py-6 text-center">No alerts logged today.</p>
               ) : (
-                notifications.map((n) => (
-                  <div key={n._id} className="p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800/50 rounded-2xl flex items-start space-x-2.5 text-[11px] leading-relaxed">
-                    {n.type?.includes('Overdue') ? (
-                      <ShieldAlert className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                    ) : n.type?.includes('Payment') ? (
-                      <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-                    ) : (
-                      <Users className="w-4 h-4 text-teal-500 mt-0.5 flex-shrink-0" />
-                    )}
-                    <div>
-                      <p className="font-bold text-slate-700 dark:text-slate-200">{n.title}</p>
-                      <p className="text-slate-500 dark:text-slate-400 mt-0.5">{n.message}</p>
+                notifications.map((n) => {
+                  const targetCustomerId = n.customerId || n.message?.match(/SOL-\d+/)?.[0];
+                  return (
+                    <div 
+                      key={n._id} 
+                      onClick={() => {
+                        if (targetCustomerId) {
+                          navigate(`/admin/customers/${targetCustomerId}`);
+                        } else if (n.type?.includes('Payment') || n.type?.includes('Overdue') || n.type?.includes('Due')) {
+                          navigate('/admin/emis');
+                        } else {
+                          navigate('/admin/customers');
+                        }
+                      }}
+                      title="Click to open customer file"
+                      className="p-3 bg-slate-50 dark:bg-slate-900/50 hover:bg-teal-50/60 dark:hover:bg-slate-800/80 border border-slate-200/50 dark:border-slate-800/50 hover:border-teal-500/40 rounded-2xl flex items-start justify-between text-[11px] leading-relaxed cursor-pointer group transition-all"
+                    >
+                      <div className="flex items-start space-x-2.5 flex-1 min-w-0 pr-2">
+                        {n.type?.includes('Overdue') ? (
+                          <ShieldAlert className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                        ) : n.type?.includes('Payment') ? (
+                          <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <Users className="w-4 h-4 text-teal-500 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-slate-700 dark:text-slate-200 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">{n.title}</p>
+                          <p className="text-slate-500 dark:text-slate-400 mt-0.5">{n.message}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" />
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
