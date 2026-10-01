@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../utils/api.js';
 import { formatCurrency } from '../../utils/format.js';
 import { 
-  Users, UserPlus, Search, SlidersHorizontal, DownloadCloud, Eye, Trash2, X, FileText, MessageCircle 
+  Users, UserPlus, Search, SlidersHorizontal, DownloadCloud, Eye, Trash2, X, FileText, MessageCircle, MapPin, Crosshair 
 } from 'lucide-react';
 import { openWhatsApp } from '../../utils/whatsapp.js';
 
@@ -19,6 +19,7 @@ export default function CustomerManager() {
   // Add Customer Modal States
   const [showAddModal, setShowAddModal] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [detectingGps, setDetectingGps] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '', fatherName: '', motherName: '', mobileNumber: '', alternateNumber: '',
     email: '', address: '', city: '', district: '', state: '', pinCode: '',
@@ -26,8 +27,33 @@ export default function CustomerManager() {
     bankName: '', accountNumber: '', ifscCode: '', nomineeDetails: '',
     installationAddress: '', solarCapacity: '', solarBrand: '', solarCost: '',
     installationDate: '', warrantyDetails: '', loanAmount: '', downPayment: '',
-    interestRate: '2', emiDuration: '12', loanStartDate: '', remarks: ''
+    interestRate: '2', emiDuration: '12', loanStartDate: '', remarks: '',
+    latitude: '', longitude: ''
   });
+
+  const handleDetectGps = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+    setDetectingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setFormData(prev => ({
+          ...prev,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6)
+        }));
+        setDetectingGps(false);
+      },
+      (err) => {
+        console.error('GPS error:', err);
+        alert(`Failed to detect GPS: ${err.message || 'Permission denied or timed out'}`);
+        setDetectingGps(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   // Files state
   const [files, setFiles] = useState({
@@ -117,7 +143,8 @@ export default function CustomerManager() {
         bankName: '', accountNumber: '', ifscCode: '', nomineeDetails: '',
         installationAddress: '', solarCapacity: '', solarBrand: '', solarCost: '',
         installationDate: '', warrantyDetails: '', loanAmount: '', downPayment: '',
-        interestRate: '2', emiDuration: '12', loanStartDate: '', remarks: ''
+        interestRate: '2', emiDuration: '12', loanStartDate: '', remarks: '',
+        latitude: '', longitude: ''
       });
       setFiles({
         aadhaarFile: null, panFile: null, photoFile: null,
@@ -485,9 +512,21 @@ export default function CustomerManager() {
                 </div>
               </div>
 
-              {/* BLOCK 3: SOLAR CAPACITY & COST */}
+              {/* BLOCK 3: SOLAR CAPACITY & ROOFTOP GPS */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">3. Solar Project & Installation</h4>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">3. Solar Project & Rooftop GPS Location</h4>
+                  <button
+                    type="button"
+                    onClick={handleDetectGps}
+                    disabled={detectingGps}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/50 text-teal-600 dark:text-teal-400 text-xs font-bold border border-teal-200/50 dark:border-teal-800/50 transition-colors self-start sm:self-auto"
+                    title="Capture current phone or laptop coordinates"
+                  >
+                    <Crosshair className={`w-3.5 h-3.5 ${detectingGps ? 'animate-spin' : ''}`} />
+                    <span>{detectingGps ? 'Detecting Satellite GPS...' : '📍 Auto-Detect Current Roof GPS'}</span>
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div className="md:col-span-2">
                     <label className="block font-semibold text-slate-500 mb-1">Solar Installation Address</label>
@@ -496,6 +535,14 @@ export default function CustomerManager() {
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">Solar Capacity (kW) *</label>
                     <input type="number" step="0.1" required name="solarCapacity" value={formData.solarCapacity} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">Roof Latitude (GPS)</label>
+                    <input type="number" step="any" placeholder="e.g. 11.1271" name="latitude" value={formData.latitude} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">Roof Longitude (GPS)</label>
+                    <input type="number" step="any" placeholder="e.g. 78.6569" name="longitude" value={formData.longitude} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">Solar Brand / Manufacturer</label>

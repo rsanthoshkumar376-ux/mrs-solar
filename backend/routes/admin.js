@@ -238,6 +238,8 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
       },
       nomineeDetails: rawData.nomineeDetails || '',
       installationAddress: rawData.installationAddress || '',
+      latitude: rawData.latitude ? Number(rawData.latitude) : null,
+      longitude: rawData.longitude ? Number(rawData.longitude) : null,
       solarCapacity: Number(rawData.solarCapacity) || 0,
       solarBrand: rawData.solarBrand || '',
       solarCost: Number(rawData.solarCost) || 0,
@@ -357,6 +359,8 @@ router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload
       solarCost: rawData.solarCost !== undefined ? Number(rawData.solarCost) : oldCustomer.solarCost,
       installationDate: rawData.installationDate !== undefined ? rawData.installationDate : oldCustomer.installationDate,
       warrantyDetails: rawData.warrantyDetails !== undefined ? rawData.warrantyDetails : oldCustomer.warrantyDetails,
+      latitude: rawData.latitude !== undefined ? (rawData.latitude ? Number(rawData.latitude) : null) : oldCustomer.latitude,
+      longitude: rawData.longitude !== undefined ? (rawData.longitude ? Number(rawData.longitude) : null) : oldCustomer.longitude,
       remarks: rawData.remarks !== undefined ? rawData.remarks : oldCustomer.remarks,
       documents: updatedDocs
     };

@@ -6,9 +6,25 @@ import {
   User, Compass, Zap, Landmark, Award, ShieldCheck, 
   ArrowLeft, Edit, FileText, CheckCircle, Clock, AlertTriangle, 
   Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2, Mail, Lock,
-  MessageCircle, Send, Globe
+  MessageCircle, Send, Globe, Eye, Download, FolderArchive
 } from 'lucide-react';
 import { generateEmiReminderMessage, generatePaymentReceiptMessage, openWhatsApp } from '../../utils/whatsapp.js';
+import SolarSiteMap from '../../components/SolarSiteMap.jsx';
+
+const DOC_CONFIGS = [
+  { key: 'aadhaarFile', label: 'Aadhaar Identity Proof', desc: 'Government photo identity card' },
+  { key: 'panFile', label: 'PAN Card', desc: 'Permanent account number card' },
+  { key: 'photoFile', label: 'Passport Photograph', desc: 'Customer portrait verification photo' },
+  { key: 'electricityBillFile', label: 'TNEB Electricity Bill', desc: 'Consumer utility billing document' },
+  { key: 'propertyProofFile', label: 'Property / Roof Proof', desc: 'Roof ownership & tax document' },
+  { key: 'agreementFile', label: 'Solar Contract & Warranty', desc: 'Signed installation & warranty agreement' },
+];
+
+const getDocUrl = (path) => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${window.location.origin}${path}`;
+};
 
 export default function CustomerDetails() {
   const { id } = useParams();
@@ -30,6 +46,7 @@ export default function CustomerDetails() {
   const [emailSending, setEmailSending] = useState(false);
   const [payEmail, setPayEmail] = useState('');
   const [whatsappModal, setWhatsappModal] = useState(null); // { type: 'reminder'|'receipt', emi, customer, language: 'ta' }
+  const [previewDoc, setPreviewDoc] = useState(null); // { title, url, isPdf }
 
   const fetchCustomerDetails = async () => {
     try {
@@ -366,22 +383,22 @@ export default function CustomerDetails() {
             </div>
             
             <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Verification Files</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Verified Documents Vault</p>
               <div className="grid grid-cols-2 gap-2">
-                {customer.documents && Object.keys(customer.documents).map((docName) => {
-                  const url = customer.documents[docName];
-                  if (!url) return null;
+                {DOC_CONFIGS.map((doc) => {
+                  const path = customer.documents?.[doc.key];
+                  if (!path) return null;
+                  const fullUrl = getDocUrl(path);
                   return (
-                    <a
-                      key={docName}
-                      href={`http://localhost:5000${url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/20 text-slate-600 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 rounded-lg border border-slate-200/50 dark:border-slate-700/50 truncate text-[10px]"
+                    <button
+                      key={doc.key}
+                      type="button"
+                      onClick={() => setPreviewDoc({ title: doc.label, url: fullUrl, isPdf: fullUrl.toLowerCase().endsWith('.pdf') })}
+                      className="flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/20 text-slate-600 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 rounded-lg border border-slate-200/50 dark:border-slate-700/50 truncate text-[10px] text-left"
                     >
                       <FileText className="w-3 h-3 flex-shrink-0" />
-                      <span className="capitalize truncate">{docName.replace('File', '')}</span>
-                    </a>
+                      <span className="truncate">{doc.label}</span>
+                    </button>
                   );
                 })}
               </div>
@@ -389,6 +406,95 @@ export default function CustomerDetails() {
           </div>
         </div>
 
+      </div>
+
+      {/* 1. SOLAR ROOFTOP SITE MAP & GPS NAVIGATION */}
+      <div className="no-print">
+        <SolarSiteMap customer={customer} />
+      </div>
+
+      {/* 2. CUSTOMER DOCUMENT & WARRANTY VAULT */}
+      <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-4 no-print border border-slate-200/60 dark:border-slate-800/60">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+              <FolderArchive className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 dark:text-white text-sm">Customer Document & Warranty Vault</h3>
+              <p className="text-[11px] text-slate-500">Secure digital repository of KYC verification, electricity bills, and solar warranty agreements</p>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 font-medium">
+            {Object.values(customer.documents || {}).filter(Boolean).length} / {DOC_CONFIGS.length} Documents Uploaded
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+          {DOC_CONFIGS.map((doc) => {
+            const relativePath = customer.documents?.[doc.key];
+            const fileUrl = relativePath ? getDocUrl(relativePath) : null;
+            const isPdf = fileUrl ? fileUrl.toLowerCase().endsWith('.pdf') : false;
+
+            return (
+              <div
+                key={doc.key}
+                className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                  fileUrl
+                    ? 'bg-slate-50/70 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 hover:border-teal-500/50'
+                    : 'bg-slate-50/30 dark:bg-slate-900/20 border-dashed border-slate-200 dark:border-slate-800/80 opacity-70'
+                }`}
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    {fileUrl ? (
+                      <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/50">
+                        <CheckCircle className="w-3 h-3" />
+                        <span>Verified</span>
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500">
+                        Not Uploaded
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs mt-3">{doc.label}</h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{doc.desc}</p>
+                </div>
+
+                {fileUrl ? (
+                  <div className="flex items-center gap-2 pt-4 mt-2 border-t border-slate-200/50 dark:border-slate-800/50">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDoc({ title: doc.label, url: fileUrl, isPdf })}
+                      className="flex-1 inline-flex items-center justify-center space-x-1 py-1.5 px-2 rounded-xl bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 dark:hover:bg-teal-900/50 text-teal-600 dark:text-teal-400 text-xs font-semibold transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Preview</span>
+                    </button>
+                    <a
+                      href={fileUrl}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+                      title="Download Document"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-slate-400 italic pt-4 mt-2 border-t border-slate-100 dark:border-slate-800/40">
+                    No document attached
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* AMORTISATION TIMELINE SCHEDULE */}
@@ -903,6 +1009,52 @@ export default function CustomerDetails() {
                   <span>Send via WhatsApp</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DOCUMENT PREVIEW MODAL */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in no-print">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/50">
+              <div className="flex items-center space-x-2">
+                <FileText className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                <h3 className="font-bold text-slate-800 dark:text-white text-sm">{previewDoc.title}</h3>
+              </div>
+              <div className="flex items-center space-x-2">
+                <a
+                  href={previewDoc.url}
+                  download
+                  className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 text-xs font-semibold hover:bg-teal-100 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-slate-100 dark:bg-slate-950 min-h-[400px]">
+              {previewDoc.isPdf ? (
+                <iframe
+                  src={previewDoc.url}
+                  title={previewDoc.title}
+                  className="w-full h-[70vh] rounded-xl border border-slate-200 dark:border-slate-800"
+                ></iframe>
+              ) : (
+                <img
+                  src={previewDoc.url}
+                  alt={previewDoc.title}
+                  className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-md"
+                />
+              )}
             </div>
           </div>
         </div>

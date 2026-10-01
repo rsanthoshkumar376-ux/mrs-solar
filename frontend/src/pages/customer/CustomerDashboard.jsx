@@ -6,6 +6,7 @@ import {
   QrCode, Landmark, User, FileText, Info, Calculator, MessageCircle
 } from 'lucide-react';
 import { openCustomerSupportChat } from '../../utils/whatsapp.js';
+import SolarSiteMap from '../../components/SolarSiteMap.jsx';
 
 export default function CustomerDashboard() {
   const [customer, setCustomer] = useState(null);
@@ -260,10 +261,11 @@ export default function CustomerDashboard() {
                 {customer.documents && Object.keys(customer.documents).map((docName) => {
                   const url = customer.documents[docName];
                   if (!url) return null;
+                  const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
                   return (
                     <a
                       key={docName}
-                      href={`http://localhost:5000${url}`}
+                      href={fullUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/20 text-slate-600 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 rounded-xl transition-all border border-slate-200/50 dark:border-slate-700/50 truncate"
@@ -279,6 +281,9 @@ export default function CustomerDashboard() {
         </div>
 
       </div>
+
+      {/* SOLAR ROOFTOP SITE MAP & GPS NAVIGATION */}
+      <SolarSiteMap customer={customer} />
 
       {/* LIVE EMI CALCULATOR SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
