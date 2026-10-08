@@ -1,8 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, Navigation, ExternalLink, Crosshair, Compass } from 'lucide-react';
+import { translations, getLanguage } from '../utils/translations.js';
 
 export default function SolarSiteMap({ customer }) {
   const [mapType, setMapType] = useState('street'); // 'street' or 'satellite'
+  const [lang, setLang] = useState(getLanguage);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
 
   // Extract address details
   const addressQuery = customer?.installationAddress || customer?.address || `${customer?.city || ''}, ${customer?.district || ''}, Tamil Nadu, India`;
@@ -39,8 +49,8 @@ export default function SolarSiteMap({ customer }) {
             <Compass className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="font-bold text-slate-800 dark:text-white text-sm">Solar Rooftop Site & GPS Navigation</h3>
-            <p className="text-[11px] text-slate-500">Live geolocation of installation roof for site visits</p>
+            <h3 className="font-bold text-slate-800 dark:text-white text-sm">{t.siteMapTitle}</h3>
+            <p className="text-[11px] text-slate-500">{t.siteMapSubtitle}</p>
           </div>
         </div>
 
@@ -54,7 +64,7 @@ export default function SolarSiteMap({ customer }) {
             title="Open Turn-by-Turn GPS Driving Directions in Google Maps"
           >
             <Navigation className="w-3.5 h-3.5" />
-            <span>Start GPS Navigation</span>
+            <span>{t.startGpsNav}</span>
           </a>
           <a
             href={googleMapsViewUrl}
@@ -83,7 +93,7 @@ export default function SolarSiteMap({ customer }) {
           <div className="flex items-center space-x-1.5">
             <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 flex-shrink-0" />
             <span className="font-bold text-slate-800 dark:text-white truncate">
-              {customer?.installationAddress || customer?.address || 'Site Address'}
+              {customer?.installationAddress || customer?.address || t.siteAddress}
             </span>
           </div>
           {hasCoords && (
@@ -97,22 +107,22 @@ export default function SolarSiteMap({ customer }) {
       {/* FOOTER METADATA */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
         <div className="bg-slate-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
-          <span className="text-[10px] uppercase font-bold text-slate-400">Installation Address</span>
+          <span className="text-[10px] uppercase font-bold text-slate-400">{t.installationAddress}</span>
           <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5 truncate" title={customer?.installationAddress || customer?.address}>
             {customer?.installationAddress || customer?.address || '—'}
           </p>
         </div>
         <div className="bg-slate-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
-          <span className="text-[10px] uppercase font-bold text-slate-400">District & State</span>
+          <span className="text-[10px] uppercase font-bold text-slate-400">{t.districtState}</span>
           <p className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">
             {customer?.district || customer?.city || 'Tamil Nadu'}, {customer?.state || 'TN'}
           </p>
         </div>
         <div className="bg-slate-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
-          <span className="text-[10px] uppercase font-bold text-slate-400">GPS Site Status</span>
+          <span className="text-[10px] uppercase font-bold text-slate-400">{t.gpsSiteStatus}</span>
           <div className="flex items-center space-x-1.5 mt-0.5 text-emerald-600 dark:text-emerald-400 font-bold">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Rooftop Geocoded</span>
+            <span>{t.rooftopGeocoded}</span>
           </div>
         </div>
       </div>

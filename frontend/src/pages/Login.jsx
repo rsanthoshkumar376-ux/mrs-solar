@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Sun, Moon, Lock, User, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { Sun, Moon, Lock, User, ShieldAlert, Eye, EyeOff, Languages } from 'lucide-react';
 import InstallAppBanner from '../components/InstallAppBanner.jsx';
+import { translations, getLanguage, setLanguage } from '../utils/translations.js';
 
 export default function Login() {
   const [roleTab, setRoleTab] = useState('customer'); // 'customer' or 'admin'
@@ -11,6 +12,16 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [lang, setLang] = useState(getLanguage);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark' || 
       (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -44,7 +55,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username || !password) {
-      setError('Please fill in all fields.');
+      setError(t.fillAllFieldsError);
       return;
     }
 
@@ -80,14 +91,30 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-teal-50/20 to-emerald-50/10 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-950 transition-colors duration-300 px-4">
-      {/* Dark mode switcher in corner */}
-      <button 
-        onClick={() => setDarkMode(!darkMode)}
-        className="absolute top-4 right-4 p-2 rounded-full glass border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
-        aria-label="Toggle theme"
-      >
-        {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-      </button>
+      {/* Top action controls: Language Switcher & Dark Mode Switcher */}
+      <div className="absolute top-4 right-4 flex items-center space-x-2">
+        <button
+          type="button"
+          onClick={() => {
+            const nextLang = lang === 'en' ? 'ta' : 'en';
+            setLang(nextLang);
+            setLanguage(nextLang);
+          }}
+          className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-full glass border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+          title="Switch Language / மொழி மாற்றுக"
+        >
+          <Languages className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+          <span>{lang === 'en' ? 'தமிழ்' : 'English'}</span>
+        </button>
+
+        <button 
+          onClick={() => setDarkMode(!darkMode)}
+          className="p-2 rounded-full glass border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+          aria-label="Toggle theme"
+        >
+          {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
+      </div>
 
       <div className="w-full max-w-md">
         {/* LOGO */}
@@ -98,7 +125,7 @@ export default function Login() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-800 dark:text-white">
             MRS <span className="text-teal-600 dark:text-teal-400">SOLAR</span>
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Solar Loan Management Portal</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t.loginTitle}</p>
         </div>
 
         {/* INSTALL APP PROMPT */}
@@ -122,7 +149,7 @@ export default function Login() {
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              Customer Login
+              {t.customerLoginTab}
             </button>
             <button
               onClick={() => selectTab('admin')}
@@ -132,7 +159,7 @@ export default function Login() {
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              Owner/Admin Login
+              {t.adminLoginTab}
             </button>
           </div>
 
@@ -147,7 +174,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                {roleTab === 'customer' ? 'Mobile Number or Customer ID' : 'Username'}
+                {roleTab === 'customer' ? t.loginIdentifierLabel : t.loginIdentifierAdminLabel}
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 dark:text-slate-500">
@@ -157,7 +184,7 @@ export default function Login() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder={roleTab === 'customer' ? 'Enter Mobile Number or Customer ID (e.g. 9876543210 or SOL-1001)' : 'e.g. MRSassociates'}
+                  placeholder={roleTab === 'customer' ? t.loginIdentifierPlaceholder : t.loginIdentifierAdminPlaceholder}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 rounded-xl py-3 pl-10 pr-4 outline-none transition-all text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 text-sm"
                 />
               </div>
@@ -166,11 +193,11 @@ export default function Login() {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Password
+                  {t.passwordLabel}
                 </label>
                 {roleTab === 'customer' && (
                   <span className="text-[11px] text-teal-600 dark:text-teal-400 font-medium">
-                    (Password = Your Mobile Number)
+                    {t.passwordHint}
                   </span>
                 )}
               </div>
@@ -182,7 +209,7 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={roleTab === 'customer' ? 'Enter 10-digit mobile number' : '••••••••'}
+                  placeholder={roleTab === 'customer' ? t.passwordPlaceholderCustomer : t.passwordPlaceholderAdmin}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 rounded-xl py-3 pl-10 pr-11 outline-none transition-all text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 text-sm"
                 />
                 <button
@@ -209,10 +236,10 @@ export default function Login() {
               {loading ? (
                 <div className="flex items-center justify-center space-x-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Logging in...</span>
+                  <span>{t.loggingInBtn}</span>
                 </div>
               ) : (
-                'Sign In'
+                t.signInBtn
               )}
             </button>
           </form>

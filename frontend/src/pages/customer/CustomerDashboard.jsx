@@ -104,18 +104,18 @@ export default function CustomerDashboard() {
         <div className="absolute top-0 right-0 -mt-6 -mr-6 w-36 h-36 bg-yellow-300/10 rounded-full blur-xl animate-pulse-soft"></div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-teal-200 bg-teal-800/50 px-3 py-1 rounded-full">Active Financing</span>
-            <h2 className="text-3xl font-extrabold mt-3">Welcome, {customer.fullName}</h2>
-            <p className="text-sm text-teal-100 mt-1">Customer ID: {customer.customerId} | Installation Date: {formatDate(customer.installationDate)}</p>
+            <span className="text-xs font-bold uppercase tracking-widest text-teal-200 bg-teal-800/50 px-3 py-1 rounded-full">{t.activeFinancing}</span>
+            <h2 className="text-3xl font-extrabold mt-3">{t.welcome}, {customer.fullName}</h2>
+            <p className="text-sm text-teal-100 mt-1">{t.customerId}: {customer.customerId} | {t.installationDate}: {formatDate(customer.installationDate)}</p>
           </div>
           <div className="flex flex-wrap gap-3 items-center">
             <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/10 text-center">
-              <p className="text-xs text-teal-200">Total Outstanding</p>
+              <p className="text-xs text-teal-200">{t.totalOutstanding}</p>
               <p className="text-2xl font-black mt-1">{formatCurrency(outstandingAmount)}</p>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/10 text-center">
-              <p className="text-xs text-teal-200">Next EMI Date</p>
-              <p className="text-2xl font-black mt-1">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : 'Completed'}</p>
+              <p className="text-xs text-teal-200">{t.nextEmiDate}</p>
+              <p className="text-2xl font-black mt-1">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : t.completed}</p>
             </div>
             <button
               type="button"
@@ -124,7 +124,7 @@ export default function CustomerDashboard() {
               title="View & Download official loan amortization statement with stamp"
             >
               <Printer className="w-4 h-4" />
-              <span>{lang === 'ta' ? 'கடன் அறிக்கை (PDF)' : 'Loan Statement (PDF)'}</span>
+              <span>{t.loanStatementBtn}</span>
             </button>
             <button
               type="button"
@@ -148,7 +148,7 @@ export default function CustomerDashboard() {
             </div>
             <div>
               <h3 className="font-bold text-slate-800 dark:text-white text-sm">{t.greenTitle}</h3>
-              <p className="text-[11px] text-slate-500">Live return-on-investment & clean solar power metrics</p>
+              <p className="text-[11px] text-slate-500">{t.greenSubtitle}</p>
             </div>
           </div>
           <span className="px-3 py-1 bg-emerald-600 text-white text-[11px] font-bold rounded-full self-start sm:self-auto shadow-sm">
@@ -160,9 +160,9 @@ export default function CustomerDashboard() {
           <div className="bg-white/80 dark:bg-slate-900/80 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
             <span className="text-[10px] font-bold uppercase text-slate-400">{t.estGeneration}</span>
             <p className="text-xl font-black text-slate-800 dark:text-white mt-0.5">
-              ~{Math.round((Number(customer.solarCapacity) || 3) * 120)} Units <span className="text-xs font-normal text-slate-400">/ mo</span>
+              ~{Math.round((Number(customer.solarCapacity) || 3) * 120)} {t.unitsPerMonth}
             </p>
-            <p className="text-[10px] text-slate-500 mt-1">Based on 4 kWh/kW daily sunshine in TN</p>
+            <p className="text-[10px] text-slate-500 mt-1">{t.sunshineNote}</p>
           </div>
 
           <div className="bg-white/80 dark:bg-slate-900/80 p-3.5 rounded-2xl border border-emerald-300/40 dark:border-emerald-800/40">
@@ -170,7 +170,7 @@ export default function CustomerDashboard() {
             <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
               {formatCurrency(Math.round((Number(customer.solarCapacity) || 3) * 120 * 6.5), false)} <span className="text-xs font-normal text-slate-400">/ mo</span>
             </p>
-            <p className="text-[10px] text-slate-500 mt-1">Direct savings against commercial/residential TNEB bills</p>
+            <p className="text-[10px] text-slate-500 mt-1">{t.ebSavingsNote}</p>
           </div>
 
           <div className="bg-white/80 dark:bg-slate-900/80 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
@@ -178,7 +178,9 @@ export default function CustomerDashboard() {
             <p className="text-xl font-black text-teal-600 dark:text-teal-400 mt-0.5">
               ~{Math.round((Number(customer.solarCapacity) || 3) * 120 * 0.82)} kg CO₂
             </p>
-            <p className="text-[10px] text-slate-500 mt-1">Equivalent to planting ~{Math.round((Number(customer.solarCapacity) || 3) * 6)} trees per month</p>
+            <p className="text-[10px] text-slate-500 mt-1">
+              {t.treesPlantedNote.replace('{trees}', Math.round((Number(customer.solarCapacity) || 3) * 6))}
+            </p>
           </div>
         </div>
       </div>
@@ -186,9 +188,9 @@ export default function CustomerDashboard() {
       {/* LOAN PROGRESS TIMELINE */}
       <div className="glass-premium rounded-3xl p-6 md:p-8 shadow-sm">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="font-bold text-lg text-slate-800 dark:text-white">Loan Repayment Progress</h3>
+          <h3 className="font-bold text-lg text-slate-800 dark:text-white">{t.loanRepaymentProgress}</h3>
           <span className="text-sm font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 px-3 py-1 rounded-full">
-            {emisPaidCount} of {totalEmisCount} Paid ({progressPercentage}%)
+            {t.paidOfText.replace('{paid}', emisPaidCount).replace('{total}', totalEmisCount).replace('{percent}', progressPercentage)}
           </span>
         </div>
         
@@ -204,9 +206,17 @@ export default function CustomerDashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-3">
           {emiSchedule.map((emi) => {
             let color = 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800/40 dark:border-slate-800 dark:text-slate-600';
-            if (emi.status === 'Paid') color = 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50';
-            else if (emi.status === 'Overdue') color = 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/50 animate-pulse';
-            else if (emi.status === 'Due Soon') color = 'bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/50';
+            let statusText = emi.status;
+            if (emi.status === 'Paid') {
+              color = 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50';
+              statusText = t.statusPaid;
+            } else if (emi.status === 'Overdue') {
+              color = 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/50 animate-pulse';
+              statusText = t.statusOverdue;
+            } else if (emi.status === 'Due Soon') {
+              color = 'bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/50';
+              statusText = t.statusDueSoon;
+            }
             
             return (
               <div 
@@ -214,9 +224,9 @@ export default function CustomerDashboard() {
                 className={`border rounded-xl p-2.5 text-center flex flex-col items-center justify-center transition-all hover:scale-105 cursor-help ${color}`}
                 title={`Due: ${formatDate(emi.dueDate)}\nAmount: ${formatCurrency(emi.emiAmount + (emi.lateFee || 0))}`}
               >
-                <span className="text-[10px] uppercase font-bold tracking-wider opacity-85">EMI</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider opacity-85">{t.emiLabel}</span>
                 <span className="text-lg font-black mt-0.5">#{emi.emiNumber}</span>
-                <span className="text-[9px] font-bold mt-1 uppercase tracking-tight">{emi.status}</span>
+                <span className="text-[9px] font-bold mt-1 uppercase tracking-tight">{statusText}</span>
               </div>
             );
           })}
@@ -230,36 +240,36 @@ export default function CustomerDashboard() {
         <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-6">
           <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
             <Zap className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <h3 className="font-bold text-slate-800 dark:text-white">Solar Project Details</h3>
+            <h3 className="font-bold text-slate-800 dark:text-white">{t.solarProjectDetails}</h3>
           </div>
           <div className="space-y-4 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-500">Capacity (kW)</span>
+              <span className="text-slate-500">{t.capacityKw}</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.solarCapacity} kW</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Solar Brand</span>
+              <span className="text-slate-500">{t.solarBrand}</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.solarBrand || 'N/A'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Total System Cost</span>
+              <span className="text-slate-500">{t.totalSystemCost}</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(customer.solarCost)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Down Payment</span>
+              <span className="text-slate-500">{t.downPayment}</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(customer.downPayment)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Loan Principal</span>
+              <span className="text-slate-500">{t.loanPrincipal}</span>
               <span className="font-semibold text-teal-600 dark:text-teal-400">{formatCurrency(customer.loanAmount)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Interest Rate</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.interestRate}% / month</span>
+              <span className="text-slate-500">{t.interestRate}</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.interestRate}{t.perMonthRate}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Warranty Details</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{customer.warrantyDetails || 'Standard'}</span>
+              <span className="text-slate-500">{t.warrantyDetails}</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{customer.warrantyDetails || t.standardWarranty}</span>
             </div>
           </div>
         </div>
@@ -268,33 +278,33 @@ export default function CustomerDashboard() {
         <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-6">
           <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
             <Landmark className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <h3 className="font-bold text-slate-800 dark:text-white">Financing & Banking</h3>
+            <h3 className="font-bold text-slate-800 dark:text-white">{t.financingBanking}</h3>
           </div>
           <div className="space-y-4 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-500">Monthly EMI</span>
+              <span className="text-slate-500">{t.monthlyEmi}</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(customer.monthlyEmi)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Duration (Months)</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.emiDuration} Months</span>
+              <span className="text-slate-500">{t.durationMonths}</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.emiDuration} {t.monthsSuffix}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Loan Start Date</span>
+              <span className="text-slate-500">{t.loanStartDate}</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">{formatDate(customer.loanStartDate)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Loan End Date</span>
+              <span className="text-slate-500">{t.loanEndDate}</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">{formatDate(customer.loanEndDate)}</span>
             </div>
             <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Repayment Bank Account</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t.repaymentBankAccount}</p>
               <div className="flex justify-between">
-                <span className="text-slate-500">Bank Name</span>
+                <span className="text-slate-500">{t.bankName}</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.bankDetails?.bankName || 'N/A'}</span>
               </div>
               <div className="flex justify-between mt-1">
-                <span className="text-slate-500">Account No.</span>
+                <span className="text-slate-500">{t.accountNo}</span>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.bankDetails?.accountNumber || 'N/A'}</span>
               </div>
             </div>
@@ -305,25 +315,25 @@ export default function CustomerDashboard() {
         <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-6">
           <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
             <User className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <h3 className="font-bold text-slate-800 dark:text-white">Customer & Documents</h3>
+            <h3 className="font-bold text-slate-800 dark:text-white">{t.customerDocuments}</h3>
           </div>
           <div className="space-y-4 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-500">Mobile</span>
+              <span className="text-slate-500">{t.mobile}</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.mobileNumber}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Email</span>
+              <span className="text-slate-500">{t.email}</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{customer.email || 'N/A'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Installation Address</span>
+              <span className="text-slate-500">{t.installationAddress}</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200 text-right truncate max-w-[180px]" title={customer.installationAddress}>
                 {customer.installationAddress || 'N/A'}
               </span>
             </div>
             <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Uploaded Files</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t.uploadedFiles}</p>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {customer.documents && Object.keys(customer.documents).map((docName) => {
                   const url = customer.documents[docName];
@@ -359,13 +369,13 @@ export default function CustomerDashboard() {
         <div className="glass-premium rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
           <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
             <Calculator className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <h3 className="font-bold text-slate-800 dark:text-white">Interactive Loan Amortisation Calculator</h3>
+            <h3 className="font-bold text-slate-800 dark:text-white">{t.calculatorTitle}</h3>
           </div>
           
           <div className="space-y-5 text-sm">
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-slate-500">Solar Project Cost:</span>
+                <span className="text-slate-500">{t.projectCostLabel}</span>
                 <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(calcCost, false)}</span>
               </div>
               <input
@@ -381,7 +391,7 @@ export default function CustomerDashboard() {
 
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-slate-500">Down Payment Amount:</span>
+                <span className="text-slate-500">{t.downPaymentLabel}</span>
                 <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(calcDownPayment, false)}</span>
               </div>
               <input
@@ -397,8 +407,8 @@ export default function CustomerDashboard() {
 
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-slate-500">EMI Duration:</span>
-                <span className="font-bold text-slate-800 dark:text-white">{calcMonths} Months</span>
+                <span className="text-slate-500">{t.durationLabel}</span>
+                <span className="font-bold text-slate-800 dark:text-white">{calcMonths} {t.monthsSuffix}</span>
               </div>
               <input
                 type="range"
@@ -413,8 +423,8 @@ export default function CustomerDashboard() {
 
             <div className="bg-teal-500/5 dark:bg-teal-400/5 border border-teal-500/20 dark:border-teal-400/10 rounded-2xl p-4 flex justify-between items-center">
               <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider">Estimated Monthly EMI</p>
-                <p className="text-xs text-slate-500 mt-0.5">Reducing balance @ 2% / mo interest</p>
+                <p className="text-xs text-slate-400 uppercase tracking-wider">{t.estMonthlyEmi}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{t.reducingBalanceNote}</p>
               </div>
               <p className="text-3xl font-black text-teal-600 dark:text-teal-400">{formatCurrency(calcEmiResult)}</p>
             </div>
@@ -426,15 +436,15 @@ export default function CustomerDashboard() {
           <div>
             <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50 mb-6">
               <QrCode className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-              <h3 className="font-bold text-slate-800 dark:text-white">Pay Current Installment</h3>
+              <h3 className="font-bold text-slate-800 dark:text-white">{t.payCurrentInstallment}</h3>
             </div>
             
             {nextPendingEmi ? (
               <div className="space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Current Scheduled EMI</span>
-                    <h4 className="text-2xl font-black text-slate-800 dark:text-white mt-1">EMI #{nextPendingEmi.emiNumber}</h4>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.currentScheduledEmi}</span>
+                    <h4 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{t.emiLabel} #{nextPendingEmi.emiNumber}</h4>
                   </div>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase ${
                     nextPendingEmi.status === 'Overdue' 
@@ -443,35 +453,35 @@ export default function CustomerDashboard() {
                       ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 border border-orange-200/30'
                       : 'bg-teal-50 text-teal-600 dark:bg-teal-950/20 dark:text-teal-400 border border-teal-200/30'
                   }`}>
-                    {nextPendingEmi.status}
+                    {nextPendingEmi.status === 'Overdue' ? t.statusOverdue : nextPendingEmi.status === 'Due Soon' ? t.statusDueSoon : t.statusActive}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
                   <div>
-                    <span className="text-slate-500">EMI Base Amount</span>
+                    <span className="text-slate-500">{t.emiBaseAmount}</span>
                     <p className="font-bold text-slate-800 dark:text-white mt-0.5">{formatCurrency(nextPendingEmi.emiAmount)}</p>
                   </div>
                   <div>
-                    <span className="text-slate-500">Late Penalty Fee</span>
+                    <span className="text-slate-500">{t.latePenaltyFee}</span>
                     <p className={`font-bold mt-0.5 ${nextPendingEmi.lateFee > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'}`}>
                       {formatCurrency(nextPendingEmi.lateFee)}
                     </p>
                   </div>
                   <div>
-                    <span className="text-slate-500">Interest Portion</span>
+                    <span className="text-slate-500">{t.interestPortion}</span>
                     <p className="font-semibold text-slate-800 dark:text-white mt-0.5">{formatCurrency(nextPendingEmi.interestPaid)}</p>
                   </div>
                   <div>
-                    <span className="text-slate-500">Principal Portion</span>
+                    <span className="text-slate-500">{t.principalPortion}</span>
                     <p className="font-semibold text-slate-800 dark:text-white mt-0.5">{formatCurrency(nextPendingEmi.principalPaid)}</p>
                   </div>
                 </div>
 
                 <div className="flex justify-between items-center bg-teal-600 text-white p-4 rounded-2xl shadow-lg shadow-teal-500/10">
                   <div>
-                    <p className="text-xs opacity-80 uppercase font-semibold">Total Outstanding Due</p>
-                    <p className="text-lg opacity-70 text-teal-100">Including accumulated late fees</p>
+                    <p className="text-xs opacity-80 uppercase font-semibold">{t.totalOutstandingDue}</p>
+                    <p className="text-lg opacity-70 text-teal-100">{t.includingLateFees}</p>
                   </div>
                   <p className="text-3xl font-black">{formatCurrency(nextPendingEmi.emiAmount + nextPendingEmi.lateFee)}</p>
                 </div>
@@ -481,8 +491,8 @@ export default function CustomerDashboard() {
                 <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto">
                   <ShieldCheck className="w-6 h-6" />
                 </div>
-                <h4 className="font-bold text-slate-800 dark:text-white">All Installments Paid!</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">Thank you! Your loan financing has been fully settled and closed.</p>
+                <h4 className="font-bold text-slate-800 dark:text-white">{t.allEmisPaidTitle}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">{t.allEmisPaidDesc}</p>
               </div>
             )}
           </div>
@@ -493,7 +503,7 @@ export default function CustomerDashboard() {
               className="w-full mt-6 py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-2xl transition-colors shadow-lg shadow-teal-500/10 flex items-center justify-center space-x-2 outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
             >
               <QrCode className="w-5 h-5" />
-              <span>Generate Quick Pay QR Code</span>
+              <span>{t.generateQrBtn}</span>
             </button>
           )}
         </div>
@@ -512,8 +522,8 @@ export default function CustomerDashboard() {
             </button>
 
             <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">Scan QR to Pay</h3>
-              <p className="text-xs text-slate-500">EMI #{selectedEmi.emiNumber} | Customer: {customer.fullName}</p>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white">{t.scanQrToPay}</h3>
+              <p className="text-xs text-slate-500">{t.emiLabel} #{selectedEmi.emiNumber} | {customer.fullName}</p>
             </div>
 
             {/* Simulated UPI QR Code */}
@@ -526,7 +536,7 @@ export default function CustomerDashboard() {
             </div>
 
             <div className="text-center space-y-1">
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Amount to transfer</p>
+              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">{t.amountToTransfer}</p>
               <p className="text-3xl font-black text-teal-600 dark:text-teal-400">{formatCurrency(selectedEmi.emiAmount + selectedEmi.lateFee)}</p>
               <p className="text-[10px] text-slate-400 italic">UPI: rsanthoshkumar376@oksbi</p>
             </div>
@@ -534,7 +544,7 @@ export default function CustomerDashboard() {
             {/* MULTI-APP UPI PAYMENT SELECTOR */}
             <div className="space-y-2 pt-1">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
-                1-Tap Mobile Payment (Opens App Directly)
+                {t.oneTapPayment}
               </p>
 
               <div className="grid grid-cols-2 gap-2">
@@ -544,7 +554,7 @@ export default function CustomerDashboard() {
                   title="Open Google Pay"
                 >
                   <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                  <span>Google Pay</span>
+                  <span>{t.openGPay}</span>
                 </a>
 
                 <a
@@ -553,7 +563,7 @@ export default function CustomerDashboard() {
                   title="Open PhonePe"
                 >
                   <span className="w-2.5 h-2.5 rounded-full bg-white"></span>
-                  <span>PhonePe</span>
+                  <span>{t.openPhonePe}</span>
                 </a>
 
                 <a
@@ -562,7 +572,7 @@ export default function CustomerDashboard() {
                   title="Open Paytm"
                 >
                   <span className="w-2.5 h-2.5 rounded-full bg-cyan-200"></span>
-                  <span>Paytm</span>
+                  <span>{t.openPaytm}</span>
                 </a>
 
                 <a
@@ -571,7 +581,7 @@ export default function CustomerDashboard() {
                   title="Open Any UPI App"
                 >
                   <Zap className="w-3.5 h-3.5 text-yellow-300 fill-current" />
-                  <span>Any UPI App</span>
+                  <span>{t.openAnyUpi}</span>
                 </a>
               </div>
 
@@ -588,12 +598,12 @@ export default function CustomerDashboard() {
                 {copiedUpi ? (
                   <>
                     <Check className="w-3 h-3 text-emerald-600" />
-                    <span className="text-emerald-600 font-bold">UPI ID Copied to Clipboard!</span>
+                    <span className="text-emerald-600 font-bold">{t.copiedUpiSuccess}</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-3 h-3" />
-                    <span>Copy UPI ID (rsanthoshkumar376@oksbi)</span>
+                    <span>{t.copyUpiId}</span>
                   </>
                 )}
               </button>
@@ -603,16 +613,16 @@ export default function CustomerDashboard() {
               onClick={async () => {
                 try {
                   await api.post('/customer/notify-payment', { emiNumber: selectedEmi.emiNumber });
-                  alert("Payment notification sent! The owner/administrator has been notified to verify your payment.");
+                  alert(t.paymentNotifyAlert);
                 } catch (err) {
-                  alert("Payment recorded! Owner/administrator will verify your payment shortly.");
+                  alert(t.paymentRecordAlert);
                 } finally {
                   setShowQrModal(false);
                 }
               }}
               className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition-colors text-xs"
             >
-              I Have Completed Payment
+              {t.iHaveCompletedPayment}
             </button>
           </div>
         </div>
@@ -634,7 +644,7 @@ export default function CustomerDashboard() {
         aria-label="Chat with MRS SOLAR on WhatsApp"
       >
         <MessageCircle className="w-5 h-5 text-white" />
-        <span className="hidden sm:inline">WhatsApp Help</span>
+        <span className="hidden sm:inline">{t.whatsappHelp}</span>
       </button>
 
     </div>

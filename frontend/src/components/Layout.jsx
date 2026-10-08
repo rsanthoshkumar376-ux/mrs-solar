@@ -9,7 +9,7 @@ import {
   Search, Languages, Mic
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
-import { getLanguage, setLanguage } from '../utils/translations.js';
+import { translations, getLanguage, setLanguage } from '../utils/translations.js';
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
@@ -32,6 +32,14 @@ export default function Layout({ children }) {
   const [searchResults, setSearchResults] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
 
   // Global hotkey Ctrl+K / Cmd+K for fast search
   useEffect(() => {
@@ -170,17 +178,17 @@ export default function Layout({ children }) {
 
   // Define navigation links based on role
   const adminLinks = [
-    { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-    { label: 'Customers', path: '/admin/customers', icon: Users },
-    { label: 'EMI Management', path: '/admin/emis', icon: DollarSign },
-    { label: 'Audit Logs', path: '/admin/audits', icon: FolderLock },
-    { label: 'Database Backup', path: '/admin/backup', icon: Database },
-    { label: 'Email Settings', path: '/admin/email-settings', icon: Mail }
+    { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
+    { label: t.customers, path: '/admin/customers', icon: Users },
+    { label: t.emiManagement, path: '/admin/emis', icon: DollarSign },
+    { label: t.auditLogs, path: '/admin/audits', icon: FolderLock },
+    { label: t.backup, path: '/admin/backup', icon: Database },
+    { label: t.emailSettings, path: '/admin/email-settings', icon: Mail }
   ];
 
   const customerLinks = [
-    { label: 'My Dashboard', path: '/customer', icon: LayoutDashboard },
-    { label: 'Payment History', path: '/customer/payments', icon: History }
+    { label: t.myDashboard, path: '/customer', icon: LayoutDashboard },
+    { label: t.paymentHistory, path: '/customer/payments', icon: History }
   ];
 
   const links = user?.role === 'admin' ? adminLinks : customerLinks;
@@ -254,7 +262,7 @@ export default function Layout({ children }) {
                 {user?.fullName || 'MRS Solar User'}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                {user?.role === 'admin' ? 'Owner / Admin' : `ID: ${user?.customerId}`}
+                {user?.role === 'admin' ? t.roleAdmin : `ID: ${user?.customerId}`}
               </p>
             </div>
           </div>
@@ -263,7 +271,7 @@ export default function Layout({ children }) {
             className="flex items-center justify-center space-x-2 w-full mt-3 px-4 py-2.5 bg-slate-100 hover:bg-red-50 dark:bg-slate-800/80 dark:hover:bg-red-950/30 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-xl text-sm font-semibold transition-colors outline-none"
           >
             <LogOut className="w-4 h-4" />
-            <span>Sign Out</span>
+            <span>{t.signOut}</span>
           </button>
         </div>
       </aside>
@@ -283,7 +291,7 @@ export default function Layout({ children }) {
               <Menu className="w-5 h-5" />
             </button>
             <span className="hidden md:inline text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full border border-slate-200/50 dark:border-slate-700/50">
-              Role: {user?.role === 'admin' ? 'Owner Portal' : 'Customer Portal'}
+              {user?.role === 'admin' ? t.roleAdmin : t.roleCustomer}
             </span>
           </div>
 
@@ -298,7 +306,7 @@ export default function Layout({ children }) {
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   onFocus={() => searchQuery.trim() && setSearchOpen(true)}
-                  placeholder="Quick Search (Ctrl+K)..."
+                  placeholder={t.quickSearchPlaceholder}
                   className="w-full pl-8 pr-8 py-1.5 bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
                 />
                 <button
@@ -399,20 +407,20 @@ export default function Layout({ children }) {
                   <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)}></div>
                   <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden">
                     <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-                      <span className="font-bold text-sm text-slate-800 dark:text-white">Notifications</span>
+                      <span className="font-bold text-sm text-slate-800 dark:text-white">{t.notificationsTitle}</span>
                       {unreadCount > 0 && (
                         <button 
                           onClick={markAllRead}
                           className="text-xs text-teal-600 dark:text-teal-400 font-semibold hover:underline"
                         >
-                          Mark all read
+                          {t.markAllRead}
                         </button>
                       )}
                     </div>
                     <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
                       {notifications.length === 0 ? (
                         <div className="p-6 text-center text-sm text-slate-500">
-                          No notifications yet.
+                          {t.noNotifications}
                         </div>
                       ) : (
                         notifications.map((n) => (
@@ -447,7 +455,7 @@ export default function Layout({ children }) {
                                     {new Date(n.createdAt).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                                   </p>
                                   <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 group-hover:underline">
-                                    Open File →
+                                    {t.openFile}
                                   </span>
                                 </div>
                               </div>
@@ -486,7 +494,7 @@ export default function Layout({ children }) {
               }`}
             >
               <Icon className="w-5 h-5" />
-              <span className="text-[10px] mt-1">{link.name}</span>
+              <span className="text-[10px] mt-1">{link.label}</span>
             </Link>
           );
         })}

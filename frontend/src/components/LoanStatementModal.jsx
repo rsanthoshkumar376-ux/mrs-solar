@@ -1,8 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatCurrency, formatDate } from '../utils/format.js';
 import { Printer, Download, X, Sun, CheckCircle, ShieldCheck } from 'lucide-react';
+import { translations, getLanguage } from '../utils/translations.js';
 
 export default function LoanStatementModal({ customer, isOpen, onClose }) {
+  const [lang, setLang] = useState(getLanguage);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+
   if (!isOpen || !customer) return null;
 
   const totalPaid = (customer.emiSchedule || [])
@@ -26,7 +37,7 @@ export default function LoanStatementModal({ customer, isOpen, onClose }) {
         <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-4 bg-slate-50 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 print:hidden">
           <div className="flex items-center space-x-2">
             <Printer className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <h3 className="font-bold text-slate-800 dark:text-white text-sm">Official Loan Statement & Amortization Ledger</h3>
+            <h3 className="font-bold text-slate-800 dark:text-white text-sm">{t.statementModalTitle}</h3>
           </div>
           
           <div className="flex items-center space-x-2">
@@ -36,7 +47,7 @@ export default function LoanStatementModal({ customer, isOpen, onClose }) {
               className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-md shadow-teal-600/20 transition-all"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print / Save as PDF</span>
+              <span>{t.printSavePdf}</span>
             </button>
             <button
               type="button"
@@ -62,23 +73,23 @@ export default function LoanStatementModal({ customer, isOpen, onClose }) {
                   MRS <span className="text-teal-600">SOLAR</span> ASSOCIATES
                 </h1>
                 <p className="text-xs font-semibold text-slate-600 print:text-slate-700">
-                  Rooftop Solar EPC & Clean Energy Installment Financing
+                  {t.companySubtitle}
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Tamil Nadu, India • Phone: +91 94892 88376 • Email: mrssolar@gmail.com
+                  {t.companyContact}
                 </p>
               </div>
             </div>
 
             <div className="text-left sm:text-right text-xs space-y-1">
               <span className="inline-block px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200 print:border-black">
-                {isCompleted ? 'LOAN FULLY SETTLED' : 'ACTIVE LOAN STATEMENT'}
+                {isCompleted ? t.loanFullySettled : t.activeLoanStatement}
               </span>
               <p className="font-mono text-slate-500 text-[11px]">
-                Statement Date: {formatDate(new Date().toISOString())}
+                {t.statementDate} {formatDate(new Date().toISOString())}
               </p>
               <p className="font-mono text-slate-500 text-[11px]">
-                Account ID: <strong>{customer.customerId}</strong>
+                {t.accountId} <strong>{customer.customerId}</strong>
               </p>
             </div>
           </div>
@@ -87,62 +98,62 @@ export default function LoanStatementModal({ customer, isOpen, onClose }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 print:bg-slate-50 print:border-slate-300 text-xs">
             <div className="space-y-1.5">
               <h4 className="font-bold text-teal-700 uppercase tracking-wider text-[11px] border-b pb-1">
-                Customer Profile
+                {t.customerProfile}
               </h4>
-              <p><strong>Name:</strong> {customer.fullName}</p>
-              <p><strong>Mobile:</strong> {customer.mobileNumber}</p>
-              <p><strong>Email:</strong> {customer.email || '—'}</p>
-              <p><strong>Aadhaar No.:</strong> {customer.aadhaarNumber || '—'}</p>
-              <p><strong>Address:</strong> {customer.installationAddress || customer.address || '—'}</p>
+              <p><strong>{t.nameLabel}</strong> {customer.fullName}</p>
+              <p><strong>{t.mobileLabel}</strong> {customer.mobileNumber}</p>
+              <p><strong>{t.emailLabel}</strong> {customer.email || '—'}</p>
+              <p><strong>{t.aadhaarLabel}</strong> {customer.aadhaarNumber || '—'}</p>
+              <p><strong>{t.addressLabel}</strong> {customer.installationAddress || customer.address || '—'}</p>
             </div>
 
             <div className="space-y-1.5">
               <h4 className="font-bold text-teal-700 uppercase tracking-wider text-[11px] border-b pb-1">
-                Solar Financing Details
+                {t.solarFinancingDetails}
               </h4>
-              <p><strong>Solar Capacity:</strong> {customer.solarCapacity} kW ({customer.solarBrand || 'Standard Solar'})</p>
-              <p><strong>Total Project Cost:</strong> {formatCurrency(customer.solarCost, false)}</p>
-              <p><strong>Down Payment:</strong> {formatCurrency(customer.downPayment, false)}</p>
-              <p><strong>Net Loan Principal:</strong> {formatCurrency(customer.loanAmount, false)}</p>
-              <p><strong>Interest & Tenure:</strong> {customer.interestRate}% / mo for {customer.emiDuration} Months</p>
+              <p><strong>{t.solarCapacity}:</strong> {customer.solarCapacity} kW ({customer.solarBrand || 'Standard Solar'})</p>
+              <p><strong>{t.totalSystemCost}:</strong> {formatCurrency(customer.solarCost, false)}</p>
+              <p><strong>{t.downPayment}:</strong> {formatCurrency(customer.downPayment, false)}</p>
+              <p><strong>{t.loanPrincipal}:</strong> {formatCurrency(customer.loanAmount, false)}</p>
+              <p><strong>{t.interestTenure}</strong> {customer.interestRate}% / mo for {customer.emiDuration} {t.monthsSuffix}</p>
             </div>
           </div>
 
           {/* FINANCIAL SUMMARY HIGHLIGHTS */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-              <span className="text-[10px] uppercase font-bold text-slate-500">Loan Principal</span>
+              <span className="text-[10px] uppercase font-bold text-slate-500">{t.loanPrincipal}</span>
               <p className="text-base font-bold text-slate-900 mt-0.5">{formatCurrency(customer.loanAmount, false)}</p>
             </div>
             <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-              <span className="text-[10px] uppercase font-bold text-emerald-700">Total Collected</span>
+              <span className="text-[10px] uppercase font-bold text-emerald-700">{t.totalCollected}</span>
               <p className="text-base font-bold text-emerald-800 mt-0.5">{formatCurrency(totalPaid, false)}</p>
             </div>
             <div className="p-3 bg-orange-50 rounded-xl border border-orange-200">
-              <span className="text-[10px] uppercase font-bold text-orange-700">Monthly EMI</span>
+              <span className="text-[10px] uppercase font-bold text-orange-700">{t.monthlyEmi}</span>
               <p className="text-base font-bold text-orange-900 mt-0.5">{formatCurrency(customer.monthlyEmi, false)}</p>
             </div>
             <div className="p-3 bg-teal-50 rounded-xl border border-teal-200">
-              <span className="text-[10px] uppercase font-bold text-teal-700">Net Outstanding</span>
+              <span className="text-[10px] uppercase font-bold text-teal-700">{t.netOutstanding}</span>
               <p className="text-base font-bold text-teal-900 mt-0.5">{formatCurrency(customer.totalOutstandingAmount, false)}</p>
             </div>
           </div>
 
           {/* AMORTIZATION REPAYMENT TABLE */}
           <div>
-            <h4 className="font-bold text-sm text-slate-800 mb-2">Amortization Repayment Ledger</h4>
+            <h4 className="font-bold text-sm text-slate-800 mb-2">{t.amortizationLedger}</h4>
             <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="w-full text-left text-[11px] border-collapse">
                 <thead>
                   <tr className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-                    <th className="p-2.5">EMI</th>
-                    <th className="p-2.5">Due Date</th>
-                    <th className="p-2.5 text-right">Installment</th>
-                    <th className="p-2.5 text-right">Interest (2%)</th>
-                    <th className="p-2.5 text-right">Principal</th>
-                    <th className="p-2.5 text-right">Late Penalty</th>
-                    <th className="p-2.5 text-right">Balance</th>
-                    <th className="p-2.5 text-center">Status</th>
+                    <th className="p-2.5">{t.emiLabel}</th>
+                    <th className="p-2.5">{t.dueDate}</th>
+                    <th className="p-2.5 text-right">{t.installmentAmount}</th>
+                    <th className="p-2.5 text-right">{t.interestPaid}</th>
+                    <th className="p-2.5 text-right">{t.principalPaid}</th>
+                    <th className="p-2.5 text-right">{t.lateFee}</th>
+                    <th className="p-2.5 text-right">{t.remainingBalance}</th>
+                    <th className="p-2.5 text-center">{t.status}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -163,7 +174,7 @@ export default function LoanStatementModal({ customer, isOpen, onClose }) {
                             ? 'bg-red-100 text-red-800'
                             : 'bg-slate-100 text-slate-700'
                         }`}>
-                          {emi.status}
+                          {emi.status === 'Paid' ? t.statusPaid : emi.status === 'Overdue' ? t.statusOverdue : emi.status === 'Due Soon' ? t.statusDueSoon : emi.status}
                         </span>
                       </td>
                     </tr>
@@ -176,17 +187,16 @@ export default function LoanStatementModal({ customer, isOpen, onClose }) {
           {/* SIGNATURE & LEGAL DISCLAIMER */}
           <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-end gap-6 text-xs text-slate-500">
             <div className="max-w-md space-y-1">
-              <p className="font-semibold text-slate-700">Official Certification:</p>
+              <p className="font-semibold text-slate-700">{t.officialCertification}</p>
               <p className="text-[10px] leading-relaxed">
-                This document is an authentic computerized statement issued by MRS SOLAR ASSOCIATES. 
-                All installment transactions and payments recorded herein are verified and accepted for subsidy verification and tax records.
+                {t.statementDisclaimer}
               </p>
             </div>
 
             <div className="text-center sm:text-right space-y-8 min-w-[200px]">
-              <p className="font-semibold text-slate-800">For MRS SOLAR ASSOCIATES</p>
+              <p className="font-semibold text-slate-800">{t.forCompany}</p>
               <div className="border-t border-slate-400 pt-1">
-                <p className="text-[11px] font-bold text-slate-800">Authorized Signatory / Seal</p>
+                <p className="text-[11px] font-bold text-slate-800">{t.authorizedSignatorySeal}</p>
               </div>
             </div>
           </div>
