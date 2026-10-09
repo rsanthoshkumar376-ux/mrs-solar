@@ -11,6 +11,7 @@ import {
 import { generateEmiReminderMessage, generatePaymentReceiptMessage, openWhatsApp } from '../../utils/whatsapp.js';
 import SolarSiteMap from '../../components/SolarSiteMap.jsx';
 import LoanStatementModal from '../../components/LoanStatementModal.jsx';
+import { translations, getLanguage } from '../../utils/translations.js';
 
 const DOC_CONFIGS = [
   { key: 'aadhaarFile', label: 'Aadhaar Identity Proof', desc: 'Government photo identity card' },
@@ -49,6 +50,15 @@ export default function CustomerDetails() {
   const [whatsappModal, setWhatsappModal] = useState(null); // { type: 'reminder'|'receipt', emi, customer, language: 'ta' }
   const [previewDoc, setPreviewDoc] = useState(null); // { title, url, isPdf }
   const [showStatementModal, setShowStatementModal] = useState(false);
+  const [lang, setLang] = useState(getLanguage);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
 
   const fetchCustomerDetails = async () => {
     try {
@@ -221,7 +231,7 @@ export default function CustomerDetails() {
           className="flex items-center space-x-2 text-slate-500 hover:text-slate-700 dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
-          <span>Back to Customers</span>
+          <span>{t.backToCustomers || 'Back to Customers'}</span>
         </button>
 
         <div className="flex items-center space-x-2">
@@ -232,7 +242,7 @@ export default function CustomerDetails() {
             title="Generate and print official loan amortization statement with stamp"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Official Statement (PDF)</span>
+            <span>{t.officialStatementPdf || 'Official Statement (PDF)'}</span>
           </button>
           <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase border ${
             customer.paymentStatus === 'Paid'
@@ -241,7 +251,7 @@ export default function CustomerDetails() {
               ? 'bg-red-50 text-red-600 border-red-200/50 dark:bg-red-950/20 animate-pulse'
               : 'bg-orange-50 text-orange-600 border-orange-200/50 dark:bg-orange-950/20'
           }`}>
-            Repayments: {customer.paymentStatus}
+            {t.repaymentStatusCol || 'Repayments'}: {customer.paymentStatus === 'Paid' ? t.statusPaid : customer.paymentStatus === 'Overdue' ? t.statusOverdue : customer.paymentStatus === 'Due Soon' ? t.statusDueSoon : t.statusPending}
           </span>
         </div>
       </div>

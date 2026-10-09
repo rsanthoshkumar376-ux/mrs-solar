@@ -6,6 +6,7 @@ import {
   Users, Zap, DollarSign, Wallet, ShieldAlert, Clock, 
   TrendingUp, Activity, BellRing, PlayCircle, RefreshCw, CheckCircle, ChevronRight
 } from 'lucide-react';
+import { translations, getLanguage } from '../../utils/translations.js';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -13,6 +14,15 @@ export default function AdminDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [schedulerRunning, setSchedulerRunning] = useState(false);
+  const [lang, setLang] = useState(getLanguage);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
 
   const fetchDashboardData = async () => {
     try {
@@ -37,11 +47,11 @@ export default function AdminDashboard() {
     setSchedulerRunning(true);
     try {
       const response = await api.post('/admin/trigger-scheduler', {});
-      alert(`Midnight audit simulation completed successfully!\nCustomers Checked: ${response.data.details.checkedCount}`);
+      alert(t.auditCompletedAlert ? t.auditCompletedAlert.replace('{count}', response.data.details.checkedCount) : `Midnight audit simulation completed successfully!\nCustomers Checked: ${response.data.details.checkedCount}`);
       await fetchDashboardData();
     } catch (error) {
       console.error('Scheduler execution failed:', error);
-      alert('Failed to execute daily status audit check.');
+      alert(t.auditFailedAlert || 'Failed to execute daily status audit check.');
     } finally {
       setSchedulerRunning(false);
     }
@@ -66,8 +76,8 @@ export default function AdminDashboard() {
       {/* HEADER WITH RUN MANUAL CALCULATIONS BUTTON */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-800 dark:text-white">Owner Dashboard</h2>
-          <p className="text-sm text-slate-500">Real-time solar project metrics, collections, and financial audits.</p>
+          <h2 className="text-3xl font-extrabold text-slate-800 dark:text-white">{t.ownerDashboard}</h2>
+          <p className="text-sm text-slate-500">{t.ownerDashboardSubtitle}</p>
         </div>
 
         <button
@@ -80,7 +90,7 @@ export default function AdminDashboard() {
           ) : (
             <PlayCircle className="w-5 h-5" />
           )}
-          <span>Run Midnight Audit Check</span>
+          <span>{schedulerRunning ? t.runningMidnightAudit : t.runMidnightAuditCheck}</span>
         </button>
       </div>
 
@@ -93,9 +103,13 @@ export default function AdminDashboard() {
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Total Customers</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t.totalCustomers}</p>
             <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{stats?.totalCustomers}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">{stats?.activeCustomers} Active | {stats?.completedCustomers} Paid Off</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {t.activePaidOffDesc 
+                ? t.activePaidOffDesc.replace('{active}', stats?.activeCustomers || 0).replace('{completed}', stats?.completedCustomers || 0)
+                : `${stats?.activeCustomers} Active | ${stats?.completedCustomers} Paid Off`}
+            </p>
           </div>
         </div>
 
@@ -105,9 +119,9 @@ export default function AdminDashboard() {
             <Zap className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Solar Installations</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t.solarInstallations}</p>
             <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{stats?.totalSolarCapacityKw} kW</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Total capacity installed to date</p>
+            <p className="text-xs text-slate-500 mt-0.5">{t.totalCapacityInstalled}</p>
           </div>
         </div>
 
@@ -117,9 +131,9 @@ export default function AdminDashboard() {
             <DollarSign className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Total Loan Capital</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t.totalLoanCapital}</p>
             <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{formatCurrency(stats?.totalLoanAmount, false)}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Funded solar panel financing</p>
+            <p className="text-xs text-slate-500 mt-0.5">{t.fundedSolarFinancing}</p>
           </div>
         </div>
 
@@ -129,9 +143,9 @@ export default function AdminDashboard() {
             <Wallet className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Capital Collected</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t.capitalCollected}</p>
             <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{formatCurrency(stats?.totalAmountCollected, false)}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Total EMIs + Penalties paid</p>
+            <p className="text-xs text-slate-500 mt-0.5">{t.totalEmisPenaltiesPaid}</p>
           </div>
         </div>
 
@@ -141,9 +155,9 @@ export default function AdminDashboard() {
             <ShieldAlert className="w-6 h-6 animate-pulse" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Overdue Customers</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t.overdueCustomers}</p>
             <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{stats?.overdueCustomers}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Customers with unpaid overdue EMIs</p>
+            <p className="text-xs text-slate-500 mt-0.5">{t.unpaidOverdueNote}</p>
           </div>
         </div>
 
@@ -153,9 +167,13 @@ export default function AdminDashboard() {
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Outstanding Dues</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t.outstandingDues}</p>
             <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{formatCurrency(stats?.totalOutstandingAmount, false)}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">{stats?.pendingPaymentsCount} unpaid installments</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {t.unpaidInstallmentsCount 
+                ? t.unpaidInstallmentsCount.replace('{count}', stats?.pendingPaymentsCount || 0)
+                : `${stats?.pendingPaymentsCount} unpaid installments`}
+            </p>
           </div>
         </div>
 
@@ -165,9 +183,9 @@ export default function AdminDashboard() {
             <TrendingUp className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Total Profit</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t.totalProfit}</p>
             <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{formatCurrency(stats?.totalProfit, false)}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Interest earned + late fee penalties</p>
+            <p className="text-xs text-slate-500 mt-0.5">{t.interestLateFeeProfitNote}</p>
           </div>
         </div>
 
@@ -177,12 +195,20 @@ export default function AdminDashboard() {
             <Activity className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Monthly Collection</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{t.monthlyCollection}</p>
             {/* Display current month's collection */}
             <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">
               {formatCurrency(stats?.chartData?.collections[new Date().getMonth()] || 0, false)}
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">Revenue collected in {stats?.chartData?.months[new Date().getMonth()]}</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {(() => {
+                const curMonthIdx = new Date().getMonth();
+                const curMonthName = (t.monthsFull && t.monthsFull[curMonthIdx]) || (stats?.chartData?.months && stats.chartData.months[curMonthIdx]) || '';
+                return t.revenueCollectedIn 
+                  ? t.revenueCollectedIn.replace('{month}', curMonthName)
+                  : `Revenue collected in ${curMonthName}`;
+              })()}
+            </p>
           </div>
         </div>
 
@@ -194,22 +220,27 @@ export default function AdminDashboard() {
         {/* CHART: COLLECTIONS IN CURRENT YEAR */}
         <div className="lg:col-span-2 glass-premium rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
           <div>
-            <h3 className="font-bold text-slate-800 dark:text-white text-lg">Monthly Income Progression</h3>
-            <p className="text-xs text-slate-500">Collected repayments split by month during {new Date().getFullYear()}.</p>
+            <h3 className="font-bold text-slate-800 dark:text-white text-lg">{t.monthlyIncomeProgression}</h3>
+            <p className="text-xs text-slate-500">
+              {t.collectedRepaymentsSplit 
+                ? t.collectedRepaymentsSplit.replace('{year}', new Date().getFullYear())
+                : `Collected repayments split by month during ${new Date().getFullYear()}.`}
+            </p>
           </div>
 
           {/* SVG/HTML Bar Chart */}
           <div className="h-64 flex items-end justify-between gap-1 pt-6 px-4">
             {stats?.chartData?.collections.map((val, idx) => {
               const heightPct = Math.max(8, Math.round((val / maxCollection) * 100));
-              const monthName = stats.chartData.months[idx];
+              const defaultMonthName = stats.chartData.months[idx];
+              const monthName = (t.monthsShort && t.monthsShort[idx]) || defaultMonthName;
               const isCurrentMonth = new Date().getMonth() === idx;
 
               return (
                 <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
                   {/* Tooltip */}
                   <div className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap shadow">
-                    Coll: {formatCurrency(val, false)}
+                    {t.collTooltip || 'Coll'}: {formatCurrency(val, false)}
                   </div>
                   
                   {/* Bar */}
@@ -237,12 +268,12 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
               <BellRing className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-              <h3 className="font-bold text-slate-800 dark:text-white">Recent Activity Alerts</h3>
+              <h3 className="font-bold text-slate-800 dark:text-white">{t.recentActivityAlerts}</h3>
             </div>
 
             <div className="space-y-3 overflow-y-auto max-h-[220px]">
               {notifications.length === 0 ? (
-                <p className="text-xs text-slate-400 py-6 text-center">No alerts logged today.</p>
+                <p className="text-xs text-slate-400 py-6 text-center">{t.noAlertsToday}</p>
               ) : (
                 notifications.map((n) => {
                   const targetCustomerId = n.customerId || n.message?.match(/SOL-\d+/)?.[0];
@@ -258,7 +289,7 @@ export default function AdminDashboard() {
                           navigate('/admin/customers');
                         }
                       }}
-                      title="Click to open customer file"
+                      title={t.clickToOpenFile || "Click to open customer file"}
                       className="p-3 bg-slate-50 dark:bg-slate-900/50 hover:bg-teal-50/60 dark:hover:bg-slate-800/80 border border-slate-200/50 dark:border-slate-800/50 hover:border-teal-500/40 rounded-2xl flex items-start justify-between text-[11px] leading-relaxed cursor-pointer group transition-all"
                     >
                       <div className="flex items-start space-x-2.5 flex-1 min-w-0 pr-2">

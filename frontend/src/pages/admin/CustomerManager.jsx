@@ -7,10 +7,20 @@ import {
 } from 'lucide-react';
 import { openWhatsApp } from '../../utils/whatsapp.js';
 import { exportCustomersToCsv } from '../../utils/exportCsv.js';
+import { translations, getLanguage } from '../../utils/translations.js';
 
 export default function CustomerManager() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lang, setLang] = useState(getLanguage);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
   
   // Search & Filter state
   const [search, setSearch] = useState('');
@@ -188,8 +198,8 @@ export default function CustomerManager() {
       {/* HEADER ACTION CONTROL BAR */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Customer Records</h2>
-          <p className="text-sm text-slate-500">Manage client financing details, amortization logs, and documents.</p>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t.customerRecords}</h2>
+          <p className="text-sm text-slate-500">{t.customerRecordsSubtitle}</p>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -201,7 +211,7 @@ export default function CustomerManager() {
             title="Download full customer spreadsheet (.CSV / Excel)"
           >
             <DownloadCloud className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-            <span>Export to Excel</span>
+            <span>{t.exportToExcel}</span>
           </button>
           
           <button
@@ -209,7 +219,7 @@ export default function CustomerManager() {
             className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl flex items-center space-x-2 text-sm font-bold transition-all shadow shadow-teal-500/10"
           >
             <UserPlus className="w-4 h-4" />
-            <span>Add Customer</span>
+            <span>{t.addCustomer}</span>
           </button>
         </div>
       </div>
@@ -226,7 +236,7 @@ export default function CustomerManager() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, ID, phone number, village..."
+            placeholder={t.searchCustomerPlaceholder || "Search by name, ID, phone number, village..."}
             className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-800 dark:text-white outline-none transition-all"
           />
         </div>
@@ -236,7 +246,7 @@ export default function CustomerManager() {
           
           <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl text-xs text-slate-500">
             <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>Filters:</span>
+            <span>{t.filtersLabel || 'Filters:'}</span>
           </div>
 
           {/* Loan Status */}
@@ -245,9 +255,9 @@ export default function CustomerManager() {
             onChange={(e) => setLoanStatus(e.target.value)}
             className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 py-2 px-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
           >
-            <option value="">All Loan Status</option>
-            <option value="Active">Active</option>
-            <option value="Completed">Completed</option>
+            <option value="">{t.allLoanStatus || 'All Loan Status'}</option>
+            <option value="Active">{t.statusActive}</option>
+            <option value="Completed">{t.statusCompleted}</option>
           </select>
 
           {/* Payment Status */}
@@ -256,11 +266,11 @@ export default function CustomerManager() {
             onChange={(e) => setPaymentStatus(e.target.value)}
             className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 py-2 px-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
           >
-            <option value="">All Repayments Status</option>
-            <option value="Paid">Paid</option>
-            <option value="Due Soon">Due Soon</option>
-            <option value="Overdue">Overdue</option>
-            <option value="Pending">Pending</option>
+            <option value="">{t.allRepaymentStatus || 'All Repayments Status'}</option>
+            <option value="Paid">{t.statusPaid}</option>
+            <option value="Due Soon">{t.statusDueSoon}</option>
+            <option value="Overdue">{t.statusOverdue}</option>
+            <option value="Pending">{t.statusPending}</option>
           </select>
 
         </div>
@@ -272,15 +282,15 @@ export default function CustomerManager() {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100/50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200/50 dark:border-slate-800/50">
-                <th className="px-6 py-4">Customer ID</th>
-                <th className="px-6 py-4">Client Name</th>
-                <th className="px-6 py-4">Mobile Number</th>
-                <th className="px-6 py-4">Solar Brand/Size</th>
-                <th className="px-6 py-4 text-right">Loan Amount</th>
-                <th className="px-6 py-4 text-right">Monthly EMI</th>
-                <th className="px-6 py-4 text-center">Loan Status</th>
-                <th className="px-6 py-4 text-center">Repayment Status</th>
-                <th className="px-6 py-4 text-center">Action</th>
+                <th className="px-6 py-4">{t.customerId}</th>
+                <th className="px-6 py-4">{t.clientNameCol}</th>
+                <th className="px-6 py-4">{t.mobile}</th>
+                <th className="px-6 py-4">{t.solarBrandSizeCol}</th>
+                <th className="px-6 py-4 text-right">{t.loanAmountCol}</th>
+                <th className="px-6 py-4 text-right">{t.monthlyEmiCol}</th>
+                <th className="px-6 py-4 text-center">{t.loanStatusCol}</th>
+                <th className="px-6 py-4 text-center">{t.repaymentStatusCol}</th>
+                <th className="px-6 py-4 text-center">{t.actionCol}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 text-slate-700 dark:text-slate-300">
@@ -293,7 +303,7 @@ export default function CustomerManager() {
               ) : customers.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="px-6 py-12 text-center text-slate-500">
-                    No customer records matched your query.
+                    {t.noCustomersFound}
                   </td>
                 </tr>
               ) : (
@@ -311,7 +321,7 @@ export default function CustomerManager() {
                               phone: c.mobileNumber,
                               message: `வணக்கம் ${c.fullName}, MRS SOLAR-ல் இருந்து தொடர்பு கொள்கிறோம்.`
                             })}
-                            title="Chat on WhatsApp"
+                            title={t.whatsappHelp}
                             className="p-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-colors"
                           >
                             <MessageCircle className="w-3 h-3" />
@@ -328,7 +338,7 @@ export default function CustomerManager() {
                           ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-250/30'
                           : 'bg-teal-50 text-teal-600 dark:bg-teal-950/20 dark:text-teal-400 border-teal-250/30'
                       }`}>
-                        {c.loanStatus}
+                        {c.loanStatus === 'Completed' ? t.statusCompleted : t.statusActive}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -341,7 +351,7 @@ export default function CustomerManager() {
                           ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 border-orange-200/30'
                           : 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200/30'
                       }`}>
-                        {c.paymentStatus}
+                        {c.paymentStatus === 'Paid' ? t.statusPaid : c.paymentStatus === 'Overdue' ? t.statusOverdue : c.paymentStatus === 'Due Soon' ? t.statusDueSoon : t.statusPending}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -349,14 +359,14 @@ export default function CustomerManager() {
                         <Link
                           to={`/admin/customers/${c._id}`}
                           className="p-1.5 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/50 text-teal-600 dark:text-teal-400 rounded-lg transition-colors"
-                          title="View Ledger Statement"
+                          title={t.viewLedgerStatement || "View Ledger Statement"}
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </Link>
                         <button
                           onClick={() => handleDeleteCustomer(c._id, c.fullName)}
                           className="p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg transition-colors"
-                          title="Delete Ledger"
+                          title={t.deleteLedger || "Delete Ledger"}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -378,8 +388,8 @@ export default function CustomerManager() {
             {/* Header */}
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 rounded-t-3xl">
               <div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white">Register Solar Installment Financing</h3>
-                <p className="text-xs text-slate-500">Configure client metadata, solar capacity, financing calculations and document uploads.</p>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white">{t.registerFinancingTitle}</h3>
+                <p className="text-xs text-slate-500">{t.registerFinancingSubtitle}</p>
               </div>
               <button 
                 onClick={() => setShowAddModal(false)}
@@ -394,31 +404,31 @@ export default function CustomerManager() {
               
               {/* BLOCK 1: PERSONAL INFORMATION */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">1. Personal Information</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.personalInfoSection}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Full Name *</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.fullNameLabel}</label>
                     <input type="text" name="fullName" required value={formData.fullName} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Father's Name</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.fatherNameLabel}</label>
                     <input type="text" name="fatherName" value={formData.fatherName} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Mother's Name</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.motherNameLabel}</label>
                     <input type="text" name="motherName" value={formData.motherName} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Mobile Number *</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.mobileNumberLabel}</label>
                     <input type="text" name="mobileNumber" required value={formData.mobileNumber} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Alternate Number</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.altNumberLabel}</label>
                     <input type="text" name="alternateNumber" value={formData.alternateNumber} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">
-                      Email Address <span className="text-[10px] text-slate-400 font-normal">(Optional — for email receipts)</span>
+                      {t.emailOptionalLabel}
                     </label>
                     <input 
                       type="email" 
@@ -430,39 +440,39 @@ export default function CustomerManager() {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block font-semibold text-slate-500 mb-1">Permanent Address</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.permanentAddressLabel}</label>
                     <input type="text" name="address" value={formData.address} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">City</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.cityLabel}</label>
                     <input type="text" name="city" value={formData.city} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">District</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.districtLabel}</label>
                     <input type="text" name="district" value={formData.district} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">State</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.stateLabel}</label>
                     <input type="text" name="state" value={formData.state} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">PIN Code</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.pinCodeLabel}</label>
                     <input type="text" name="pinCode" value={formData.pinCode} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Aadhaar Number</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.aadhaarNumberLabel}</label>
                     <input type="text" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">PAN Number</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.panNumberLabel}</label>
                     <input type="text" name="panNumber" value={formData.panNumber} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Occupation</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.occupationLabel}</label>
                     <input type="text" name="occupation" value={formData.occupation} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Monthly Income (₹)</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.monthlyIncomeLabel}</label>
                     <input type="number" name="monthlyIncome" value={formData.monthlyIncome} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                 </div>
@@ -470,22 +480,22 @@ export default function CustomerManager() {
 
               {/* BLOCK 2: BANK & NOMINEE DETAILS */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">2. Bank & Nominee Details</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.bankNomineeSection}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Bank Name</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.bankNameLabel}</label>
                     <input type="text" name="bankName" value={formData.bankName} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Account Number</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.accountNumberLabel}</label>
                     <input type="text" name="accountNumber" value={formData.accountNumber} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">IFSC Code</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.ifscCodeLabel}</label>
                     <input type="text" name="ifscCode" value={formData.ifscCode} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div className="md:col-span-3">
-                    <label className="block font-semibold text-slate-500 mb-1">Nominee Details (Name, Relationship, Contact)</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.nomineeDetailsLabel}</label>
                     <input type="text" name="nomineeDetails" value={formData.nomineeDetails} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                 </div>
@@ -494,7 +504,7 @@ export default function CustomerManager() {
               {/* BLOCK 3: SOLAR CAPACITY & ROOFTOP GPS */}
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">3. Solar Project & Rooftop GPS Location</h4>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">{t.solarGpsSection}</h4>
                   <button
                     type="button"
                     onClick={handleDetectGps}
@@ -503,40 +513,40 @@ export default function CustomerManager() {
                     title="Capture current phone or laptop coordinates"
                   >
                     <Crosshair className={`w-3.5 h-3.5 ${detectingGps ? 'animate-spin' : ''}`} />
-                    <span>{detectingGps ? 'Detecting Satellite GPS...' : '📍 Auto-Detect Current Roof GPS'}</span>
+                    <span>{detectingGps ? (t.detectingGpsText || 'Detecting Satellite GPS...') : (t.autoDetectRoofGps || '📍 Auto-Detect Current Roof GPS')}</span>
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div className="md:col-span-2">
-                    <label className="block font-semibold text-slate-500 mb-1">Solar Installation Address</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.solarInstallAddressLabel}</label>
                     <input type="text" name="installationAddress" value={formData.installationAddress} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Solar Capacity (kW) *</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.solarCapacityKwLabel}</label>
                     <input type="number" step="0.1" required name="solarCapacity" value={formData.solarCapacity} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Roof Latitude (GPS)</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.roofLatLabel}</label>
                     <input type="number" step="any" placeholder="e.g. 11.1271" name="latitude" value={formData.latitude} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Roof Longitude (GPS)</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.roofLngLabel}</label>
                     <input type="number" step="any" placeholder="e.g. 78.6569" name="longitude" value={formData.longitude} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Solar Brand / Manufacturer</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.solarBrandLabel}</label>
                     <input type="text" name="solarBrand" value={formData.solarBrand} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Solar System Total Cost (₹) *</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.solarCostLabel}</label>
                     <input type="number" required name="solarCost" value={formData.solarCost} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Installation Date</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.installationDateLabel}</label>
                     <input type="date" name="installationDate" value={formData.installationDate} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div className="md:col-span-3">
-                    <label className="block font-semibold text-slate-500 mb-1">Warranty Details</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.warrantyDetailsLabel}</label>
                     <input type="text" name="warrantyDetails" value={formData.warrantyDetails} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                 </div>
@@ -544,30 +554,30 @@ export default function CustomerManager() {
 
               {/* BLOCK 4: FINANCING / LOAN VARIABLES */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">4. Solar Panel Financing & Loan Setup</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.financingSetupSection}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Down Payment (₹)</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.downPaymentLabel}</label>
                     <input type="number" name="downPayment" value={formData.downPayment} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Calculated Loan Amount (Principal)</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.calcLoanPrincipalLabel}</label>
                     <input type="number" disabled name="loanAmount" value={formData.loanAmount} className="w-full bg-slate-200 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Monthly Interest Rate (%) *</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.monthlyInterestRateLabel}</label>
                     <input type="number" required name="interestRate" value={formData.interestRate} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">EMI Duration (Months) *</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.emiDurationMonthsLabel}</label>
                     <input type="number" required name="emiDuration" value={formData.emiDuration} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Loan Start Date</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.loanStartDateLabel}</label>
                     <input type="date" name="loanStartDate" value={formData.loanStartDate} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Remarks</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.remarksLabel}</label>
                     <input type="text" name="remarks" value={formData.remarks} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                 </div>
@@ -575,30 +585,30 @@ export default function CustomerManager() {
 
               {/* BLOCK 5: DOCUMENTS UPLOAD */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">5. Document Attachment</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.documentsAttachmentSection}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[10px]">
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Customer Photo</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.customerPhotoLabel}</label>
                     <input type="file" name="photoFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Aadhaar Proof</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.aadhaarProofLabel}</label>
                     <input type="file" name="aadhaarFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">PAN Card</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.panCardLabel}</label>
                     <input type="file" name="panFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Electricity Bill</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.ebBillLabel}</label>
                     <input type="file" name="electricityBillFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Property Proof</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.propertyProofLabel}</label>
                     <input type="file" name="propertyProofFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">Agreement PDF</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.agreementPdfLabel}</label>
                     <input type="file" name="agreementFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
                   </div>
                 </div>
@@ -613,7 +623,7 @@ export default function CustomerManager() {
                 onClick={() => setShowAddModal(false)}
                 className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
               >
-                Cancel
+                {t.cancel}
               </button>
               
               <button
@@ -622,7 +632,7 @@ export default function CustomerManager() {
                 className="px-5 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-2"
               >
                 {submitLoading && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
-                <span>Register & Create Ledger</span>
+                <span>{t.registerAndCreateBtn}</span>
               </button>
             </div>
 

@@ -2,12 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../../utils/api.js';
 import { formatDate } from '../../utils/format.js';
 import { Database, PlusCircle, RefreshCw, CheckCircle, Clock, Archive, UploadCloud } from 'lucide-react';
+import { translations, getLanguage } from '../../utils/translations.js';
 
 export default function BackupRestore() {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const fileInputRef = useRef(null);
+  const [lang, setLang] = useState(getLanguage);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
 
   const fetchBackups = async () => {
     try {
@@ -146,8 +156,8 @@ export default function BackupRestore() {
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Database Backup & Recovery</h2>
-          <p className="text-sm text-slate-500">Generate secure database recovery restore points and export data files.</p>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t.dbBackupTitle || 'Database Backup & Recovery'}</h2>
+          <p className="text-sm text-slate-500">{t.dbBackupSubtitle || 'Generate secure database recovery restore points and export data files.'}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -166,7 +176,7 @@ export default function BackupRestore() {
             className="px-3 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all shadow outline-none cursor-pointer"
           >
             <UploadCloud className="w-4 h-4 text-teal-200" />
-            <span>Upload & Restore JSON</span>
+            <span>{t.restoreBackupBtn || 'Upload & Restore JSON'}</span>
           </button>
 
           <button
@@ -174,7 +184,7 @@ export default function BackupRestore() {
             className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all shadow outline-none cursor-pointer"
           >
             <Archive className="w-4 h-4 text-teal-400" />
-            <span>Download JSON</span>
+            <span>{t.exportJsonBackupBtn || 'Download JSON'}</span>
           </button>
 
           <button
@@ -182,7 +192,7 @@ export default function BackupRestore() {
             className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all shadow outline-none cursor-pointer"
           >
             <Archive className="w-4 h-4 text-emerald-400" />
-            <span>Export Excel/CSV</span>
+            <span>{t.exportToExcel || 'Export Excel/CSV'}</span>
           </button>
 
           <button
@@ -190,7 +200,7 @@ export default function BackupRestore() {
             className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all shadow outline-none cursor-pointer"
           >
             <Archive className="w-4 h-4 text-yellow-400" />
-            <span>Download Excel (.xlsx)</span>
+            <span>{t.exportExcelBackupBtn || 'Download Excel (.xlsx)'}</span>
           </button>
 
           <button
@@ -203,7 +213,7 @@ export default function BackupRestore() {
             ) : (
               <PlusCircle className="w-4 h-4" />
             )}
-            <span>New Backup Point</span>
+            <span>{t.createBackupBtn || 'New Backup Point'}</span>
           </button>
         </div>
       </div>
@@ -212,17 +222,17 @@ export default function BackupRestore() {
       <div className="glass-premium rounded-3xl overflow-hidden shadow-sm">
         <div className="px-6 py-4 border-b border-slate-200/50 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-900/30 flex items-center space-x-2">
           <Database className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-          <span className="font-bold text-slate-800 dark:text-white">Available Recovery Points</span>
+          <span className="font-bold text-slate-800 dark:text-white">{t.availableBackupsList || 'Available Recovery Points'}</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100/50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200/50 dark:border-slate-800/50">
-                <th className="px-6 py-4">Restore Folder Directory Name</th>
-                <th className="px-6 py-4">Created Date</th>
-                <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4 text-center">Action</th>
+                <th className="px-6 py-4">{t.backupNameCol || 'Restore Folder Directory Name'}</th>
+                <th className="px-6 py-4">{t.createdCol || 'Created Date'}</th>
+                <th className="px-6 py-4 text-center">{t.statusCol || 'Status'}</th>
+                <th className="px-6 py-4 text-center">{t.actionCol || 'Action'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 text-slate-700 dark:text-slate-300">
@@ -257,7 +267,7 @@ export default function BackupRestore() {
                       <td className="px-6 py-4 text-center">
                         <span className="inline-flex items-center space-x-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200/50">
                           <CheckCircle className="w-3 h-3" />
-                          <span>Verified</span>
+                          <span>{t.verified || 'Verified'}</span>
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">

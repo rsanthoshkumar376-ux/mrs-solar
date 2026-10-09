@@ -2,10 +2,20 @@ import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
 import { formatDate } from '../../utils/format.js';
 import { FolderLock, Shield, User, Clock, Terminal } from 'lucide-react';
+import { translations, getLanguage } from '../../utils/translations.js';
 
 export default function AuditLogs() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lang, setLang] = useState(getLanguage);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
 
   const fetchLogs = async () => {
     try {
@@ -27,26 +37,26 @@ export default function AuditLogs() {
       
       {/* HEADER */}
       <div>
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Admin Activity Audits</h2>
-        <p className="text-sm text-slate-500">Chronological ledger recording owner administrative events and adjustments.</p>
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t.adminActivityAudits || 'Admin Activity Audits'}</h2>
+        <p className="text-sm text-slate-500">{t.adminAuditsSubtitle || 'Chronological ledger recording owner administrative events and adjustments.'}</p>
       </div>
 
       {/* AUDITS TABLE */}
       <div className="glass-premium rounded-3xl overflow-hidden shadow-sm">
         <div className="px-6 py-4 border-b border-slate-200/50 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-900/30 flex items-center space-x-2">
           <FolderLock className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-          <span className="font-bold text-slate-800 dark:text-white">Administrative Event Logs</span>
+          <span className="font-bold text-slate-800 dark:text-white">{t.administrativeEventLogs || 'Administrative Event Logs'}</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100/50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200/50 dark:border-slate-800/50">
-                <th className="px-6 py-4">Timestamp</th>
-                <th className="px-6 py-4">Admin Username</th>
-                <th className="px-6 py-4">Action Event</th>
-                <th className="px-6 py-4">Target Entity</th>
-                <th className="px-6 py-4">Action Metadata / Details</th>
+                <th className="px-6 py-4">{t.timestampCol || 'Timestamp'}</th>
+                <th className="px-6 py-4">{t.adminUsernameCol || 'Admin Username'}</th>
+                <th className="px-6 py-4">{t.actionEventCol || 'Action Event'}</th>
+                <th className="px-6 py-4">{t.targetEntityCol || 'Target Entity'}</th>
+                <th className="px-6 py-4">{t.actionMetadataCol || 'Action Metadata / Details'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 text-slate-700 dark:text-slate-300">
@@ -59,7 +69,7 @@ export default function AuditLogs() {
               ) : logs.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
-                    No activity logs recorded yet.
+                    {t.noAuditLogs || 'No activity logs recorded yet.'}
                   </td>
                 </tr>
               ) : (
