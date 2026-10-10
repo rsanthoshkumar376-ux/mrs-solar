@@ -1,0 +1,81 @@
+name: Midnight Financial Audit & Penalty Check
+
+on:
+  schedule:
+    # 18:30 UTC = 00:00 IST (Midnight Indian Standard Time, every day)
+    - cron: '30 18 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force re-run even if audit already completed today (bypass idempotency check)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  run-midnight-audit:
+    name: Trigger Midnight Audit on Render
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      RENDER_APP_URL: ${{ vars.RENDER_APP_URL || 'https://mrs-solar1.onrender.com' }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET || 'mrs_solar_midnight_cron_secret_2026' }}
+
+    steps:
+      - name: Step 1 - Wake Render Service & Check Liveness
+        run: |
+          echo "=========================================================="
+          echo "Target Render App URL: $RENDER_APP_URL"
+          echo "Checking liveness and waking server from sleep if inactive..."
+          echo "=========================================================="
+          
+          # Render free instances spin down when inactive.
+          # We perform a resilient curl with automatic retry to wake the container.
+          curl --retry 6 \
+               --retry-delay 10 \
+               --retry-all-errors \
+               --max-time 90 \
+               -s -w "\nHTTP Status: %{http_code} | Total Time: %{time_total}s\n" \
+               "$RENDER_APP_URL/api/cron/ping" || true
+
+      - name: Step 2 - Execute Midnight Loan Audit & Penalty Calculation
+        id: trigger_audit
+        run: |
+          FORCE_PARAM="${{ github.event.inputs.force || 'false' }}"
+          ENDPOINT="$RENDER_APP_URL/api/cron/midnight-audit?source=github-actions&force=$FORCE_PARAM"
+          
+          echo "=========================================================="
+          echo "Executing idempotent midnight audit at: $ENDPOINT"
+          echo "=========================================================="
+          
+          RESPONSE=$(curl --retry 3 \
+                          --retry-delay 5 \
+                          --retry-all-errors \
+                          --max-time 120 \
+                          -s \
+                          -w "\n%{http_code}" \
+                          -X POST \
+                          -H "Content-Type: application/json" \
+                          -H "x-cron-secret: $CRON_SECRET" \
+                          -d "{\"source\":\"github-actions\",\"force\":$FORCE_PARAM}" \
+                          "$ENDPOINT")
+
+          HTTP_BODY=$(echo "$RESPONSE" | sed '$d')
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
+
+          echo "HTTP Status Code: $HTTP_STATUS"
+          echo "Response Body:"
+          echo "$HTTP_BODY"
+
+          if [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "::error::Midnight audit failed with HTTP $HTTP_STATUS"
+            exit 1
+          fi
+
+          echo "=========================================================="
+          echo "Midnight Audit Trigger Succeeded!"
+          echo "=========================================================="

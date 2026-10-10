@@ -43,11 +43,34 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  const triggerScheduler = async () => {
+  const triggerScheduler = async (force = false) => {
     setSchedulerRunning(true);
     try {
-      const response = await api.post('/admin/trigger-scheduler', {});
-      alert(t.auditCompletedAlert ? t.auditCompletedAlert.replace('{count}', response.data.details.checkedCount) : `Midnight audit simulation completed successfully!\nCustomers Checked: ${response.data.details.checkedCount}`);
+      const response = await api.post('/admin/trigger-scheduler', { force });
+      const details = response.data?.details || {};
+
+      if (details.alreadyRun && !force) {
+        const baseMsg = t.auditAlreadyRunAlert
+          ? t.auditAlreadyRunAlert
+              .replace('{date}', details.auditDate || '')
+              .replace('{count}', details.lastRun?.checkedCount || details.checkedCount || 0)
+          : `Today's midnight audit (${details.auditDate}) has already completed successfully.\n\nIdempotency protected: Duplicate penalties prevented.`;
+
+        const confirmMsg = baseMsg + (language === 'ta' 
+          ? '\n\nகட்டாயமாக மீண்டும் இயக்க விரும்புகிறீர்களா?' 
+          : '\n\nDo you want to force a re-run anyway?');
+
+        const wantForce = window.confirm(confirmMsg);
+        if (wantForce) {
+          return await triggerScheduler(true);
+        }
+      } else {
+        alert(
+          t.auditCompletedAlert
+            ? t.auditCompletedAlert.replace('{count}', details.checkedCount || 0)
+            : `Midnight audit completed successfully!\nCustomers Checked: ${details.checkedCount || 0}`
+        );
+      }
       await fetchDashboardData();
     } catch (error) {
       console.error('Scheduler execution failed:', error);

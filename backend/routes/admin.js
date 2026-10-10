@@ -737,12 +737,28 @@ router.delete('/payments/delete-payment', authenticateToken, authorizeRole(['adm
 // 9. Trigger Scheduler manually (For admin convenience/testing)
 router.post('/trigger-scheduler', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
-    const result = await runDailyInterestAndPenaltyCheck(new Date());
+    const force = Boolean(req.body?.force);
+    const result = await runDailyInterestAndPenaltyCheck(new Date(), {
+      force,
+      triggeredBy: `manual-admin:${req.user.username}`
+    });
     await logAdminAction(req.user.username, 'TRIGGER_SCHEDULER', 'SYSTEM', result);
     res.json({ message: 'Daily calculation run completed successfully', details: result });
   } catch (error) {
     console.error('Scheduler trigger error:', error);
     res.status(500).json({ message: 'Failed to run daily checks' });
+  }
+});
+
+// 9b. Midnight Audit Runs Ledger
+router.get('/audit-runs', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const runs = await db.find('audit_runs');
+    runs.sort((a, b) => new Date(b.startedAt || b.createdAt || 0) - new Date(a.startedAt || a.createdAt || 0));
+    res.json(runs.slice(0, 30));
+  } catch (error) {
+    console.error('Audit runs fetch error:', error);
+    res.status(500).json({ message: 'Error loading audit runs' });
   }
 });
 
