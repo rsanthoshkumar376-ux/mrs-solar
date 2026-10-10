@@ -11,30 +11,23 @@ import { generateAmortizationSchedule, recalculateCustomerEmiStatus } from '../u
 import { logAdminAction } from '../utils/logger.js';
 import { runDailyInterestAndPenaltyCheck } from '../utils/scheduler.js';
 import { sendReceiptEmail, testEmailConnection, getEmailConfig } from '../utils/email.js';
-
+import { 
+  saveDocument, 
+  getDocumentFromVault, 
+  verifySignedExpiringToken, 
+  resolveCustomerDocumentUrls, 
+  maskAadhaar 
+} from '../utils/storage.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const UPLOADS_DIR = path.join(__dirname, '..', 'data', 'uploads');
 
-// Multer storage setup
-const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    try {
-      await fs.mkdir(UPLOADS_DIR, { recursive: true });
-      cb(null, UPLOADS_DIR);
-    } catch (err) {
-      cb(err);
-    }
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
+// In-Memory Storage: Never write sensitive identity documents to ephemeral local disk!
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 } // 15MB max file size
 });
-
-const upload = multer({ storage });
 
 const documentFields = [
   { name: 'aadhaarFile', maxCount: 1 },
@@ -148,14 +141,20 @@ router.get('/customers', authenticateToken, authorizeRole(['admin']), async (req
       customers = customers.filter(c => c.paymentStatus === paymentStatus);
     }
 
-    res.json(customers);
+    // Mask Aadhaar for all customers in list
+    const safeCustomers = customers.map(c => ({
+      ...c,
+      aadhaarNumber: maskAadhaar(c.aadhaarNumber)
+    }));
+
+    res.json(safeCustomers);
   } catch (error) {
     console.error('Customers fetch error:', error);
     res.status(500).json({ message: 'Error retrieving customers' });
   }
 });
 
-// 3. Customer Details
+// 3. Customer Details (with dynamic signed expiring URLs for documents)
 router.get('/customers/:id', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
     const customer = (await db.findOne('customers', { _id: req.params.id })) || 
@@ -166,7 +165,12 @@ router.get('/customers/:id', authenticateToken, authorizeRole(['admin']), async 
 
     // Refresh status calculations in real time
     const updatedCustomer = recalculateCustomerEmiStatus(customer, new Date());
-    res.json(updatedCustomer);
+    
+    // Resolve all documents to active, signed, expiring URLs (15 min validity)
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const safeCustomer = await resolveCustomerDocumentUrls(updatedCustomer, baseUrl);
+
+    res.json(safeCustomer);
   } catch (error) {
     console.error('Customer fetch error:', error);
     res.status(500).json({ message: 'Error retrieving customer details' });
@@ -192,17 +196,17 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
     const count = (await db.find('customers')).length + 1;
     const customerId = `SOL-${1000 + count}`;
 
-    // Get file names if uploaded
+    // Upload documents directly to private cloud storage (S3/R2/Cloudinary or Encrypted Cloud Vault)
+    // NEVER write sensitive identity documents to the ephemeral local disk!
     const files = req.files || {};
     const docs = {};
-    documentFields.forEach(f => {
+    for (const f of documentFields) {
       if (files[f.name] && files[f.name][0]) {
-        // Store relative url path
-        docs[f.name] = `/uploads/${files[f.name][0].filename}`;
+        docs[f.name] = await saveDocument(files[f.name][0], customerId, f.name);
       } else {
         docs[f.name] = null;
       }
-    });
+    }
 
     const loanAmount = Number(rawData.loanAmount);
     const monthlyRate = Number(rawData.interestRate) / 100; // Expected monthly rate (e.g. 2% = 0.02)
@@ -213,7 +217,7 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
     const emiSchedule = generateAmortizationSchedule(loanAmount, monthlyRate, emiDuration, startDate);
     const monthlyEmi = emiSchedule.length > 0 ? emiSchedule[0].emiAmount : 0;
 
-    // Create Customer
+    // Create Customer (Mask Aadhaar to store only last 4 digits)
     const customer = await db.create('customers', {
       customerId,
       fullName: rawData.fullName,
@@ -227,7 +231,7 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
       district: rawData.district || '',
       state: rawData.state || '',
       pinCode: rawData.pinCode || '',
-      aadhaarNumber: rawData.aadhaarNumber || '',
+      aadhaarNumber: maskAadhaar(rawData.aadhaarNumber),
       panNumber: rawData.panNumber || '',
       occupation: rawData.occupation || '',
       monthlyIncome: Number(rawData.monthlyIncome) || 0,
@@ -312,6 +316,48 @@ router.put('/customers/:id/email', authenticateToken, authorizeRole(['admin']), 
   }
 });
 
+// 4c. Secure Document Viewing with Signed Expiring Token (Zero Local Disk Storage)
+router.get('/documents/view/:docId', async (req, res) => {
+  try {
+    const { docId } = req.params;
+    const { expires, sig } = req.query;
+
+    const tokenCheck = verifySignedExpiringToken(docId, expires, sig);
+    if (!tokenCheck.valid) {
+      return res.status(403).send(`
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="utf-8"><title>MRS SOLAR - Link Expired</title></head>
+          <body style="margin:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #0f172a; color: #f8fafc; text-align: center;">
+            <div style="background: #1e293b; padding: 2.5rem; border-radius: 1.25rem; border: 1px solid #334155; max-width: 460px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+              <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🔒</div>
+              <h2 style="color: #f87171; margin-bottom: 0.5rem; font-size: 1.25rem;">Access Denied / Expired Link</h2>
+              <p style="color: #94a3b8; font-size: 0.875rem; line-height: 1.5;">${tokenCheck.reason}</p>
+              <p style="color: #64748b; font-size: 0.75rem; margin-top: 1.5rem; border-top: 1px solid #334155; padding-top: 1rem;">MRS SOLAR — Bank-Grade Identity Document Protection</p>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+
+    const doc = await getDocumentFromVault(docId);
+    if (!doc) {
+      return res.status(404).send('Document not found in vault.');
+    }
+
+    // Set secure delivery headers
+    res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.fileName || 'document')}"`);
+    res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+
+    res.send(doc.buffer);
+  } catch (err) {
+    console.error('Document view error:', err);
+    res.status(500).send('Error retrieving document');
+  }
+});
+
 // 5. Edit Customer Details
 router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload.fields(documentFields), async (req, res) => {
   try {
@@ -323,12 +369,12 @@ router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload
     }
 
     const files = req.files || {};
-    const updatedDocs = { ...oldCustomer.documents };
-    documentFields.forEach(f => {
+    const updatedDocs = { ...(oldCustomer.documents || {}) };
+    for (const f of documentFields) {
       if (files[f.name] && files[f.name][0]) {
-        updatedDocs[f.name] = `/uploads/${files[f.name][0].filename}`;
+        updatedDocs[f.name] = await saveDocument(files[f.name][0], oldCustomer.customerId, f.name);
       }
-    });
+    }
 
     const updatedCustomer = {
       ...oldCustomer,
@@ -343,7 +389,7 @@ router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload
       district: rawData.district !== undefined ? rawData.district : oldCustomer.district,
       state: rawData.state !== undefined ? rawData.state : oldCustomer.state,
       pinCode: rawData.pinCode !== undefined ? rawData.pinCode : oldCustomer.pinCode,
-      aadhaarNumber: rawData.aadhaarNumber !== undefined ? rawData.aadhaarNumber : oldCustomer.aadhaarNumber,
+      aadhaarNumber: rawData.aadhaarNumber !== undefined ? maskAadhaar(rawData.aadhaarNumber) : maskAadhaar(oldCustomer.aadhaarNumber),
       panNumber: rawData.panNumber !== undefined ? rawData.panNumber : oldCustomer.panNumber,
       occupation: rawData.occupation !== undefined ? rawData.occupation : oldCustomer.occupation,
       monthlyIncome: rawData.monthlyIncome !== undefined ? Number(rawData.monthlyIncome) : oldCustomer.monthlyIncome,
@@ -852,7 +898,7 @@ router.get('/backup/export-csv', authenticateToken, authorizeRole(['admin']), as
         `"${c.customerId || ''}"`,
         `"${(c.fullName || '').replace(/"/g, '""')}"`,
         `"${c.mobileNumber || ''}"`,
-        `"${c.aadhaarNumber || ''}"`,
+        `"${maskAadhaar(c.aadhaarNumber)}"`,
         `"${c.panNumber || ''}"`,
         `"${c.solarCapacity || 0}"`,
         `"${c.solarCost || 0}"`,
@@ -930,7 +976,7 @@ router.get('/backup/export-mdb', authenticateToken, authorizeRole(['admin']), as
         customerId:      c.customerId || '',
         fullName:        c.fullName || '',
         mobileNumber:    c.mobileNumber || '',
-        aadhaarNumber:   c.aadhaarNumber || '',
+        aadhaarNumber:   maskAadhaar(c.aadhaarNumber),
         panNumber:       c.panNumber || '',
         address:         c.address || '',
         solarCapacity:   c.solarCapacity || 0,
@@ -1095,14 +1141,13 @@ router.post('/backup/import-json', authenticateToken, authorizeRole(['admin']), 
       return res.status(400).json({ message: 'No backup file uploaded' });
     }
 
-    const filePath = req.file.path;
-    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const fileContent = req.file.buffer ? req.file.buffer.toString('utf-8') : (req.file.path ? await fs.readFile(req.file.path, 'utf-8') : '');
     let parsedData;
     
     try {
       parsedData = JSON.parse(fileContent);
     } catch {
-      await fs.unlink(filePath).catch(() => {});
+      if (req.file.path) await fs.unlink(req.file.path).catch(() => {});
       return res.status(400).json({ message: 'Invalid file format. Please upload a valid JSON backup file.' });
     }
 

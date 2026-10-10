@@ -184,7 +184,7 @@ function isMySQLConnected() {
 
 async function initMySQLTables() {
   if (!mysqlPool) return;
-  const collections = ['users', 'customers', 'payments', 'audit_logs', 'notifications', 'settings'];
+  const collections = ['users', 'customers', 'payments', 'audit_logs', 'notifications', 'settings', 'customer_documents'];
   for (const col of collections) {
     await mysqlPool.query(`
       CREATE TABLE IF NOT EXISTS mrs_${col} (

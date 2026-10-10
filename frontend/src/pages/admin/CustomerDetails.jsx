@@ -308,9 +308,12 @@ export default function CustomerDetails() {
                 </button>
               </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Aadhaar Number</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.aadhaarNumber || '—'}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-500 flex items-center space-x-1.5">
+                <span>Aadhaar Number</span>
+                <span className="text-[10px] px-1.5 py-0.5 bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 rounded-md border border-teal-200/40 font-mono">UIDAI Masked</span>
+              </span>
+              <span className="font-semibold font-mono text-slate-800 dark:text-slate-200">{customer.aadhaarNumber || '—'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">PAN Card</span>
@@ -446,8 +449,14 @@ export default function CustomerDetails() {
               <p className="text-[11px] text-slate-500">Secure digital repository of KYC verification, electricity bills, and solar warranty agreements</p>
             </div>
           </div>
-          <div className="text-xs text-slate-500 font-medium">
-            {Object.values(customer.documents || {}).filter(Boolean).length} / {DOC_CONFIGS.length} Documents Uploaded
+          <div className="flex items-center space-x-2">
+            <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 border border-teal-200/50">
+              <ShieldCheck className="w-3 h-3" />
+              <span>Private Cloud Vault & Expiring Links Active</span>
+            </span>
+            <div className="text-xs text-slate-500 font-medium">
+              {Object.values(customer.documents || {}).filter(Boolean).length} / {DOC_CONFIGS.length} Uploaded
+            </div>
           </div>
         </div>
 
@@ -455,7 +464,7 @@ export default function CustomerDetails() {
           {DOC_CONFIGS.map((doc) => {
             const relativePath = customer.documents?.[doc.key];
             const fileUrl = relativePath ? getDocUrl(relativePath) : null;
-            const isPdf = fileUrl ? fileUrl.toLowerCase().endsWith('.pdf') : false;
+            const isPdf = fileUrl ? (fileUrl.split('?')[0].toLowerCase().endsWith('.pdf') || (doc.key && doc.key.toLowerCase().includes('pdf'))) : false;
 
             return (
               <div

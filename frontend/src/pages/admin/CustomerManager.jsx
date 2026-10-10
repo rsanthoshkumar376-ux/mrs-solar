@@ -100,6 +100,13 @@ export default function CustomerManager() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'aadhaarNumber') {
+      const digits = value.replace(/\D/g, '');
+      if (digits.length > 4) {
+        setFormData(prev => ({ ...prev, aadhaarNumber: `XXXX-XXXX-${digits.slice(-4)}` }));
+        return;
+      }
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -461,7 +468,18 @@ export default function CustomerManager() {
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.aadhaarNumberLabel}</label>
-                    <input type="text" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input 
+                      type="text" 
+                      name="aadhaarNumber" 
+                      value={formData.aadhaarNumber} 
+                      onChange={handleInputChange} 
+                      placeholder="XXXX-XXXX-1234"
+                      maxLength={14}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" 
+                    />
+                    <p className="text-[10px] text-teal-600 dark:text-teal-400 mt-1">
+                      🔒 {t.aadhaarPrivacyNotice}
+                    </p>
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.panNumberLabel}</label>

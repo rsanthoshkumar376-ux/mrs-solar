@@ -59,7 +59,7 @@ export function exportCustomersToCsv(customers = []) {
     escapeCsvCell(c.installationAddress || c.address || ''),
     escapeCsvCell(c.city || ''),
     escapeCsvCell(c.district || ''),
-    escapeCsvCell(c.aadhaarNumber || ''),
+    escapeCsvCell(c.aadhaarNumber ? (c.aadhaarNumber.includes('XXXX') ? c.aadhaarNumber : `XXXX-XXXX-${String(c.aadhaarNumber).slice(-4)}`) : ''),
     escapeCsvCell(c.panNumber || ''),
     escapeCsvCell(c.solarCapacity || 0),
     escapeCsvCell(c.solarBrand || ''),

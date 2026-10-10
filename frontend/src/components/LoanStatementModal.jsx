@@ -103,7 +103,7 @@ export default function LoanStatementModal({ customer, isOpen, onClose }) {
               <p><strong>{t.nameLabel}</strong> {customer.fullName}</p>
               <p><strong>{t.mobileLabel}</strong> {customer.mobileNumber}</p>
               <p><strong>{t.emailLabel}</strong> {customer.email || '—'}</p>
-              <p><strong>{t.aadhaarLabel}</strong> {customer.aadhaarNumber || '—'}</p>
+              <p><strong>{t.aadhaarLabel}</strong> {customer.aadhaarNumber ? (customer.aadhaarNumber.includes('XXXX') ? customer.aadhaarNumber : `XXXX-XXXX-${String(customer.aadhaarNumber).slice(-4)}`) : '—'}</p>
               <p><strong>{t.addressLabel}</strong> {customer.installationAddress || customer.address || '—'}</p>
             </div>
 

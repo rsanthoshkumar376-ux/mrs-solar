@@ -2,6 +2,7 @@ import express from 'express';
 import { db } from '../database/db.js';
 import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { recalculateCustomerEmiStatus } from '../utils/calculations.js';
+import { resolveCustomerDocumentUrls, maskAadhaar } from '../utils/storage.js';
 
 const router = express.Router();
 
@@ -20,7 +21,12 @@ router.get('/dashboard', authenticateToken, authorizeRole(['customer']), async (
 
     // Recalculate late fees and status dynamically in real-time
     const updatedCustomer = recalculateCustomerEmiStatus(customer, new Date());
-    res.json(updatedCustomer);
+    
+    // Resolve documents to signed, expiring URLs and mask Aadhaar
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const safeCustomer = await resolveCustomerDocumentUrls(updatedCustomer, baseUrl);
+
+    res.json(safeCustomer);
   } catch (error) {
     console.error('Customer dashboard error:', error);
     res.status(500).json({ message: 'Error loading dashboard details' });
