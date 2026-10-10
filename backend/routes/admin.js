@@ -7,7 +7,16 @@ import { fileURLToPath } from 'url';
 import ExcelJS from 'exceljs';
 import { db } from '../database/db.js';
 import { authenticateToken, authorizeRole } from '../middleware/auth.js';
-import { generateAmortizationSchedule, recalculateCustomerEmiStatus } from '../utils/calculations.js';
+import { 
+  generateAmortizationSchedule, 
+  recalculateCustomerEmiStatus,
+  processPartialEmiPayment,
+  calculateEarlyClosurePayoff,
+  processEarlyClosure,
+  applyPartPrepayment,
+  toPaise,
+  toRupees
+} from '../utils/calculations.js';
 import { logAdminAction } from '../utils/logger.js';
 import { runDailyInterestAndPenaltyCheck } from '../utils/scheduler.js';
 import { sendReceiptEmail, testEmailConnection, getEmailConfig } from '../utils/email.js';
@@ -654,6 +663,216 @@ router.post('/payments/send-receipt-email', authenticateToken, authorizeRole(['a
   }
 });
 
+// 7c. Partial Payment on EMI (Integer Paise Precision)
+router.post('/payments/partial-payment', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  const { customerId, emiNumber, amount, paymentDate, remarks } = req.body;
+  if (!customerId || !emiNumber || !amount || Number(amount) <= 0) {
+    return res.status(400).json({ message: 'Customer ID, EMI Number, and a positive amount are required' });
+  }
+
+  try {
+    const customer = await db.findOne('customers', { customerId });
+    if (!customer) return res.status(404).json({ message: 'Customer not found' });
+
+    const paidDate = paymentDate ? new Date(paymentDate) : new Date();
+    const { updatedCustomer, paymentSummary } = processPartialEmiPayment(
+      customer,
+      Number(emiNumber),
+      Number(amount),
+      paidDate,
+      remarks
+    );
+
+    await db.updateOne('customers', { _id: customer._id }, updatedCustomer);
+
+    const receiptId = `REC-PART-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+    const paymentRecord = await db.create('payments', {
+      receiptId,
+      customerId,
+      customerName: customer.fullName,
+      emiNumber: Number(emiNumber),
+      paymentDate: paidDate.toISOString().split('T')[0],
+      paidAmount: Number(amount),
+      isPartialPayment: true,
+      isFullySettled: paymentSummary.isFullySettled,
+      remainingUnpaidOnEmi: paymentSummary.remainingUnpaidRupees,
+      status: paymentSummary.isFullySettled ? 'Paid' : 'Partially Paid',
+      remarks: remarks || `Partial payment of ₹${amount}`
+    });
+
+    await logAdminAction(req.user.username, 'PARTIAL_EMI_PAYMENT', customerId, {
+      emiNumber,
+      amount,
+      receiptId,
+      isFullySettled: paymentSummary.isFullySettled
+    });
+
+    await db.create('notifications', {
+      customerId,
+      role: 'customer',
+      title: paymentSummary.isFullySettled ? 'EMI Fully Settled' : 'Partial Payment Received',
+      message: `Received ₹${Number(amount).toLocaleString('en-IN')} for EMI #${emiNumber}. Receipt: ${receiptId}.${paymentSummary.isFullySettled ? ' EMI is now fully paid.' : ` Remaining on this EMI: ₹${paymentSummary.remainingUnpaidRupees.toLocaleString('en-IN')}.`}`,
+      type: 'Payment_Received_Cust',
+      read: false
+    });
+
+    res.json({
+      message: paymentSummary.isFullySettled ? `EMI #${emiNumber} fully paid!` : `Partial payment of ₹${amount} recorded for EMI #${emiNumber}.`,
+      payment: paymentRecord,
+      summary: paymentSummary,
+      customer: updatedCustomer
+    });
+  } catch (error) {
+    console.error('Partial payment error:', error);
+    res.status(400).json({ message: error.message || 'Error processing partial payment' });
+  }
+});
+
+// 7d. Early Closure Payoff Quote
+router.get('/loans/payoff-quote/:customerId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const customer = await db.findOne('customers', { customerId: req.params.customerId });
+    if (!customer) return res.status(404).json({ message: 'Customer not found' });
+
+    const asOfDate = req.query.date ? new Date(req.query.date) : new Date();
+    const quote = calculateEarlyClosurePayoff(customer, asOfDate);
+
+    res.json({
+      customerId: customer.customerId,
+      fullName: customer.fullName,
+      quoteDate: asOfDate.toISOString().split('T')[0],
+      ...quote
+    });
+  } catch (error) {
+    console.error('Payoff quote error:', error);
+    res.status(500).json({ message: 'Error calculating early closure quote' });
+  }
+});
+
+// 7e. Early Closure / Foreclosure Settlement
+router.post('/loans/early-closure', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  const { customerId, amountPaid, paymentDate, remarks } = req.body;
+  if (!customerId || !amountPaid || Number(amountPaid) <= 0) {
+    return res.status(400).json({ message: 'Customer ID and valid payoff amount are required' });
+  }
+
+  try {
+    const customer = await db.findOne('customers', { customerId });
+    if (!customer) return res.status(404).json({ message: 'Customer not found' });
+
+    const payDate = paymentDate ? new Date(paymentDate) : new Date();
+    const { updatedCustomer, closureSummary } = processEarlyClosure(
+      customer,
+      Number(amountPaid),
+      payDate,
+      remarks
+    );
+
+    await db.updateOne('customers', { _id: customer._id }, updatedCustomer);
+
+    const receiptId = `REC-CLOSE-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+    const paymentRecord = await db.create('payments', {
+      receiptId,
+      customerId,
+      customerName: customer.fullName,
+      paymentDate: payDate.toISOString().split('T')[0],
+      paidAmount: Number(amountPaid),
+      isEarlyClosure: true,
+      status: 'Paid',
+      remarks: remarks || 'Full early closure / foreclosure settlement'
+    });
+
+    await logAdminAction(req.user.username, 'EARLY_CLOSURE_SETTLEMENT', customerId, {
+      amountPaid,
+      receiptId,
+      unearnedInterestSaved: closureSummary.unearnedInterestSaved
+    });
+
+    await db.create('notifications', {
+      customerId,
+      role: 'customer',
+      title: 'Congratulations! Loan Closed Early',
+      message: `Your solar loan has been fully foreclosed and settled early with payment of ₹${Number(amountPaid).toLocaleString('en-IN')}. Thank you!`,
+      type: 'Loan_Completed_Cust',
+      read: false
+    });
+
+    res.json({
+      message: 'Loan successfully foreclosed and settled early!',
+      payment: paymentRecord,
+      closureSummary,
+      customer: updatedCustomer
+    });
+  } catch (error) {
+    console.error('Early closure error:', error);
+    res.status(400).json({ message: error.message || 'Error processing early closure' });
+  }
+});
+
+// 7f. Part-Prepayment towards Principal (Tenure / EMI reduction)
+router.post('/loans/part-prepayment', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  const { customerId, amount, strategy, paymentDate, remarks } = req.body;
+  if (!customerId || !amount || Number(amount) <= 0) {
+    return res.status(400).json({ message: 'Customer ID and a positive prepayment amount are required' });
+  }
+
+  try {
+    const customer = await db.findOne('customers', { customerId });
+    if (!customer) return res.status(404).json({ message: 'Customer not found' });
+
+    const payDate = paymentDate ? new Date(paymentDate) : new Date();
+    const { updatedCustomer, prepaymentSummary } = applyPartPrepayment(
+      customer,
+      Number(amount),
+      {
+        strategy: strategy || 'REDUCE_TENURE',
+        paymentDate: payDate,
+        remarks
+      }
+    );
+
+    await db.updateOne('customers', { _id: customer._id }, updatedCustomer);
+
+    const receiptId = `REC-PREPAY-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+    const paymentRecord = await db.create('payments', {
+      receiptId,
+      customerId,
+      customerName: customer.fullName,
+      paymentDate: payDate.toISOString().split('T')[0],
+      paidAmount: Number(amount),
+      isPartPrepayment: true,
+      strategy: prepaymentSummary.strategy,
+      status: 'Paid',
+      remarks: remarks || `Part-prepayment towards principal (${prepaymentSummary.strategy})`
+    });
+
+    await logAdminAction(req.user.username, 'PART_PREPAYMENT', customerId, {
+      amount,
+      receiptId,
+      strategy: prepaymentSummary.strategy,
+      newRemainingTenureMonths: prepaymentSummary.newRemainingTenureMonths
+    });
+
+    await db.create('notifications', {
+      customerId,
+      role: 'customer',
+      title: 'Principal Prepayment Applied',
+      message: `Your part-prepayment of ₹${Number(amount).toLocaleString('en-IN')} has been applied to reduce loan principal. Strategy: ${prepaymentSummary.strategy === 'REDUCE_TENURE' ? 'Reduced Tenure' : 'Reduced EMI'}.`,
+      type: 'Payment_Received_Cust',
+      read: false
+    });
+
+    res.json({
+      message: `Part-prepayment of ₹${amount} applied successfully!`,
+      payment: paymentRecord,
+      summary: prepaymentSummary,
+      customer: updatedCustomer
+    });
+  } catch (error) {
+    console.error('Part-prepayment error:', error);
+    res.status(400).json({ message: error.message || 'Error processing part-prepayment' });
+  }
+});
 
 // 8. Delete / Undo a Payment (Reverse Paid → Pending)
 router.delete('/payments/delete-payment', authenticateToken, authorizeRole(['admin']), async (req, res) => {
