@@ -4,7 +4,7 @@ import { formatCurrency, formatDate } from '../../utils/format.js';
 import { 
   Sun, DollarSign, Calendar, ShieldCheck, Zap, X,
   QrCode, Landmark, User, FileText, Info, Calculator, MessageCircle,
-  Copy, Check, Leaf, Printer
+  Copy, Check, Leaf, Printer, Phone, Download, AlertCircle
 } from 'lucide-react';
 import { openCustomerSupportChat } from '../../utils/whatsapp.js';
 import SolarSiteMap from '../../components/SolarSiteMap.jsx';
@@ -18,6 +18,7 @@ export default function CustomerDashboard() {
   const [selectedEmi, setSelectedEmi] = useState(null);
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [copiedMobile, setCopiedMobile] = useState(false);
   const [lang, setLang] = useState(getLanguage);
 
   useEffect(() => {
@@ -61,6 +62,19 @@ export default function CustomerDashboard() {
       setCalcEmiResult(0);
     }
   }, [calcCost, calcDownPayment, calcMonths]);
+
+  const handleDownloadQr = () => {
+    if (!selectedEmi) return;
+    const totalAmount = (selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=upi://pay?pa=rsanthoshkumar376@oksbi%26pn=Mr%20Santhoshkumar%20R%26am=${totalAmount}%26cu=INR%26tn=EMI_${selectedEmi.emiNumber}_${customer?.customerId || ''}`;
+    const link = document.createElement('a');
+    link.href = qrUrl;
+    link.download = `MRS_SOLAR_EMI_${selectedEmi.emiNumber}_Payment_QR.png`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (loading) {
     return (
@@ -529,16 +543,28 @@ export default function CustomerDashboard() {
             {/* Simulated UPI QR Code */}
             <div className="w-52 h-52 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center mx-auto relative overflow-hidden p-3 shadow-inner">
               <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=rsanthoshkumar376@oksbi%26pn=MRS_SOLAR%26am=${selectedEmi.emiAmount + selectedEmi.lateFee}%26cu=INR%26tn=EMI_${selectedEmi.emiNumber}_${customer.customerId}`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=rsanthoshkumar376@oksbi%26pn=Mr%20Santhoshkumar%20R%26am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}%26cu=INR%26tn=EMI_${selectedEmi.emiNumber}_${customer.customerId}`}
                 alt="Payment QR Code"
                 className="w-full h-full object-contain rounded"
               />
             </div>
 
+            {/* Save QR to Gallery Button */}
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={handleDownloadQr}
+                className="py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
+              >
+                <Download className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                <span>{t.saveQrImage}</span>
+              </button>
+            </div>
+
             <div className="text-center space-y-1">
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">{t.amountToTransfer}</p>
-              <p className="text-3xl font-black text-teal-600 dark:text-teal-400">{formatCurrency(selectedEmi.emiAmount + selectedEmi.lateFee)}</p>
-              <p className="text-[10px] text-slate-400 italic">UPI: rsanthoshkumar376@oksbi</p>
+              <p className="text-3xl font-black text-teal-600 dark:text-teal-400">{formatCurrency(selectedEmi.emiAmount + (selectedEmi.lateFee || 0))}</p>
+              <p className="text-[11px] text-slate-500 font-medium">A/c: Mr Santhoshkumar R (rsanthoshkumar376@oksbi)</p>
             </div>
 
             {/* MULTI-APP UPI PAYMENT SELECTOR */}
@@ -549,7 +575,7 @@ export default function CustomerDashboard() {
 
               <div className="grid grid-cols-2 gap-2">
                 <a
-                  href={`gpay://upi/pay?pa=rsanthoshkumar376@oksbi&pn=MRS%20SOLAR&am=${selectedEmi.emiAmount + selectedEmi.lateFee}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
+                  href={`gpay://upi/pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
                   className="py-2.5 px-3 bg-white hover:bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
                   title="Open Google Pay"
                 >
@@ -558,7 +584,7 @@ export default function CustomerDashboard() {
                 </a>
 
                 <a
-                  href={`phonepe://pay?pa=rsanthoshkumar376@oksbi&pn=MRS%20SOLAR&am=${selectedEmi.emiAmount + selectedEmi.lateFee}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
+                  href={`phonepe://pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
                   className="py-2.5 px-3 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
                   title="Open PhonePe"
                 >
@@ -567,7 +593,7 @@ export default function CustomerDashboard() {
                 </a>
 
                 <a
-                  href={`paytmmp://pay?pa=rsanthoshkumar376@oksbi&pn=MRS%20SOLAR&am=${selectedEmi.emiAmount + selectedEmi.lateFee}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
+                  href={`paytmmp://pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
                   className="py-2.5 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
                   title="Open Paytm"
                 >
@@ -576,7 +602,7 @@ export default function CustomerDashboard() {
                 </a>
 
                 <a
-                  href={`upi://pay?pa=rsanthoshkumar376@oksbi&pn=MRS%20SOLAR&am=${selectedEmi.emiAmount + selectedEmi.lateFee}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
+                  href={`upi://pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
                   className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
                   title="Open Any UPI App"
                 >
@@ -584,6 +610,29 @@ export default function CustomerDashboard() {
                   <span>{t.openAnyUpi}</span>
                 </a>
               </div>
+
+              {/* Copy Mobile Number (Recommended for Paytm Protect / PhonePe bypass) */}
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText('8072454996');
+                  setCopiedMobile(true);
+                  setTimeout(() => setCopiedMobile(false), 2000);
+                }}
+                className="w-full py-2 px-3 rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50/70 dark:bg-teal-950/40 text-xs text-teal-700 dark:text-teal-300 font-bold flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
+              >
+                {copiedMobile ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-emerald-600">{t.copiedMobileSuccess}</span>
+                  </>
+                ) : (
+                  <>
+                    <Phone className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                    <span>{t.copyUpiMobile}</span>
+                  </>
+                )}
+              </button>
 
               {/* Copy UPI ID Button */}
               <button
@@ -607,6 +656,19 @@ export default function CustomerDashboard() {
                   </>
                 )}
               </button>
+
+              {/* Helpful Paytm / PhonePe Risk Policy Explainer */}
+              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl p-2.5 text-left">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-[11px] text-amber-800 dark:text-amber-300">{t.upiRiskHelpTitle}</p>
+                    <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+                      {t.upiRiskHelpDesc}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <button
