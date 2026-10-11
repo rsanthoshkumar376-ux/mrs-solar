@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   RefreshCw, Smartphone, ShieldCheck, CheckCircle2, 
   ArrowDownToLine, X, Sparkles, Zap, ExternalLink, AlertCircle
@@ -113,10 +114,10 @@ export default function AppUpdateModal({ isOpen, onClose }) {
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto p-3 sm:p-6 flex items-center justify-center bg-slate-900/75 backdrop-blur-sm animate-fade-in no-print">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] overflow-y-auto p-3 sm:p-6 flex items-center justify-center bg-slate-900/75 backdrop-blur-sm animate-fade-in no-print">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl animate-scale-up relative flex flex-col max-h-[85vh] sm:max-h-[88vh] my-auto overflow-hidden">
         
         {/* CLOSE BUTTON */}
@@ -254,7 +255,8 @@ export default function AppUpdateModal({ isOpen, onClose }) {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

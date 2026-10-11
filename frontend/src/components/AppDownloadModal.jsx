@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Download, Smartphone, QrCode, CheckCircle, ShieldCheck, 
   ExternalLink, X, Apple, ArrowDownToLine, Zap, Info 
@@ -61,48 +62,48 @@ export default function AppDownloadModal({ isOpen, onClose }) {
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   // Mobile QR code target: use cloud URL when on localhost so mobile phone can reach it
   const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   const qrTargetUrl = isLocalHost ? GITHUB_APK_DOWNLOAD_URL : `${window.location.origin}/api/download-apk`;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-up relative">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] overflow-y-auto p-3 sm:p-6 flex items-center justify-center bg-slate-900/75 backdrop-blur-sm animate-fade-in no-print">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl animate-scale-up relative flex flex-col max-h-[85vh] sm:max-h-[88vh] my-auto overflow-hidden">
         
         {/* CLOSE BUTTON */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10"
+          className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/20 transition-colors z-20"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* MODAL HEADER */}
-        <div className="p-6 bg-gradient-to-r from-teal-700 to-emerald-700 text-white relative overflow-hidden">
+        <div className="shrink-0 p-5 sm:p-6 bg-gradient-to-r from-teal-700 to-emerald-700 text-white relative pr-12 overflow-hidden">
           <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-yellow-300/10 rounded-full blur-xl"></div>
           <div className="flex items-center space-x-3 relative z-10">
-            <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20">
-              <Smartphone className="w-6 h-6 text-yellow-300" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 shrink-0">
+              <Smartphone className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300" />
             </div>
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full">
                 100% Free • No Play Store Needed
               </span>
-              <h2 className="text-xl font-black mt-1">Get MRS SOLAR Mobile App</h2>
-              <p className="text-xs text-teal-100">Install directly onto any Android phone or iPhone in seconds</p>
+              <h2 className="text-lg sm:text-xl font-black mt-0.5 sm:mt-1 leading-snug">Get MRS SOLAR Mobile App</h2>
+              <p className="text-xs text-teal-100 leading-tight">Install directly onto any Android phone or iPhone in seconds</p>
             </div>
           </div>
         </div>
 
         {/* TABS */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 p-2 gap-2">
+        <div className="shrink-0 flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 p-2 gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('android')}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
               activeTab === 'android'
                 ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm'
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -114,7 +115,7 @@ export default function AppDownloadModal({ isOpen, onClose }) {
           <button
             type="button"
             onClick={() => setActiveTab('pwa')}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
               activeTab === 'pwa'
                 ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm'
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -127,7 +128,7 @@ export default function AppDownloadModal({ isOpen, onClose }) {
 
         {/* TAB 1: DIRECT APK DOWNLOAD */}
         {activeTab === 'android' && (
-          <div className="p-6 space-y-5">
+          <div className="p-5 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1 min-h-0">
             
             {/* Primary & Backup Download Actions */}
             <div className="space-y-2.5">
@@ -135,9 +136,9 @@ export default function AppDownloadModal({ isOpen, onClose }) {
                 type="button"
                 onClick={handleDirectDownload}
                 disabled={downloading}
-                className="w-full py-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/70 text-white font-bold rounded-2xl flex items-center justify-center space-x-2 text-sm shadow-xl shadow-teal-600/20 hover:shadow-teal-600/30 transition-all group cursor-pointer"
+                className="w-full py-3.5 sm:py-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/70 text-white font-bold rounded-2xl flex items-center justify-center space-x-2 text-xs sm:text-sm shadow-xl shadow-teal-600/20 hover:shadow-teal-600/30 transition-all group cursor-pointer"
               >
-                <ArrowDownToLine className={`w-5 h-5 ${downloading ? 'animate-bounce' : 'group-hover:translate-y-0.5'} transition-transform`} />
+                <ArrowDownToLine className={`w-4 h-4 sm:w-5 sm:h-5 ${downloading ? 'animate-bounce' : 'group-hover:translate-y-0.5'} transition-transform`} />
                 <span>{downloading ? 'Starting Download...' : 'Download MRS-SOLAR.apk (Direct Server)'}</span>
               </button>
 
@@ -159,7 +160,7 @@ export default function AppDownloadModal({ isOpen, onClose }) {
 
             {/* Scan QR Code to Download on Phone */}
             <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-              <div className="w-24 h-24 bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center flex-shrink-0">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center flex-shrink-0">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrTargetUrl)}`}
                   alt="Scan to Download APK"
@@ -201,14 +202,14 @@ export default function AppDownloadModal({ isOpen, onClose }) {
 
         {/* TAB 2: PWA 1-TAP INSTALL */}
         {activeTab === 'pwa' && (
-          <div className="p-6 space-y-5">
+          <div className="p-5 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1 min-h-0">
             <div className="text-center space-y-2">
               <button
                 type="button"
                 onClick={handlePwaInstall}
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl flex items-center justify-center space-x-2 text-sm shadow-xl shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all"
+                className="w-full py-3.5 sm:py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl flex items-center justify-center space-x-2 text-xs sm:text-sm shadow-xl shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all"
               >
-                <Zap className="w-5 h-5" />
+                <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>{isPwaInstalled ? 'App Already Installed' : '1-Tap Add to Home Screen'}</span>
               </button>
               <p className="text-[11px] text-slate-400">Installs directly through Chrome, Edge, or Safari with 0 storage download</p>
@@ -239,7 +240,7 @@ export default function AppDownloadModal({ isOpen, onClose }) {
         )}
 
         {/* MODAL FOOTER */}
-        <div className="px-6 py-3.5 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-xs text-slate-500">
+        <div className="shrink-0 px-5 sm:px-6 py-3 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-xs text-slate-500">
           <div className="flex items-center space-x-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
             <ShieldCheck className="w-4 h-4" />
             <span>Verified Safe & Secure</span>
@@ -247,13 +248,14 @@ export default function AppDownloadModal({ isOpen, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-semibold"
+            className="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 font-semibold transition-colors"
           >
             Close
           </button>
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, Download, Copy, Check, ExternalLink, Zap, 
   Phone, ShieldCheck, CreditCard, ArrowRight, CheckCircle2,
@@ -146,8 +147,10 @@ export default function UpiPaymentModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/75 backdrop-blur-sm animate-fade-in no-print overflow-y-auto">
+  if (!isOpen || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/75 backdrop-blur-sm animate-fade-in no-print overflow-y-auto">
       <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-up relative my-auto">
         
         {/* CLOSE BUTTON */}
@@ -473,6 +476,7 @@ export default function UpiPaymentModal({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
