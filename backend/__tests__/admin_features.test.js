@@ -1,6 +1,13 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { db } from '../database/db.js';
 import { invalidateDashboardCache } from '../routes/admin.js';
+import { 
+  getUpiConfig, 
+  getActiveUpiAccount, 
+  setActiveUpiAccount, 
+  saveUpiAccount, 
+  deleteUpiAccount 
+} from '../utils/upiConfig.js';
 
 describe('UnifiedDatabase Pagination & Indexing Methods', () => {
   beforeEach(async () => {
@@ -174,5 +181,55 @@ describe('Bank CSV Parser & Reconciliation Matching Logic', () => {
     expect(result.matched[0].customerId).toBe('SOL-1002');
     expect(result.matched[0].emiNumber).toBe(1);
     expect(result.matched[0].amount).toBe(4200);
+  });
+});
+
+describe('UPI Settings & Dynamic Payment Routing Engine', () => {
+  beforeEach(async () => {
+    // Reset upi settings
+    const existing = await db.findOne('settings', { key: 'upi' });
+    if (existing) {
+      await db.deleteOne('settings', { _id: existing._id });
+    }
+  });
+
+  test('initializes default SBI UPI configuration if none exists', async () => {
+    const config = await getUpiConfig();
+    expect(config.key).toBe('upi');
+    expect(config.activeUpiId).toBe('rsanthoshkumar376@oksbi');
+    expect(config.accounts.length).toBeGreaterThanOrEqual(1);
+
+    const active = await getActiveUpiAccount();
+    expect(active.upiId).toBe('rsanthoshkumar376@oksbi');
+    expect(active.payeeName).toBe('Mr Santhoshkumar R');
+  });
+
+  test('adds a new UPI account and allows switching active payment routing', async () => {
+    await saveUpiAccount({
+      upiId: 'mrssolar@okaxis',
+      payeeName: 'MRS SOLAR ENERGY',
+      mobileNumber: '9566866288',
+      bankName: 'Axis Bank',
+      label: 'Company Axis Account',
+      setAsActive: false
+    });
+
+    let active = await getActiveUpiAccount();
+    expect(active.upiId).toBe('rsanthoshkumar376@oksbi');
+
+    // Switch to new account
+    await setActiveUpiAccount('mrssolar@okaxis');
+    active = await getActiveUpiAccount();
+    expect(active.upiId).toBe('mrssolar@okaxis');
+    expect(active.payeeName).toBe('MRS SOLAR ENERGY');
+  });
+
+  test('prevents deleting the currently active UPI account', async () => {
+    const config = await getUpiConfig();
+    const activeAcc = config.accounts[0];
+
+    await expect(deleteUpiAccount(activeAcc.id)).rejects.toThrow(
+      /Cannot delete the currently active UPI ID/
+    );
   });
 });

@@ -79,11 +79,11 @@ export default function CustomerDashboard() {
 
   const copyPaymentLink = () => {
     if (!selectedEmi) return;
+    const activeUpiId = customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi';
+    const activePayeeName = customer?.activeUpi?.payeeName || 'Mr Santhoshkumar R';
     const totalAmount = (selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2);
-    const payeeVpa = 'rsanthoshkumar376@oksbi';
-    const payeeName = 'Mr Santhoshkumar R';
     const cleanCustId = (customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '');
-    const upiLink = `upi://pay?pa=${payeeVpa}&pn=${encodeURIComponent(payeeName)}&am=${totalAmount}&cu=INR&tn=EMI_${selectedEmi.emiNumber}_${cleanCustId}`;
+    const upiLink = `upi://pay?pa=${activeUpiId}&pn=${encodeURIComponent(activePayeeName)}&am=${totalAmount}&cu=INR&tn=EMI_${selectedEmi.emiNumber}_${cleanCustId}`;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(upiLink).catch(() => {});
     }
@@ -93,8 +93,10 @@ export default function CustomerDashboard() {
 
   const handleDownloadQr = () => {
     if (!selectedEmi) return;
+    const activeUpiId = customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi';
+    const activePayeeName = customer?.activeUpi?.payeeName || 'Mr Santhoshkumar R';
     const totalAmount = (selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2);
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=upi://pay?pa=rsanthoshkumar376@oksbi%26pn=Mr%20Santhoshkumar%20R%26am=${totalAmount}%26cu=INR%26tn=EMI_${selectedEmi.emiNumber}_${customer?.customerId || ''}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=upi://pay?pa=${activeUpiId}%26pn=${encodeURIComponent(activePayeeName)}%26am=${totalAmount}%26cu=INR%26tn=EMI_${selectedEmi.emiNumber}_${customer?.customerId || ''}`;
     const link = document.createElement('a');
     link.href = qrUrl;
     link.download = `MRS_SOLAR_EMI_${selectedEmi.emiNumber}_Payment_QR.png`;
@@ -656,7 +658,7 @@ export default function CustomerDashboard() {
             {/* UPI QR Code */}
             <div className="w-52 h-52 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center mx-auto relative overflow-hidden p-3 shadow-inner">
               <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=rsanthoshkumar376@oksbi%26pn=Mr%20Santhoshkumar%20R%26am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}%26cu=INR%26tn=EMI_${selectedEmi.emiNumber}_${(customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=${customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi'}%26pn=${encodeURIComponent(customer?.activeUpi?.payeeName || 'Mr Santhoshkumar R')}%26am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}%26cu=INR%26tn=EMI_${selectedEmi.emiNumber}_${(customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`}
                 alt="Payment QR Code"
                 className="w-full h-full object-contain rounded"
               />
@@ -677,13 +679,15 @@ export default function CustomerDashboard() {
             <div className="text-center space-y-1">
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">{t.amountToTransfer || 'Amount to transfer'}</p>
               <p className="text-3xl font-black text-teal-600 dark:text-teal-400">{formatCurrency(selectedEmi.emiAmount + (selectedEmi.lateFee || 0))}</p>
-              <p className="text-[11px] text-slate-500 font-medium">A/c: Mr Santhoshkumar R (rsanthoshkumar376@oksbi)</p>
+              <p className="text-[11px] text-slate-500 font-medium">
+                A/c: {customer?.activeUpi?.payeeName || 'Mr Santhoshkumar R'} ({customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi'})
+              </p>
             </div>
 
             {/* DIRECT UPI APP LINK FOR MOBILE */}
             <div className="space-y-2">
               <a
-                href={`upi://pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI_${selectedEmi.emiNumber}_${(customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`}
+                href={`upi://pay?pa=${customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi'}&pn=${encodeURIComponent(customer?.activeUpi?.payeeName || 'Mr Santhoshkumar R')}&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI_${selectedEmi.emiNumber}_${(customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`}
                 className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2 text-sm"
               >
                 <Zap className="w-4 h-4 text-yellow-300 fill-current" />
@@ -697,7 +701,7 @@ export default function CustomerDashboard() {
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText('rsanthoshkumar376@oksbi');
+                  navigator.clipboard.writeText(customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi');
                   setCopiedUpi(true);
                   setTimeout(() => setCopiedUpi(false), 2000);
                 }}
@@ -711,7 +715,7 @@ export default function CustomerDashboard() {
                 ) : (
                   <>
                     <Copy className="w-3 h-3" />
-                    <span>Copy UPI ID (rsanthoshkumar376@oksbi)</span>
+                    <span>Copy UPI ID ({customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi'})</span>
                   </>
                 )}
               </button>

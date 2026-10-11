@@ -27,6 +27,13 @@ import {
   resolveCustomerDocumentUrls, 
   maskAadhaar 
 } from '../utils/storage.js';
+import { 
+  getUpiConfig, 
+  getActiveUpiAccount, 
+  setActiveUpiAccount, 
+  saveUpiAccount, 
+  deleteUpiAccount 
+} from '../utils/upiConfig.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -1393,6 +1400,76 @@ router.post('/email-settings/test', authenticateToken, authorizeRole(['admin']),
   } catch (err) {
     console.error('Test email error:', err);
     res.status(500).json({ message: `Test email error: ${err.message}` });
+  }
+});
+
+// 9.5 UPI ID Management & Payment Route Configuration
+router.get('/upi-settings', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const config = await getUpiConfig();
+    const activeAccount = await getActiveUpiAccount();
+    res.json({
+      activeUpiId: config.activeUpiId,
+      activeAccount,
+      accounts: config.accounts || []
+    });
+  } catch (err) {
+    console.error('Fetch UPI settings error:', err);
+    res.status(500).json({ message: 'Failed to fetch UPI payment settings' });
+  }
+});
+
+router.post('/upi-settings/select', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { upiId, id } = req.body;
+    const target = await setActiveUpiAccount(upiId || id);
+    await logAdminAction(req.user.username, 'SELECT_ACTIVE_UPI', target.upiId, {
+      payeeName: target.payeeName,
+      label: target.label
+    });
+    res.json({
+      success: true,
+      message: `Active payment UPI ID successfully switched to "${target.upiId}" (${target.payeeName})! All customer payments will now route to this account.`,
+      activeAccount: target
+    });
+  } catch (err) {
+    console.error('Select active UPI error:', err);
+    res.status(400).json({ message: err.message || 'Failed to switch active UPI ID' });
+  }
+});
+
+router.post('/upi-settings/account', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { id, upiId, payeeName, mobileNumber, bankName, label, setAsActive } = req.body;
+    const result = await saveUpiAccount({ id, upiId, payeeName, mobileNumber, bankName, label, setAsActive });
+    await logAdminAction(req.user.username, id ? 'UPDATE_UPI_ACCOUNT' : 'CREATE_UPI_ACCOUNT', result.account.upiId, {
+      label: result.account.label,
+      isActive: result.activeUpiId === result.account.upiId
+    });
+    res.json({
+      success: true,
+      message: `UPI account "${result.account.upiId}" saved successfully!`,
+      account: result.account,
+      activeUpiId: result.activeUpiId
+    });
+  } catch (err) {
+    console.error('Save UPI account error:', err);
+    res.status(400).json({ message: err.message || 'Failed to save UPI account' });
+  }
+});
+
+router.delete('/upi-settings/account/:id', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    await deleteUpiAccount(id);
+    await logAdminAction(req.user.username, 'DELETE_UPI_ACCOUNT', id);
+    res.json({
+      success: true,
+      message: 'UPI account successfully removed'
+    });
+  } catch (err) {
+    console.error('Delete UPI account error:', err);
+    res.status(400).json({ message: err.message || 'Failed to remove UPI account' });
   }
 });
 

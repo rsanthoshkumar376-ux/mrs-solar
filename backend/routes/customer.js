@@ -3,6 +3,7 @@ import { db } from '../database/db.js';
 import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { recalculateCustomerEmiStatus } from '../utils/calculations.js';
 import { resolveCustomerDocumentUrls, maskAadhaar } from '../utils/storage.js';
+import { getActiveUpiAccount } from '../utils/upiConfig.js';
 
 const router = express.Router();
 
@@ -26,10 +27,26 @@ router.get('/dashboard', authenticateToken, authorizeRole(['customer']), async (
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const safeCustomer = await resolveCustomerDocumentUrls(updatedCustomer, baseUrl);
 
-    res.json(safeCustomer);
+    // Attach active administrator-selected UPI account for payment routing
+    const activeUpi = await getActiveUpiAccount();
+
+    res.json({
+      ...safeCustomer,
+      activeUpi
+    });
   } catch (error) {
     console.error('Customer dashboard error:', error);
     res.status(500).json({ message: 'Error loading dashboard details' });
+  }
+});
+
+// 1.1 Direct Active UPI endpoint
+router.get('/active-upi', async (req, res) => {
+  try {
+    const activeUpi = await getActiveUpiAccount();
+    res.json(activeUpi);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching active payment UPI' });
   }
 });
 

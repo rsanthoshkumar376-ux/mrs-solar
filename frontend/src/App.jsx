@@ -15,6 +15,7 @@ const EmiManagement = React.lazy(() => import('./pages/admin/EmiManagement.jsx')
 const AuditLogs = React.lazy(() => import('./pages/admin/AuditLogs.jsx'));
 const BackupRestore = React.lazy(() => import('./pages/admin/BackupRestore.jsx'));
 const EmailSettings = React.lazy(() => import('./pages/admin/EmailSettings.jsx'));
+const UpiSettings = React.lazy(() => import('./pages/admin/UpiSettings.jsx'));
 
 // Customer Portal (Lazy loaded)
 const CustomerDashboard = React.lazy(() => import('./pages/customer/CustomerDashboard.jsx'));
@@ -105,6 +106,16 @@ export default function App() {
               <ProtectedRoute allowedRoles={['admin']}>
                 <Layout>
                   <EmailSettings />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/upi-settings"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <UpiSettings />
                 </Layout>
               </ProtectedRoute>
             }

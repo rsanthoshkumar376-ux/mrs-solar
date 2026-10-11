@@ -25,6 +25,7 @@ export default function UpiPaymentModal({
   const [utrSuccess, setUtrSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [activeTab, setActiveTab] = useState('upi'); // 'upi' or 'qr'
+  const [activeUpi, setActiveUpi] = useState(null);
 
   useEffect(() => {
     const handleLangChange = () => setLang(getLanguage());
@@ -37,15 +38,18 @@ export default function UpiPaymentModal({
       setUtrNumber(customer?.submittedUtr || '');
       setUtrSuccess(false);
       setErrorMessage('');
+      api.get('/customer/active-upi')
+        .then(res => setActiveUpi(res.data))
+        .catch(() => {});
     }
   }, [isOpen, customer]);
 
   if (!isOpen || !emi) return null;
 
   const t = translations[lang] || translations.en;
-  const payeeVpa = 'rsanthoshkumar376@oksbi';
-  const payeeName = 'Mr Santhoshkumar R';
-  const payeeMobile = '8072454996';
+  const payeeVpa = activeUpi?.upiId || 'rsanthoshkumar376@oksbi';
+  const payeeName = activeUpi?.payeeName || 'Mr Santhoshkumar R';
+  const payeeMobile = activeUpi?.mobileNumber || '8072454996';
   const totalAmountNum = (Number(emi.emiAmount) || 0) + (Number(emi.lateFee) || 0);
   const formattedAmount = totalAmountNum.toFixed(2);
   const cleanCustId = (customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '');
