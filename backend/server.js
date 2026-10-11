@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs/promises';
+import syncFs from 'fs';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import cron from 'node-cron';
@@ -64,6 +65,23 @@ app.get('/sw.js', (req, res) => {
 });
 
 app.use(express.static(frontendDistPath));
+
+// Direct Android APK Download Endpoint
+app.get(['/api/download-apk', '/MRS-SOLAR.apk', '/download/apk'], (req, res) => {
+  const possiblePaths = [
+    path.join(frontendDistPath, 'MRS-SOLAR.apk'),
+    path.join(__dirname, '..', 'frontend', 'public', 'MRS-SOLAR.apk'),
+    path.join(__dirname, 'test_download.apk')
+  ];
+  for (const apkPath of possiblePaths) {
+    if (syncFs.existsSync(apkPath)) {
+      res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+      res.setHeader('Content-Disposition', 'attachment; filename="MRS-SOLAR.apk"');
+      return res.sendFile(path.resolve(apkPath));
+    }
+  }
+  res.redirect('https://github.com/rsanthoshkumar376-ux/mrs-solar/releases/download/app-release/MRS-SOLAR.apk');
+});
 
 // API Health Check
 app.get('/api/health', (req, res) => {

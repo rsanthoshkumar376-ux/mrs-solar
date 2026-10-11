@@ -378,5 +378,77 @@
     "type": "Owner_Overdue_5d",
     "emiNumber": 1,
     "read": false
+  },
+  {
+    "_id": "NOT-567300-188",
+    "createdAt": "2026-10-11T01:52:47.302Z",
+    "updatedAt": "2026-10-11T01:52:47.302Z",
+    "customerId": "CUS-567225-361",
+    "role": "customer",
+    "title": "Overdue EMI Alert",
+    "message": "Your EMI #1 of ₹5,000 is late by 5 days. Late penalty: ₹250.",
+    "type": "Customer_Overdue_5d",
+    "emiNumber": 1,
+    "read": false
+  },
+  {
+    "_id": "NOT-567308-802",
+    "createdAt": "2026-10-11T01:52:47.310Z",
+    "updatedAt": "2026-10-11T01:52:47.310Z",
+    "role": "admin",
+    "customerId": "CUS-567225-361",
+    "title": "Customer Overdue Alert",
+    "message": "Customer Test Customer Idempotency (ID: TEST-CUST-IDEMPOTENT-001) is overdue on EMI #1 by 5 days. Late fee: ₹250.",
+    "type": "Owner_Overdue_5d",
+    "emiNumber": 1,
+    "read": false
+  },
+  {
+    "_id": "NOT-567365-474",
+    "createdAt": "2026-10-11T01:52:47.367Z",
+    "updatedAt": "2026-10-11T01:52:47.367Z",
+    "customerId": "CUS-567341-350",
+    "role": "customer",
+    "title": "Overdue EMI Alert",
+    "message": "Your EMI #1 of ₹5,000 is late by 5 days. Late penalty: ₹250.",
+    "type": "Customer_Overdue_5d",
+    "emiNumber": 1,
+    "read": false
+  },
+  {
+    "_id": "NOT-567372-858",
+    "createdAt": "2026-10-11T01:52:47.375Z",
+    "updatedAt": "2026-10-11T01:52:47.375Z",
+    "role": "admin",
+    "customerId": "CUS-567341-350",
+    "title": "Customer Overdue Alert",
+    "message": "Customer Test Customer Idempotency (ID: TEST-CUST-IDEMPOTENT-001) is overdue on EMI #1 by 5 days. Late fee: ₹250.",
+    "type": "Owner_Overdue_5d",
+    "emiNumber": 1,
+    "read": false
+  },
+  {
+    "_id": "NOT-567435-150",
+    "createdAt": "2026-10-11T01:52:47.437Z",
+    "updatedAt": "2026-10-11T01:52:47.437Z",
+    "customerId": "CUS-567411-319",
+    "role": "customer",
+    "title": "Overdue EMI Alert",
+    "message": "Your EMI #1 of ₹5,000 is late by 5 days. Late penalty: ₹250.",
+    "type": "Customer_Overdue_5d",
+    "emiNumber": 1,
+    "read": false
+  },
+  {
+    "_id": "NOT-567443-911",
+    "createdAt": "2026-10-11T01:52:47.444Z",
+    "updatedAt": "2026-10-11T01:52:47.444Z",
+    "role": "admin",
+    "customerId": "CUS-567411-319",
+    "title": "Customer Overdue Alert",
+    "message": "Customer Test Customer Idempotency (ID: TEST-CUST-IDEMPOTENT-001) is overdue on EMI #1 by 5 days. Late fee: ₹250.",
+    "type": "Owner_Overdue_5d",
+    "emiNumber": 1,
+    "read": false
   }
 ]

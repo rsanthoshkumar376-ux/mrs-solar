@@ -4,12 +4,14 @@ import {
   ExternalLink, X, Apple, ArrowDownToLine, Zap, Info 
 } from 'lucide-react';
 
-export const DIRECT_APK_DOWNLOAD_URL = 'https://github.com/rsanthoshkumar376-ux/mrs-solar/releases/download/app-release/MRS-SOLAR.apk';
+export const GITHUB_APK_DOWNLOAD_URL = 'https://github.com/rsanthoshkumar376-ux/mrs-solar/releases/download/app-release/MRS-SOLAR.apk';
+export const LOCAL_APK_DOWNLOAD_URL = '/api/download-apk';
 
 export default function AppDownloadModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('android'); // 'android' or 'pwa'
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isPwaInstalled, setIsPwaInstalled] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstall = (e) => {
@@ -41,7 +43,29 @@ export default function AppDownloadModal({ isOpen, onClose }) {
     }
   };
 
+  const handleDirectDownload = () => {
+    setDownloading(true);
+    try {
+      // Programmatic direct link trigger for highest browser compatibility
+      const link = document.createElement('a');
+      link.href = LOCAL_APK_DOWNLOAD_URL;
+      link.setAttribute('download', 'MRS-SOLAR.apk');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.warn('Direct download trigger error, redirecting:', e);
+      window.location.href = LOCAL_APK_DOWNLOAD_URL;
+    } finally {
+      setTimeout(() => setDownloading(false), 2000);
+    }
+  };
+
   if (!isOpen) return null;
+
+  // Mobile QR code target: use cloud URL when on localhost so mobile phone can reach it
+  const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const qrTargetUrl = isLocalHost ? GITHUB_APK_DOWNLOAD_URL : `${window.location.origin}/api/download-apk`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in">
@@ -85,7 +109,7 @@ export default function AppDownloadModal({ isOpen, onClose }) {
             }`}
           >
             <Smartphone className="w-4 h-4" />
-            <span>Direct Android APK (~5 MB)</span>
+            <span>Direct Android APK (~5.4 MB)</span>
           </button>
           <button
             type="button"
@@ -105,24 +129,39 @@ export default function AppDownloadModal({ isOpen, onClose }) {
         {activeTab === 'android' && (
           <div className="p-6 space-y-5">
             
-            {/* Download Button */}
-            <div className="text-center space-y-2">
-              <a
-                href={DIRECT_APK_DOWNLOAD_URL}
-                download="MRS-SOLAR.apk"
-                className="w-full py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-2xl flex items-center justify-center space-x-2 text-sm shadow-xl shadow-teal-600/20 hover:shadow-teal-600/30 transition-all group"
+            {/* Primary & Backup Download Actions */}
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={handleDirectDownload}
+                disabled={downloading}
+                className="w-full py-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/70 text-white font-bold rounded-2xl flex items-center justify-center space-x-2 text-sm shadow-xl shadow-teal-600/20 hover:shadow-teal-600/30 transition-all group cursor-pointer"
               >
-                <ArrowDownToLine className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
-                <span>Download MRS-SOLAR.apk (Direct Installer)</span>
-              </a>
-              <p className="text-[11px] text-slate-400">Direct standalone APK file • Version 1.0.0 • Size: ~5.4 MB</p>
+                <ArrowDownToLine className={`w-5 h-5 ${downloading ? 'animate-bounce' : 'group-hover:translate-y-0.5'} transition-transform`} />
+                <span>{downloading ? 'Starting Download...' : 'Download MRS-SOLAR.apk (Direct Server)'}</span>
+              </button>
+
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <a
+                  href={GITHUB_APK_DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2 px-3 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-center text-slate-600 dark:text-slate-300 font-semibold inline-flex items-center justify-center space-x-1.5 transition-colors"
+                  title="Download from GitHub Cloud Releases"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Cloud Mirror (GitHub)</span>
+                </a>
+
+                <span className="text-[11px] text-slate-400 px-2 font-mono">v1.0.0 • 5.4 MB</span>
+              </div>
             </div>
 
             {/* Scan QR Code to Download on Phone */}
             <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
               <div className="w-24 h-24 bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center flex-shrink-0">
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(DIRECT_APK_DOWNLOAD_URL)}`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrTargetUrl)}`}
                   alt="Scan to Download APK"
                   className="w-full h-full object-contain"
                 />
@@ -133,7 +172,7 @@ export default function AppDownloadModal({ isOpen, onClose }) {
                   <span>Scan with Mobile Camera</span>
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Open your phone's camera or Google Lens, point at this QR code to download the APK directly onto your phone!
+                  Open camera or Google Lens on your phone, point at this QR code to download the APK directly onto your phone!
                 </p>
               </div>
             </div>
@@ -152,7 +191,7 @@ export default function AppDownloadModal({ isOpen, onClose }) {
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="w-5 h-5 rounded-full bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400 font-bold flex items-center justify-center text-[10px] flex-shrink-0">3</span>
-                  <span>Tap <strong>Install</strong>. The app icon is now on your home screen!</span>
+                  <span>Tap <strong>Install</strong>. The MRS SOLAR app icon will appear on your home screen!</span>
                 </div>
               </div>
             </div>
