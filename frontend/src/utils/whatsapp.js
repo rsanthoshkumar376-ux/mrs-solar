@@ -37,6 +37,14 @@ export function generateEmiReminderMessage({ customer, emi, language = 'ta', sup
   const totalDue = formatCurrency((emi?.emiAmount || 0) + lateFee);
   const isOverdue = emi?.status === 'Overdue' || lateFee > 0;
 
+  const totalAmountNum = (Number(emi?.emiAmount) || 0) + (Number(emi?.lateFee) || 0);
+  const formattedAmount = totalAmountNum.toFixed(2);
+  const cleanCustId = (customerId || '').replace(/[^a-zA-Z0-9]/g, '');
+  const payeeVpa = 'rsanthoshkumar376@oksbi';
+  const payeeName = 'Mr Santhoshkumar R';
+  const payeeMobile = OWNER_PAYMENT_PHONE;
+  const upiLink = `upi://pay?pa=${payeeVpa}&pn=${encodeURIComponent(payeeName)}&am=${formattedAmount}&cu=INR&tn=EMI_${emiNum}_${cleanCustId}`;
+
   if (language === 'ta') {
     return `வணக்கம் *${customerName}* அவர்களுக்கு,
 
@@ -48,7 +56,14 @@ export function generateEmiReminderMessage({ customer, emi, language = 'ta', sup
 💰 *மாத தவணை தொகை:* ${baseAmount}${lateFee > 0 ? `\n⚠️ *தாமத கட்டணம்:* ${formatCurrency(lateFee)}` : ''}
 💳 *மொத்த செலுத்த வேண்டிய தொகை:* *${totalDue}*
 ${isOverdue ? '\n🚨 *குறிப்பு:* உங்கள் தவணை தேதி கடந்துவிட்டது. தயவுசெய்து உடனடியாக செலுத்தவும்.\n' : ''}
-வங்கி அல்லது UPI மூலம் செலுத்தியவுடன் ரசீது பெற்றுக்கொள்ளவும்.
+💳 *கட்டணம் செலுத்தும் முறை (UPI):*
+• UPI ID: ${payeeVpa}
+• மொபைல்: ${payeeMobile}
+
+📲 *நேரடியாக செலுத்த இந்த இணைப்பை கிளிக் செய்யவும்:*
+${upiLink}
+
+வங்கி அல்லது UPI மூலம் செலுத்தியவுடன் ரசீது அல்லது UTR எண்ணை பகிரவும்.
 
 ஏதேனும் சந்தேகங்கள் இருந்தால் தொடர்புகொள்ளவும்: 📞 ${supportPhone}
 நன்றி,
@@ -68,7 +83,14 @@ This is a gentle reminder regarding your solar loan installment:
 💰 *EMI Amount:* ${baseAmount}${lateFee > 0 ? `\n⚠️ *Late Penalty:* ${formatCurrency(lateFee)}` : ''}
 💳 *Total Payable:* *${totalDue}*
 ${isOverdue ? '\n🚨 *Note:* This installment is currently overdue. Please clear the payment at the earliest.\n' : ''}
-After payment, kindly share the screenshot/UTR reference to receive your official receipt.
+💳 *Payment Methods (UPI):*
+• UPI ID: ${payeeVpa}
+• Mobile: ${payeeMobile}
+
+📲 *Click to pay via UPI (GPay / PhonePe / Paytm):*
+${upiLink}
+
+After payment, kindly share the screenshot or 12-digit UTR reference here to receive your official receipt.
 
 For any queries, contact support: 📞 ${supportPhone}
 Thank you,
@@ -157,3 +179,84 @@ export function openCustomerSupportChat({ customer, supportPhone = DEFAULT_SUPPO
   const url = `https://wa.me/${cleanSupport}?text=${encodeURIComponent(text)}`;
   window.open(url, '_blank', 'noopener,noreferrer');
 }
+
+export const OWNER_PAYMENT_PHONE = '8072454996';
+
+/**
+ * Generates an official payment link & request message for WhatsApp
+ */
+export function generateWhatsAppPaymentRequest({ customer, emi, language = 'ta' }) {
+  const customerName = customer?.fullName || 'வாடிக்கையாளர்';
+  const customerId = customer?.customerId || 'N/A';
+  const emiNum = emi?.emiNumber || 1;
+  const dueDateStr = formatDate(emi?.dueDate);
+  const totalAmountNum = (Number(emi?.emiAmount) || 0) + (Number(emi?.lateFee) || 0);
+  const formattedAmount = totalAmountNum.toFixed(2);
+  const cleanCustId = (customerId || '').replace(/[^a-zA-Z0-9]/g, '');
+
+  const payeeVpa = 'rsanthoshkumar376@oksbi';
+  const payeeName = 'Mr Santhoshkumar R';
+  const payeeMobile = OWNER_PAYMENT_PHONE;
+
+  // Universal UPI payment link
+  const upiLink = `upi://pay?pa=${payeeVpa}&pn=${encodeURIComponent(payeeName)}&am=${formattedAmount}&cu=INR&tn=EMI_${emiNum}_${cleanCustId}`;
+
+  if (language === 'ta') {
+    return `☀️ *${COMPANY_NAME} - தவணை கட்டண விபரம்* ☀️
+━━━━━━━━━━━━━━━━━
+👤 *வாடிக்கையாளர்:* ${customerName}
+📌 *வாடிக்கையாளர் எண்:* ${customerId}
+🔢 *தவணை எண்:* EMI #${emiNum}
+📅 *கடைசி தேதி:* ${dueDateStr}
+💰 *செலுத்த வேண்டிய தொகை:* *₹${formattedAmount}*
+━━━━━━━━━━━━━━━━━
+💳 *கட்டணம் செலுத்தும் முறைகள்:*
+• UPI ID: ${payeeVpa}
+• மொபைல் எண்: ${payeeMobile}
+• கணக்கு பெயர்: ${payeeName}
+
+📲 *நேரடியாக செலுத்த இந்த இணைப்பை கிளிக் செய்யவும்:*
+${upiLink}
+
+✅ பணம் செலுத்தியவுடன், ரசீது அல்லது 12-இலக்க UTR எண்ணை இங்கு பகிரவும். அதிகாரப்பூர்வ முத்திரையிடப்பட்ட ரசீது வழங்கப்படும்.
+நன்றி,
+*${COMPANY_NAME}* ☀️`;
+  }
+
+  return `☀️ *${COMPANY_NAME} - EMI Payment Request* ☀️
+━━━━━━━━━━━━━━━━━
+👤 *Customer:* ${customerName}
+📌 *Customer ID:* ${customerId}
+🔢 *Installment:* EMI #${emiNum}
+📅 *Due Date:* ${dueDateStr}
+💰 *Total Payable:* *₹${formattedAmount}*
+━━━━━━━━━━━━━━━━━
+💳 *Payment Methods:*
+• UPI ID: ${payeeVpa}
+• Mobile Number: ${payeeMobile}
+• Payee Name: ${payeeName}
+
+📲 *Click below to pay via GPay / PhonePe / Paytm:*
+${upiLink}
+
+✅ After paying, kindly share your payment screenshot or 12-digit UTR reference number here to receive your official stamped receipt!
+Thank you,
+*${COMPANY_NAME}* ☀️`;
+}
+
+/**
+ * Opens WhatsApp chat with MRS SOLAR Owner to send the payment message
+ */
+export function openPaymentWhatsAppToOwner({ customer, emi, language = 'ta' }) {
+  const message = generateWhatsAppPaymentRequest({ customer, emi, language });
+  openWhatsApp({ phone: OWNER_PAYMENT_PHONE, message });
+}
+
+/**
+ * Opens WhatsApp chat with Customer to send them their payment bill link
+ */
+export function sendPaymentLinkToCustomerWhatsApp({ customer, emi, language = 'ta' }) {
+  const message = generateWhatsAppPaymentRequest({ customer, emi, language });
+  openWhatsApp({ phone: customer?.mobileNumber, message });
+}
+

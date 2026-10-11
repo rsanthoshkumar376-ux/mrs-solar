@@ -126,7 +126,13 @@ export const translations = {
     includingLateFees: 'Including accumulated late fees',
     allEmisPaidTitle: 'All Installments Paid!',
     allEmisPaidDesc: 'Thank you! Your loan financing has been fully settled and closed.',
-    generateQrBtn: 'Generate Quick Pay QR Code',
+    generateQrBtn: 'Pay EMI via WhatsApp',
+    payViaWhatsappBtn: 'Pay EMI via WhatsApp',
+    whatsappPaymentTitle: 'Official WhatsApp Payment Service',
+    whatsappPaymentDesc: 'Get official payment link & invoice directly on WhatsApp with 100% success rate.',
+    payOnWhatsappNow: 'Pay via WhatsApp (Open Link & Chat)',
+    sendBillToMyPhone: 'Send Bill & Link to My Phone',
+    copiedPaymentLink: 'Payment Link Copied to Clipboard!',
     
     // QR Modal
     scanQrToPay: 'Scan QR to Pay',
@@ -530,8 +536,13 @@ export const translations = {
     totalOutstandingDue: 'செலுத்த வேண்டிய மொத்த தொகை',
     includingLateFees: 'தாமத கட்டணம் உட்பட',
     allEmisPaidTitle: 'அனைத்து தவணைகளும் செலுத்தப்பட்டது!',
-    allEmisPaidDesc: 'நன்றி! உங்கள் சோலார் கடன் முழுவதும் திருப்பிச் செலுத்தப்பட்டு வெற்றிகரமாக முடிவடைந்தது.',
-    generateQrBtn: 'UPI QR குறியீடு உருவாக்கு',
+    generateQrBtn: 'வாட்ஸ்அப் மூலம் தவணை செலுத்த',
+    payViaWhatsappBtn: 'வாட்ஸ்அப் மூலம் தவணை செலுத்த',
+    whatsappPaymentTitle: 'அதிகாரப்பூர்வ வாட்ஸ்அப் கட்டண சேவை',
+    whatsappPaymentDesc: 'செயலி அல்லது வங்கி வரம்புகள் இன்றி வாட்ஸ்அப் மூலம் 100% தடையின்றி எளிதாக செலுத்தலாம்.',
+    payOnWhatsappNow: 'வாட்ஸ்அப்பில் உடனடியாக செலுத்த (Pay on WhatsApp)',
+    sendBillToMyPhone: 'எனது வாட்ஸ்அப்பிற்கு ரசீது & இணைப்பு அனுப்ப',
+    copiedPaymentLink: 'கட்டண இணைப்பு நகலெடுக்கப்பட்டது!',
     
     // QR Modal
     scanQrToPay: 'QR குறியீட்டை ஸ்கேன் செய்து செலுத்தவும்',
