@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../utils/api.js';
 import { 
   Mail, CheckCircle, AlertTriangle, Send, ShieldCheck, 
-  ExternalLink, Copy, Check, RefreshCw, Zap, Server
+  ExternalLink, Copy, Check, RefreshCw, Zap, Server, CreditCard
 } from 'lucide-react';
 
 export default function EmailSettings() {
@@ -156,6 +157,21 @@ export default function EmailSettings() {
           <RefreshCw className="w-3.5 h-3.5" />
           <span>Refresh Status</span>
         </button>
+      </div>
+
+      {/* SETTINGS TABS SWITCHER */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 space-x-6 text-xs font-bold">
+        <span className="pb-3 border-b-2 border-teal-600 text-teal-600 dark:text-teal-400 flex items-center space-x-2 cursor-default">
+          <Mail className="w-4 h-4" />
+          <span>Email &amp; SMTP Delivery</span>
+        </span>
+        <Link
+          to="/admin/payment-settings"
+          className="pb-3 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 flex items-center space-x-2 transition-colors"
+        >
+          <CreditCard className="w-4 h-4 text-emerald-600" />
+          <span>Google Pay &amp; UPI Merchant Settings</span>
+        </Link>
       </div>
 
       {/* ACTIVE STATUS CARD */}

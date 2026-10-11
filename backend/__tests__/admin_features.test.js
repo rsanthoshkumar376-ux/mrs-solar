@@ -176,3 +176,59 @@ describe('Bank CSV Parser & Reconciliation Matching Logic', () => {
     expect(result.matched[0].amount).toBe(4200);
   });
 });
+
+describe('Merchant Payment Configuration & Settings Persistence', () => {
+  beforeEach(async () => {
+    // Clean up settings for isolation
+    const existing = await db.findOne('settings', { key: 'payment' });
+    if (existing) {
+      await db.deleteOne('settings', { _id: existing._id });
+    }
+  });
+
+  test('returns default fallback when no payment settings are configured', async () => {
+    const setting = await db.findOne('settings', { key: 'payment' });
+    const merchantUpiId = setting?.merchantUpiId || 'rsanthoshkumar376@oksbi';
+    const merchantName = setting?.merchantName || 'MRS SOLAR ENERGY';
+    const merchantPhone = setting?.merchantPhone || '8072454996';
+
+    expect(merchantUpiId).toBe('rsanthoshkumar376@oksbi');
+    expect(merchantName).toBe('MRS SOLAR ENERGY');
+    expect(merchantPhone).toBe('8072454996');
+  });
+
+  test('successfully persists and updates merchant UPI and business details', async () => {
+    const newSettings = {
+      key: 'payment',
+      merchantUpiId: 'mrssolar@okbizaxis',
+      merchantName: 'MRS SOLAR PVT LTD',
+      merchantPhone: '8072454996',
+      businessType: 'Google Pay for Business',
+      accountNumber: '123456789012',
+      ifscCode: 'SBIN0001234',
+      bankName: 'State Bank of India',
+      accountHolderName: 'MRS SOLAR PVT LTD',
+      qrNote: 'MRS SOLAR EMI Payment'
+    };
+
+    await db.create('settings', newSettings);
+
+    const saved = await db.findOne('settings', { key: 'payment' });
+    expect(saved).toBeDefined();
+    expect(saved.merchantUpiId).toBe('mrssolar@okbizaxis');
+    expect(saved.merchantName).toBe('MRS SOLAR PVT LTD');
+    expect(saved.accountNumber).toBe('123456789012');
+
+    // Update settings
+    await db.updateOne('settings', { _id: saved._id }, {
+      ...saved,
+      merchantUpiId: 'mrssolar@ybl',
+      businessType: 'PhonePe Business'
+    });
+
+    const updated = await db.findOne('settings', { key: 'payment' });
+    expect(updated.merchantUpiId).toBe('mrssolar@ybl');
+    expect(updated.businessType).toBe('PhonePe Business');
+  });
+});
+

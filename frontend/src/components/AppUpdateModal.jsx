@@ -6,7 +6,7 @@ import {
 import api from '../utils/api.js';
 import { translations, getLanguage } from '../utils/translations.js';
 
-export const CURRENT_APP_VERSION = 'v1.3.0';
+export const CURRENT_APP_VERSION = 'v1.4.0';
 export const BUILD_DATE = '11 Oct 2026';
 
 export default function AppUpdateModal({ isOpen, onClose }) {
@@ -18,11 +18,11 @@ export default function AppUpdateModal({ isOpen, onClose }) {
     version: CURRENT_APP_VERSION,
     releaseDate: BUILD_DATE,
     changelog: [
-      'Customer Record Editing (Personal, KYC, Bank & Solar specs)',
-      '12-Digit UPI UTR Payment Verification & Status Tracking',
-      'Automated Indian Bank Statement CSV Reconciler',
-      'Real-Time Dynamic Overdue Penalty Computation',
-      'Client-Side Image Compression & Faster Offline Caching'
+      'Google Pay for Business & PhonePe Merchant UPI Integration (0% Fee)',
+      'Dynamic Merchant Settings Portal & Direct Bank Transfer (IMPS/NEFT) Fail-Safe',
+      'Universal Multi-Fallback UPI Payment Modal with Android App Chooser',
+      'Customer Record Editing & 12-Digit UTR Payment Reconciler',
+      'Mobile Bottom Navigation Safe-Area & Dashboard Layout Optimization'
     ]
   });
 

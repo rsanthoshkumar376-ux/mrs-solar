@@ -6,7 +6,7 @@ import {
   Sun, Moon, LogOut, Menu, X, Bell, LayoutDashboard, 
   Users, DollarSign, History, Calculator, ShieldAlert,
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
-  Search, Languages, Mic
+  Search, Languages, Mic, CreditCard
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -182,6 +182,7 @@ export default function Layout({ children }) {
     { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
     { label: t.customers, path: '/admin/customers', icon: Users },
     { label: t.emiManagement, path: '/admin/emis', icon: DollarSign },
+    { label: t.paymentSettings, path: '/admin/payment-settings', icon: CreditCard },
     { label: t.auditLogs, path: '/admin/audits', icon: FolderLock },
     { label: t.backup, path: '/admin/backup', icon: Database },
     { label: t.emailSettings, path: '/admin/email-settings', icon: Mail }
