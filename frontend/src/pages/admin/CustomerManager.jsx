@@ -3,11 +3,14 @@ import { Link } from 'react-router-dom';
 import api from '../../utils/api.js';
 import { formatCurrency } from '../../utils/format.js';
 import { 
-  Users, UserPlus, Search, SlidersHorizontal, DownloadCloud, Eye, Trash2, X, FileText, MessageCircle, MapPin, Crosshair 
+  Users, UserPlus, Search, SlidersHorizontal, DownloadCloud, Eye, Trash2, X, FileText, 
+  MessageCircle, MapPin, Crosshair, Edit2, UploadCloud, CheckCircle2, AlertCircle, 
+  ChevronLeft, ChevronRight, FileSpreadsheet, Check
 } from 'lucide-react';
 import { openWhatsApp } from '../../utils/whatsapp.js';
 import { exportCustomersToCsv } from '../../utils/exportCsv.js';
 import { translations, getLanguage } from '../../utils/translations.js';
+import { compressImageFile } from '../../utils/imageCompressor.js';
 
 export default function CustomerManager() {
   const [customers, setCustomers] = useState([]);
@@ -27,10 +30,30 @@ export default function CustomerManager() {
   const [loanStatus, setLoanStatus] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('');
 
+  // Server-side Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+
   // Add Customer Modal States
   const [showAddModal, setShowAddModal] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [detectingGps, setDetectingGps] = useState(false);
+
+  // Edit Customer Modal States
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editCustomer, setEditCustomer] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [editFiles, setEditFiles] = useState({});
+  const [editSubmitLoading, setEditSubmitLoading] = useState(false);
+
+  // Bank CSV Reconciler States
+  const [showReconcileModal, setShowReconcileModal] = useState(false);
+  const [reconcileFile, setReconcileFile] = useState(null);
+  const [autoApplyReconcile, setAutoApplyReconcile] = useState(false);
+  const [reconcileLoading, setReconcileLoading] = useState(false);
+  const [reconcileResult, setReconcileResult] = useState(null);
+
   const [formData, setFormData] = useState({
     fullName: '', fatherName: '', motherName: '', mobileNumber: '', alternateNumber: '',
     email: '', address: '', city: '', district: '', state: '', pinCode: '',
@@ -72,13 +95,19 @@ export default function CustomerManager() {
     electricityBillFile: null, propertyProofFile: null, agreementFile: null
   });
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (targetPage = page) => {
     setLoading(true);
     try {
       const response = await api.get('/admin/customers', {
-        params: { search, loanStatus, paymentStatus }
+        params: { search, loanStatus, paymentStatus, page: targetPage, limit: pageSize }
       });
-      setCustomers(response.data);
+      if (response.data && response.data.customers) {
+        setCustomers(response.data.customers);
+        setPagination(response.data.pagination);
+      } else if (Array.isArray(response.data)) {
+        setCustomers(response.data);
+        setPagination({ total: response.data.length, totalPages: Math.ceil(response.data.length / pageSize) || 1 });
+      }
     } catch (error) {
       console.error('Error fetching customers:', error);
     } finally {
@@ -87,8 +116,15 @@ export default function CustomerManager() {
   };
 
   useEffect(() => {
-    fetchCustomers();
-  }, [search, loanStatus, paymentStatus]);
+    setPage(1);
+    fetchCustomers(1);
+  }, [search, loanStatus, paymentStatus, pageSize]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > (pagination.totalPages || 1)) return;
+    setPage(newPage);
+    fetchCustomers(newPage);
+  };
 
   // Handle auto-calculating loan amount (Cost - Downpayment)
   useEffect(() => {
@@ -133,18 +169,18 @@ export default function CustomerManager() {
     setSubmitLoading(true);
 
     try {
-      // Form Data construct for file upload
       const data = new FormData();
       Object.keys(formData).forEach(key => {
         data.append(key, formData[key]);
       });
 
-      // Append files
-      Object.keys(files).forEach(key => {
+      // Compress images before upload to save bandwidth
+      for (const key of Object.keys(files)) {
         if (files[key]) {
-          data.append(key, files[key]);
+          const compressed = await compressImageFile(files[key]);
+          data.append(key, compressed);
         }
-      });
+      }
 
       await api.post('/admin/customers', data, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -169,12 +205,157 @@ export default function CustomerManager() {
         electricityBillFile: null, propertyProofFile: null, agreementFile: null
       });
 
-      fetchCustomers();
+      fetchCustomers(1);
     } catch (error) {
       console.error(error);
       alert(error.response?.data?.message || 'Failed to create customer record.');
     } finally {
       setSubmitLoading(false);
+    }
+  };
+
+  // Edit Customer Handlers
+  const handleOpenEditModal = (c) => {
+    setEditCustomer(c);
+    setEditFormData({
+      fullName: c.fullName || '',
+      fatherName: c.fatherName || '',
+      motherName: c.motherName || '',
+      mobileNumber: c.mobileNumber || '',
+      alternateNumber: c.alternateNumber || '',
+      email: c.email || '',
+      address: c.address || '',
+      city: c.city || '',
+      district: c.district || '',
+      state: c.state || '',
+      pinCode: c.pinCode || c.pincode || '',
+      aadhaarNumber: c.aadhaarNumber || '',
+      panNumber: c.panNumber || '',
+      occupation: c.occupation || '',
+      monthlyIncome: c.monthlyIncome ? String(c.monthlyIncome) : '',
+      bankName: c.bankDetails?.bankName || '',
+      accountNumber: c.bankDetails?.accountNumber || '',
+      ifscCode: c.bankDetails?.ifscCode || '',
+      nomineeDetails: c.nomineeDetails || '',
+      installationAddress: c.installationAddress || '',
+      solarCapacity: c.solarCapacity ? String(c.solarCapacity) : '',
+      solarBrand: c.solarBrand || '',
+      solarCost: c.solarCost ? String(c.solarCost) : '',
+      installationDate: c.installationDate || '',
+      warrantyDetails: c.warrantyDetails || '',
+      remarks: c.remarks || '',
+      latitude: c.latitude ? String(c.latitude) : '',
+      longitude: c.longitude ? String(c.longitude) : ''
+    });
+    setEditFiles({});
+    setShowEditModal(true);
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'aadhaarNumber') {
+      const digits = value.replace(/\D/g, '');
+      if (digits.length > 4) {
+        setEditFormData(prev => ({ ...prev, aadhaarNumber: `XXXX-XXXX-${digits.slice(-4)}` }));
+        return;
+      }
+    }
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditFileChange = (e) => {
+    const { name, files: selectedFiles } = e.target;
+    if (selectedFiles && selectedFiles[0]) {
+      setEditFiles(prev => ({ ...prev, [name]: selectedFiles[0] }));
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editCustomer) return;
+    if (!editFormData.fullName || !editFormData.mobileNumber) {
+      alert('Full Name and Mobile Number are required.');
+      return;
+    }
+
+    setEditSubmitLoading(true);
+    try {
+      const data = new FormData();
+      Object.keys(editFormData).forEach(key => {
+        data.append(key, editFormData[key]);
+      });
+
+      for (const key of Object.keys(editFiles)) {
+        if (editFiles[key]) {
+          const compressed = await compressImageFile(editFiles[key]);
+          data.append(key, compressed);
+        }
+      }
+
+      await api.put(`/admin/customers/${editCustomer._id}`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      alert(t.customerUpdatedSuccessfully || 'Customer record successfully updated!');
+      setShowEditModal(false);
+      fetchCustomers(page);
+    } catch (err) {
+      console.error('Edit error:', err);
+      alert(err.response?.data?.message || 'Failed to update customer record.');
+    } finally {
+      setEditSubmitLoading(false);
+    }
+  };
+
+  // Bank CSV Reconciler Handlers
+  const handleReconcileSubmit = async (e) => {
+    e.preventDefault();
+    if (!reconcileFile) {
+      alert('Please select a bank statement CSV file.');
+      return;
+    }
+
+    setReconcileLoading(true);
+    try {
+      const data = new FormData();
+      data.append('csvFile', reconcileFile);
+      data.append('autoApply', autoApplyReconcile);
+
+      const res = await api.post('/admin/reconcile-bank-csv', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setReconcileResult(res.data);
+      if (autoApplyReconcile && res.data.matchedCount > 0) {
+        fetchCustomers(page);
+      }
+    } catch (err) {
+      console.error('Reconcile error:', err);
+      alert(err.response?.data?.message || 'Failed to process bank statement.');
+    } finally {
+      setReconcileLoading(false);
+    }
+  };
+
+  const handleApplyReconciledPayments = async () => {
+    if (!reconcileFile) return;
+    setReconcileLoading(true);
+    try {
+      const data = new FormData();
+      data.append('csvFile', reconcileFile);
+      data.append('autoApply', 'true');
+
+      const res = await api.post('/admin/reconcile-bank-csv', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setReconcileResult(res.data);
+      alert(`Successfully reconciled and approved ${res.data.matchedCount} matching payments!`);
+      fetchCustomers(page);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to apply reconciled payments.');
+    } finally {
+      setReconcileLoading(false);
     }
   };
 
@@ -186,7 +367,7 @@ export default function CustomerManager() {
     try {
       await api.delete(`/admin/customers/${id}`);
       alert('Customer record deleted.');
-      fetchCustomers();
+      fetchCustomers(page);
     } catch (error) {
       console.error('Delete customer error:', error);
       alert('Failed to delete customer.');
@@ -219,6 +400,20 @@ export default function CustomerManager() {
           >
             <DownloadCloud className="w-4 h-4 text-teal-600 dark:text-teal-400" />
             <span>{t.exportToExcel}</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => {
+              setShowReconcileModal(true);
+              setReconcileResult(null);
+              setReconcileFile(null);
+            }}
+            className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-xl flex items-center space-x-2 text-sm font-bold transition-all border border-indigo-200/50 dark:border-indigo-700/50 shadow-sm"
+            title="Upload bank statement CSV to match UPI/NEFT repayments with pending EMIs"
+          >
+            <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span>{t.bankCsvReconciler || 'Bank CSV Match'}</span>
           </button>
           
           <button
@@ -371,6 +566,14 @@ export default function CustomerManager() {
                           <Eye className="w-3.5 h-3.5" />
                         </Link>
                         <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(c)}
+                          className="p-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg transition-colors"
+                          title={t.editCustomer || "Edit Customer Record"}
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => handleDeleteCustomer(c._id, c.fullName)}
                           className="p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg transition-colors"
                           title={t.deleteLedger || "Delete Ledger"}
@@ -384,6 +587,53 @@ export default function CustomerManager() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* SERVER-SIDE PAGINATION CONTROLS */}
+        <div className="px-6 py-4 border-t border-slate-200/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <div className="flex items-center space-x-2">
+            <span>{t.rowsPerPage || 'Rows per page:'}</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs rounded-lg px-2 py-1 outline-none text-slate-800 dark:text-white"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+            <span>
+              Total: <strong className="text-slate-800 dark:text-white">{pagination.total || customers.length}</strong>
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <span>
+              {(t.pageOf || 'Page {page} of {total}')
+                .replace('{page}', String(page))
+                .replace('{total}', String(pagination.totalPages || 1))}
+            </span>
+            <div className="flex items-center space-x-1">
+              <button
+                type="button"
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+                title="Previous Page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= (pagination.totalPages || 1)}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+                title="Next Page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -651,6 +901,389 @@ export default function CustomerManager() {
               >
                 {submitLoading && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
                 <span>{t.registerAndCreateBtn}</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* EDIT CUSTOMER MODAL */}
+      {showEditModal && editCustomer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-4xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl relative max-h-[90vh] flex flex-col">
+            
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 rounded-t-3xl">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center space-x-2">
+                  <Edit2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <span>{t.editCustomer || 'Edit Customer Record'} — {editCustomer.fullName} ({editCustomer.customerId})</span>
+                </h3>
+                <p className="text-xs text-slate-500">{t.editCustomerSubtitle || 'Modify personal, solar, banking, and contact details.'}</p>
+              </div>
+              <button 
+                onClick={() => setShowEditModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable form body */}
+            <form onSubmit={handleEditSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+              
+              {/* BLOCK 1: PERSONAL INFORMATION */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.personalInfoSection}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.fullNameLabel} *</label>
+                    <input type="text" name="fullName" required value={editFormData.fullName || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.fatherNameLabel}</label>
+                    <input type="text" name="fatherName" value={editFormData.fatherName || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.motherNameLabel}</label>
+                    <input type="text" name="motherName" value={editFormData.motherName || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.mobileNumberLabel} *</label>
+                    <input type="tel" name="mobileNumber" required value={editFormData.mobileNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.altMobileLabel}</label>
+                    <input type="tel" name="alternateNumber" value={editFormData.alternateNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.emailAddressLabel}</label>
+                    <input type="email" name="email" value={editFormData.email || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* BLOCK 2: ADDRESS */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.addressKycSection}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                  <div className="md:col-span-2">
+                    <label className="block font-semibold text-slate-500 mb-1">{t.streetAddressLabel}</label>
+                    <input type="text" name="address" value={editFormData.address || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.cityVillageLabel}</label>
+                    <input type="text" name="city" value={editFormData.city || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.districtLabel}</label>
+                    <input type="text" name="district" value={editFormData.district || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.stateLabel}</label>
+                    <input type="text" name="state" value={editFormData.state || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.pincodeLabel}</label>
+                    <input type="text" name="pinCode" value={editFormData.pinCode || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.panNumberLabel}</label>
+                    <input type="text" name="panNumber" value={editFormData.panNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.nomineeDetailsLabel}</label>
+                    <input type="text" name="nomineeDetails" value={editFormData.nomineeDetails || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* BLOCK 3: BANK DETAILS */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.bankingDetailsSection}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.bankNameLabel}</label>
+                    <input type="text" name="bankName" value={editFormData.bankName || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.accountNumberLabel}</label>
+                    <input type="text" name="accountNumber" value={editFormData.accountNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.ifscCodeLabel}</label>
+                    <input type="text" name="ifscCode" value={editFormData.ifscCode || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* BLOCK 4: SOLAR INSTALLATION */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.solarTechnicalSection}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.capacityKwLabel}</label>
+                    <input type="number" step="0.5" name="solarCapacity" value={editFormData.solarCapacity || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.solarBrandLabel}</label>
+                    <input type="text" name="solarBrand" value={editFormData.solarBrand || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.installationDateLabel}</label>
+                    <input type="date" name="installationDate" value={editFormData.installationDate || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.warrantyDetailsLabel}</label>
+                    <input type="text" name="warrantyDetails" value={editFormData.warrantyDetails || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div className="md:col-span-4">
+                    <label className="block font-semibold text-slate-500 mb-1">{t.installAddressLabel}</label>
+                    <input type="text" name="installationAddress" value={editFormData.installationAddress || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div className="md:col-span-4">
+                    <label className="block font-semibold text-slate-500 mb-1">{t.remarksLabel}</label>
+                    <textarea rows="2" name="remarks" value={editFormData.remarks || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* BLOCK 5: UPDATE DOCUMENTS (OPTIONAL) */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">Update Documents (Leave blank to keep existing files)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[10px]">
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.customerPhotoLabel}</label>
+                    <input type="file" name="photoFile" onChange={handleEditFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.aadhaarProofLabel}</label>
+                    <input type="file" name="aadhaarFile" onChange={handleEditFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.ebBillLabel}</label>
+                    <input type="file" name="electricityBillFile" onChange={handleEditFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
+                  </div>
+                </div>
+              </div>
+
+            </form>
+
+            {/* Footer buttons */}
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-3 bg-slate-50 dark:bg-slate-900/50 rounded-b-3xl">
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              >
+                {t.cancel}
+              </button>
+              
+              <button
+                onClick={handleEditSubmit}
+                disabled={editSubmitLoading}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-2"
+              >
+                {editSubmitLoading && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                <span>{t.saveChanges || 'Save Changes'}</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* BANK CSV STATEMENT RECONCILER MODAL */}
+      {showReconcileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-4xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl relative max-h-[90vh] flex flex-col">
+            
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-indigo-50/50 dark:bg-indigo-950/20 rounded-t-3xl">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center space-x-2">
+                  <UploadCloud className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  <span>{t.bankCsvReconciler || 'Bank Statement CSV Reconciler'}</span>
+                </h3>
+                <p className="text-xs text-slate-500">{t.bankCsvSubtitle || 'Match UPI/NEFT repayments with pending EMIs by UTR number & exact amount.'}</p>
+              </div>
+              <button 
+                onClick={() => setShowReconcileModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              
+              {/* Upload Input & Options */}
+              <form onSubmit={handleReconcileSubmit} className="space-y-4 bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800/60">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      {t.uploadBankCsv || 'Select Bank Statement CSV File'}
+                    </label>
+                    <input
+                      type="file"
+                      accept=".csv,text/csv"
+                      onChange={(e) => setReconcileFile(e.target.files[0] || null)}
+                      className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Supports SBI, HDFC, ICICI, Canara, and Indian Bank statement formats with Date, Narration, UTR, and Credit columns.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-start sm:items-end gap-2">
+                    <label className="flex items-center space-x-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoApplyReconcile}
+                        onChange={(e) => setAutoApplyReconcile(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                      />
+                      <span>{t.autoApplyPayments || 'Auto-record matching payments'}</span>
+                    </label>
+
+                    <button
+                      type="submit"
+                      disabled={reconcileLoading || !reconcileFile}
+                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-600/50 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shadow-lg shadow-indigo-600/10"
+                    >
+                      {reconcileLoading && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                      <span>{t.processStatement || 'Process Statement'}</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              {/* Results Display */}
+              {reconcileResult && (
+                <div className="space-y-5">
+                  {/* Summary Metric Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                      <p className="text-[11px] text-slate-500 font-semibold uppercase">Total Transactions</p>
+                      <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">{reconcileResult.totalProcessed}</p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-center">
+                      <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase">Matched & Verified</p>
+                      <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">{reconcileResult.matchedCount}</p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold uppercase">Unmatched / Review</p>
+                      <p className="text-2xl font-black text-amber-700 dark:text-amber-300 mt-1">{reconcileResult.unmatchedCount}</p>
+                    </div>
+                  </div>
+
+                  {/* Matched Transactions Table */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center space-x-1.5 uppercase tracking-wider">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>{t.matchedTransactions || 'Matched Customer Payments'} ({reconcileResult.matchedCount})</span>
+                      </h4>
+                      {!reconcileResult.autoApplied && reconcileResult.matchedCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleApplyReconciledPayments}
+                          disabled={reconcileLoading}
+                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Approve All Matched</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {reconcileResult.matched.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
+                        {t.noMatchedTransactions || 'No matching pending payments identified in this statement.'}
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-emerald-50/50 dark:bg-emerald-950/20 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800">
+                            <tr>
+                              <th className="px-4 py-2.5">Date</th>
+                              <th className="px-4 py-2.5">Customer</th>
+                              <th className="px-4 py-2.5">EMI #</th>
+                              <th className="px-4 py-2.5 text-right">Amount</th>
+                              <th className="px-4 py-2.5">UTR / Ref</th>
+                              <th className="px-4 py-2.5">Match Reason</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                            {reconcileResult.matched.map((m, idx) => (
+                              <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                                <td className="px-4 py-2 font-mono text-[11px]">{m.date || 'N/A'}</td>
+                                <td className="px-4 py-2 font-semibold">{m.customerName} <span className="font-mono text-slate-400">({m.customerId})</span></td>
+                                <td className="px-4 py-2 font-bold text-teal-600">#{m.emiNumber}</td>
+                                <td className="px-4 py-2 text-right font-bold text-emerald-600">{formatCurrency(m.amount, false)}</td>
+                                <td className="px-4 py-2 font-mono text-[11px] text-slate-500">{m.utr}</td>
+                                <td className="px-4 py-2 text-[10px] text-slate-500">{m.matchReason}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Unmatched Transactions Table */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center space-x-1.5 uppercase tracking-wider">
+                      <AlertCircle className="w-4 h-4 text-amber-600" />
+                      <span>{t.unmatchedTransactions || 'Unmatched Entries (Review Needed)'} ({reconcileResult.unmatchedCount})</span>
+                    </h4>
+
+                    {reconcileResult.unmatched.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
+                        {t.noUnmatchedTransactions || 'All statement credit entries were matched successfully!'}
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 max-h-56">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800 sticky top-0">
+                            <tr>
+                              <th className="px-4 py-2.5">Date</th>
+                              <th className="px-4 py-2.5">Narration / Particulars</th>
+                              <th className="px-4 py-2.5 text-right">Credit</th>
+                              <th className="px-4 py-2.5">UTR</th>
+                              <th className="px-4 py-2.5">Reason</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-600 dark:text-slate-400 text-[11px]">
+                            {reconcileResult.unmatched.map((u, idx) => (
+                              <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                                <td className="px-4 py-2 font-mono">{u.date || 'N/A'}</td>
+                                <td className="px-4 py-2 truncate max-w-xs">{u.narration}</td>
+                                <td className="px-4 py-2 text-right font-bold text-slate-800 dark:text-slate-200">{formatCurrency(u.amount, false)}</td>
+                                <td className="px-4 py-2 font-mono">{u.utr}</td>
+                                <td className="px-4 py-2 text-[10px] text-slate-400">{u.reason}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-3 bg-slate-50 dark:bg-slate-900/50 rounded-b-3xl">
+              <button
+                type="button"
+                onClick={() => setShowReconcileModal(false)}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              >
+                {t.close || 'Close'}
               </button>
             </div>
 

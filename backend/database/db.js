@@ -298,7 +298,49 @@ function getModel(name) {
     { _id: { type: String, required: true } },
     { strict: false, timestamps: true, collection: name }
   );
+
+  // High-performance MongoDB Indexes (Zero full-table scans)
+  if (name === 'customers') {
+    schema.index({ customerId: 1 }, { unique: true, sparse: true });
+    schema.index({ mobileNumber: 1 });
+    schema.index({ paymentStatus: 1 });
+    schema.index({ 'emiSchedule.dueDate': 1 });
+    schema.index({ loanStatus: 1 });
+    schema.index({ createdAt: -1 });
+  } else if (name === 'payments') {
+    schema.index({ customerId: 1 });
+    schema.index({ paymentDate: -1 });
+    schema.index({ utrNumber: 1 }, { sparse: true });
+    schema.index({ status: 1 });
+    schema.index({ receiptId: 1 });
+  } else if (name === 'notifications') {
+    schema.index({ customerId: 1 });
+    schema.index({ role: 1 });
+    schema.index({ read: 1 });
+    schema.index({ createdAt: -1 });
+  } else if (name === 'users') {
+    schema.index({ username: 1 }, { unique: true, sparse: true });
+    schema.index({ customerId: 1 }, { sparse: true });
+  } else if (name === 'audit_runs') {
+    schema.index({ auditDate: 1 });
+    schema.index({ status: 1 });
+  }
+
   return mongoose.model(name, schema);
+}
+
+export async function initMongoIndexes() {
+  if (!isMongoConnected()) return;
+  try {
+    const cols = ['customers', 'payments', 'notifications', 'users', 'audit_runs'];
+    for (const col of cols) {
+      const Model = getModel(col);
+      await Model.createIndexes();
+    }
+    console.log('⚡ MongoDB performance indexes successfully created & verified!');
+  } catch (err) {
+    console.warn('MongoDB index initialization note:', err.message);
+  }
 }
 
 function isMongoConnected() {
@@ -413,6 +455,66 @@ class UnifiedDatabase {
       }
     }
     return jsonDb.deleteOne(collection, query);
+  }
+
+  async countDocuments(collection, query = {}) {
+    if (isMongoConnected()) {
+      try {
+        const Model = getModel(collection);
+        return await Model.countDocuments(query);
+      } catch (err) {
+        console.error(`MongoDB countDocuments error on ${collection}:`, err.message);
+      }
+    }
+    const items = await this.find(collection, query);
+    return items.length;
+  }
+
+  async findPaginated(collection, query = {}, options = {}) {
+    const page = Math.max(1, parseInt(options.page) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(options.limit) || 10));
+    const skip = (page - 1) * limit;
+    const sort = options.sort || { createdAt: -1 };
+
+    if (isMongoConnected()) {
+      try {
+        const Model = getModel(collection);
+        const [data, total] = await Promise.all([
+          Model.find(query).sort(sort).skip(skip).limit(limit).lean(),
+          Model.countDocuments(query)
+        ]);
+        return {
+          data,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        };
+      } catch (err) {
+        console.error(`MongoDB findPaginated error on ${collection}:`, err.message);
+      }
+    }
+
+    const all = await this.find(collection, query);
+    const sortKey = Object.keys(sort)[0] || 'createdAt';
+    const sortDir = sort[sortKey] === 1 ? 1 : -1;
+    all.sort((a, b) => {
+      const valA = a[sortKey] ?? '';
+      const valB = b[sortKey] ?? '';
+      if (valA < valB) return -1 * sortDir;
+      if (valA > valB) return 1 * sortDir;
+      return 0;
+    });
+
+    const total = all.length;
+    const data = all.slice(skip, skip + limit);
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
   }
 
   async backup() {
@@ -532,6 +634,7 @@ export async function connectDB() {
         family: 4
       });
       console.log('✅ Successfully connected to MongoDB Atlas (mrs-solar database)!');
+      await initMongoIndexes();
       return true;
     } catch (err) {
       console.error('❌ MongoDB Atlas connection failed:', err.message);

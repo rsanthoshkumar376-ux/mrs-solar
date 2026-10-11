@@ -9,9 +9,12 @@ import {
   MessageCircle, Send, Globe, Eye, Download, FolderArchive
 } from 'lucide-react';
 import { generateEmiReminderMessage, generatePaymentReceiptMessage, openWhatsApp } from '../../utils/whatsapp.js';
-import SolarSiteMap from '../../components/SolarSiteMap.jsx';
-import LoanStatementModal from '../../components/LoanStatementModal.jsx';
 import { translations, getLanguage } from '../../utils/translations.js';
+import { compressImageFile } from '../../utils/imageCompressor.js';
+
+// Lazy load heavy Leaflet map and PDF statement modal for performance
+const SolarSiteMap = React.lazy(() => import('../../components/SolarSiteMap.jsx'));
+const LoanStatementModal = React.lazy(() => import('../../components/LoanStatementModal.jsx'));
 
 const DOC_CONFIGS = [
   { key: 'aadhaarFile', label: 'Aadhaar Identity Proof', desc: 'Government photo identity card' },
@@ -41,7 +44,14 @@ export default function CustomerDetails() {
   const [selectedEmi, setSelectedEmi] = useState(null);
   const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
   const [remarks, setRemarks] = useState('');
+  const [payUtr, setPayUtr] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
+
+  // Edit customer record modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
+  const [editFiles, setEditFiles] = useState({});
+  const [editSubmitLoading, setEditSubmitLoading] = useState(false);
 
   // Receipt printable view state
   const [activeReceipt, setActiveReceipt] = useState(null);
@@ -96,6 +106,99 @@ export default function CustomerDetails() {
     }
   };
 
+  // Edit Customer Handlers
+  const openEditModal = () => {
+    if (!customer) return;
+    setEditFormData({
+      fullName: customer.fullName || '',
+      fatherName: customer.fatherName || '',
+      motherName: customer.motherName || '',
+      mobileNumber: customer.mobileNumber || '',
+      alternateNumber: customer.alternateNumber || '',
+      email: customer.email || '',
+      address: customer.address || '',
+      city: customer.city || '',
+      district: customer.district || '',
+      state: customer.state || '',
+      pinCode: customer.pinCode || customer.pincode || '',
+      aadhaarNumber: customer.aadhaarNumber || '',
+      panNumber: customer.panNumber || '',
+      occupation: customer.occupation || '',
+      monthlyIncome: customer.monthlyIncome ? String(customer.monthlyIncome) : '',
+      bankName: customer.bankDetails?.bankName || '',
+      accountNumber: customer.bankDetails?.accountNumber || '',
+      ifscCode: customer.bankDetails?.ifscCode || '',
+      nomineeDetails: customer.nomineeDetails || '',
+      installationAddress: customer.installationAddress || '',
+      solarCapacity: customer.solarCapacity ? String(customer.solarCapacity) : '',
+      solarBrand: customer.solarBrand || '',
+      solarCost: customer.solarCost ? String(customer.solarCost) : '',
+      installationDate: customer.installationDate || '',
+      warrantyDetails: customer.warrantyDetails || '',
+      remarks: customer.remarks || '',
+      latitude: customer.latitude ? String(customer.latitude) : '',
+      longitude: customer.longitude ? String(customer.longitude) : ''
+    });
+    setEditFiles({});
+    setShowEditModal(true);
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'aadhaarNumber') {
+      const digits = value.replace(/\D/g, '');
+      if (digits.length > 4) {
+        setEditFormData(prev => ({ ...prev, aadhaarNumber: `XXXX-XXXX-${digits.slice(-4)}` }));
+        return;
+      }
+    }
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditFileChange = (e) => {
+    const { name, files: selectedFiles } = e.target;
+    if (selectedFiles && selectedFiles[0]) {
+      setEditFiles(prev => ({ ...prev, [name]: selectedFiles[0] }));
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!customer) return;
+    if (!editFormData.fullName || !editFormData.mobileNumber) {
+      alert('Full Name and Mobile Number are required.');
+      return;
+    }
+
+    setEditSubmitLoading(true);
+    try {
+      const data = new FormData();
+      Object.keys(editFormData).forEach(key => {
+        data.append(key, editFormData[key]);
+      });
+
+      for (const key of Object.keys(editFiles)) {
+        if (editFiles[key]) {
+          const compressed = await compressImageFile(editFiles[key]);
+          data.append(key, compressed);
+        }
+      }
+
+      await api.put(`/admin/customers/${customer._id}`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      alert(t.customerUpdatedSuccessfully || 'Customer record successfully updated!');
+      setShowEditModal(false);
+      fetchCustomerDetails();
+    } catch (err) {
+      console.error('Edit error:', err);
+      alert(err.response?.data?.message || 'Failed to update customer record.');
+    } finally {
+      setEditSubmitLoading(false);
+    }
+  };
+
   const handleMarkPaidSubmit = async (e) => {
     e.preventDefault();
     if (!selectedEmi) return;
@@ -113,12 +216,14 @@ export default function CustomerDetails() {
         emiNumber: selectedEmi.emiNumber,
         paymentDate: payDate,
         remarks: remarks,
-        email: cleanEmail
+        email: cleanEmail,
+        utrNumber: payUtr.trim()
       });
       
       alert(response.data?.message || `EMI #${selectedEmi.emiNumber} marked as Paid!`);
       setShowMarkModal(false);
       setRemarks('');
+      setPayUtr('');
       fetchCustomerDetails();
     } catch (error) {
       console.error(error);
@@ -131,6 +236,7 @@ export default function CustomerDetails() {
   const openMarkModal = (emi) => {
     setSelectedEmi(emi);
     setPayEmail(customer?.email || '');
+    setPayUtr(emi.utrNumber || customer?.submittedUtr || '');
     setShowMarkModal(true);
   };
 
@@ -235,6 +341,15 @@ export default function CustomerDetails() {
         </button>
 
         <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={openEditModal}
+            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-bold border border-blue-200/60 dark:border-blue-800/60 transition-colors shadow-sm"
+            title="Edit Customer Profile, Banking & Technical info"
+          >
+            <Edit className="w-3.5 h-3.5" />
+            <span>{t.editCustomer || 'Edit Customer'}</span>
+          </button>
           <button
             type="button"
             onClick={() => setShowStatementModal(true)}
@@ -434,7 +549,9 @@ export default function CustomerDetails() {
 
       {/* 1. SOLAR ROOFTOP SITE MAP & GPS NAVIGATION */}
       <div className="no-print">
-        <SolarSiteMap customer={customer} />
+        <React.Suspense fallback={<div className="h-64 flex items-center justify-center bg-slate-100 dark:bg-slate-900 rounded-3xl animate-pulse text-xs text-slate-400">Loading Solar Site Map...</div>}>
+          <SolarSiteMap customer={customer} />
+        </React.Suspense>
       </div>
 
       {/* 2. CUSTOMER DOCUMENT & WARRANTY VAULT */}
@@ -748,6 +865,27 @@ export default function CustomerDetails() {
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white font-medium"
                 />
               </div>
+
+              <div>
+                <label className="block font-semibold text-slate-500 mb-1">
+                  12-Digit UPI UTR / Bank Ref Number <span className="text-slate-400 font-normal text-xs">(Optional — for bank statement reconciliation)</span>
+                </label>
+                <input
+                  type="text"
+                  value={payUtr}
+                  maxLength={25}
+                  placeholder="e.g. 428190123456"
+                  onChange={(e) => setPayUtr(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 px-3 outline-none focus:border-teal-500 font-mono text-slate-800 dark:text-white"
+                />
+              </div>
+
+              {customer?.submittedUtr && (customer?.requestingEmi === selectedEmi?.emiNumber || !customer?.requestingEmi) && (
+                <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 rounded-xl text-xs flex items-center space-x-2 border border-blue-200 dark:border-blue-900/50">
+                  <CreditCard className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                  <span>Customer submitted UTR: <strong className="font-mono">{customer.submittedUtr}</strong></span>
+                </div>
+              )}
 
               <div>
                 <label className="block font-semibold text-slate-500 mb-1">Remarks</label>
@@ -1091,11 +1229,199 @@ export default function CustomerDetails() {
       )}
 
       {/* OFFICIAL LOAN STATEMENT & CERTIFICATE MODAL */}
-      <LoanStatementModal
-        customer={customer}
-        isOpen={showStatementModal}
-        onClose={() => setShowStatementModal(false)}
-      />
+      <React.Suspense fallback={null}>
+        <LoanStatementModal
+          customer={customer}
+          isOpen={showStatementModal}
+          onClose={() => setShowStatementModal(false)}
+        />
+      </React.Suspense>
+
+      {/* EDIT CUSTOMER RECORD MODAL */}
+      {showEditModal && customer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-slate-900/60 backdrop-blur-sm overflow-y-auto no-print">
+          <div className="w-full max-w-4xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl relative max-h-[90vh] flex flex-col">
+            
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 rounded-t-3xl">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center space-x-2">
+                  <Edit className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <span>{t.editCustomer || 'Edit Customer Record'} — {customer.fullName} ({customer.customerId})</span>
+                </h3>
+                <p className="text-xs text-slate-500">{t.editCustomerSubtitle || 'Modify personal, solar, banking, and contact details.'}</p>
+              </div>
+              <button 
+                onClick={() => setShowEditModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable form body */}
+            <form onSubmit={handleEditSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+              
+              {/* BLOCK 1: PERSONAL INFORMATION */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.personalInfoSection || 'Personal Information'}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.fullNameLabel || 'Full Name'} *</label>
+                    <input type="text" name="fullName" required value={editFormData.fullName || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.fatherNameLabel || "Father's Name"}</label>
+                    <input type="text" name="fatherName" value={editFormData.fatherName || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.motherNameLabel || "Mother's Name"}</label>
+                    <input type="text" name="motherName" value={editFormData.motherName || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.mobileNumberLabel || 'Mobile Number'} *</label>
+                    <input type="tel" name="mobileNumber" required value={editFormData.mobileNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.altMobileLabel || 'Alternate Mobile'}</label>
+                    <input type="tel" name="alternateNumber" value={editFormData.alternateNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.emailAddressLabel || 'Email Address'}</label>
+                    <input type="email" name="email" value={editFormData.email || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* BLOCK 2: ADDRESS */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.addressKycSection || 'Address & KYC'}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                  <div className="md:col-span-2">
+                    <label className="block font-semibold text-slate-500 mb-1">{t.streetAddressLabel || 'Street Address'}</label>
+                    <input type="text" name="address" value={editFormData.address || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.cityVillageLabel || 'City / Village'}</label>
+                    <input type="text" name="city" value={editFormData.city || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.districtLabel || 'District'}</label>
+                    <input type="text" name="district" value={editFormData.district || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.stateLabel || 'State'}</label>
+                    <input type="text" name="state" value={editFormData.state || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.pincodeLabel || 'PIN Code'}</label>
+                    <input type="text" name="pinCode" value={editFormData.pinCode || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.panNumberLabel || 'PAN Card Number'}</label>
+                    <input type="text" name="panNumber" value={editFormData.panNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.nomineeDetailsLabel || 'Nominee Name & Relation'}</label>
+                    <input type="text" name="nomineeDetails" value={editFormData.nomineeDetails || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* BLOCK 3: BANK DETAILS */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.bankingDetailsSection || 'Bank Account Details'}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.bankNameLabel || 'Bank Name'}</label>
+                    <input type="text" name="bankName" value={editFormData.bankName || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.accountNumberLabel || 'Account Number'}</label>
+                    <input type="text" name="accountNumber" value={editFormData.accountNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.ifscCodeLabel || 'IFSC Code'}</label>
+                    <input type="text" name="ifscCode" value={editFormData.ifscCode || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* BLOCK 4: SOLAR INSTALLATION */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.solarTechnicalSection || 'Solar Installation & Technical Details'}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.capacityKwLabel || 'Capacity (kW)'}</label>
+                    <input type="number" step="0.5" name="solarCapacity" value={editFormData.solarCapacity || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.solarBrandLabel || 'Solar Panel Brand'}</label>
+                    <input type="text" name="solarBrand" value={editFormData.solarBrand || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.installationDateLabel || 'Installation Date'}</label>
+                    <input type="date" name="installationDate" value={editFormData.installationDate || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.warrantyDetailsLabel || 'Warranty Details'}</label>
+                    <input type="text" name="warrantyDetails" value={editFormData.warrantyDetails || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div className="md:col-span-4">
+                    <label className="block font-semibold text-slate-500 mb-1">{t.installAddressLabel || 'Installation Address'}</label>
+                    <input type="text" name="installationAddress" value={editFormData.installationAddress || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div className="md:col-span-4">
+                    <label className="block font-semibold text-slate-500 mb-1">{t.remarksLabel || 'Remarks / Special Notes'}</label>
+                    <textarea rows="2" name="remarks" value={editFormData.remarks || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* BLOCK 5: UPDATE DOCUMENTS (OPTIONAL) */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.updateDocumentsOptional || 'Update Documents (Leave blank to keep existing files)'}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[10px]">
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.customerPhotoLabel || 'Passport Photo'}</label>
+                    <input type="file" name="photoFile" onChange={handleEditFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.aadhaarProofLabel || 'Aadhaar Card'}</label>
+                    <input type="file" name="aadhaarFile" onChange={handleEditFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.ebBillLabel || 'TNEB Electricity Bill'}</label>
+                    <input type="file" name="electricityBillFile" onChange={handleEditFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
+                  </div>
+                </div>
+              </div>
+
+            </form>
+
+            {/* Footer buttons */}
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-3 bg-slate-50 dark:bg-slate-900/50 rounded-b-3xl">
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              >
+                {t.cancel}
+              </button>
+              
+              <button
+                onClick={handleEditSubmit}
+                disabled={editSubmitLoading}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-2"
+              >
+                {editSubmitLoading && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                <span>{t.saveChanges || 'Save Changes'}</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

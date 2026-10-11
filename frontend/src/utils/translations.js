@@ -366,7 +366,29 @@ export const translations = {
     availableBackupsList: 'Available Database Snapshots',
     backupNameCol: 'Backup Name',
     sizeCol: 'Size',
-    createdCol: 'Created At'
+    createdCol: 'Created At',
+    
+    // Edit Customer, Bank CSV, and UTR
+    editCustomer: 'Edit Customer Record',
+    editCustomerSubtitle: 'Modify personal, solar, banking, and contact details.',
+    saveChanges: 'Save Changes',
+    customerUpdatedSuccessfully: 'Customer record successfully updated!',
+    bankCsvReconciler: 'Bank CSV Reconciler',
+    bankCsvSubtitle: 'Upload statement to match UPI/NEFT transfers with pending EMIs by UTR and Amount.',
+    uploadBankCsv: 'Upload Statement CSV',
+    autoApplyPayments: 'Auto-approve and record matching payments',
+    processStatement: 'Process Statement',
+    matchedTransactions: 'Matched Payments',
+    unmatchedTransactions: 'Unmatched / Pending Review',
+    noMatchedTransactions: 'No matching payments found in this statement.',
+    noUnmatchedTransactions: 'All credit transactions matched successfully!',
+    enterUtr: 'Enter 12-Digit UPI UTR / Reference No',
+    utrPlaceholder: 'e.g. 428190123456',
+    utrSubmitted: 'UTR submitted for verification',
+    previousPage: 'Previous',
+    nextPage: 'Next',
+    pageOf: 'Page {page} of {total}',
+    rowsPerPage: 'Rows per page:'
   },
   
   ta: {
@@ -733,7 +755,29 @@ export const translations = {
     availableBackupsList: 'கிடைக்கக்கூடிய காப்புநகல்கள்',
     backupNameCol: 'காப்புநகல் பெயர்',
     sizeCol: 'அளவு',
-    createdCol: 'உருவாக்கப்பட்ட நேரம்'
+    createdCol: 'உருவாக்கப்பட்ட நேரம்',
+    
+    // Edit Customer, Bank CSV, and UTR
+    editCustomer: 'வாடிக்கையாளர் தகவலை திருத்து',
+    editCustomerSubtitle: 'தனிப்பட்ட, சோலார், வங்கி மற்றும் முகவரி தகவல்களை திருத்தவும்.',
+    saveChanges: 'மாற்றங்களை சேமி',
+    customerUpdatedSuccessfully: 'வாடிக்கையாளர் விவரங்கள் வெற்றிகரமாக புதுப்பிக்கப்பட்டன!',
+    bankCsvReconciler: 'வங்கி கணக்கு அறிக்கை சரிபார்ப்பு (CSV)',
+    bankCsvSubtitle: 'UTR மற்றும் தொகை மூலம் வங்கி அறிக்கையை நிலுவைத் தவணைகளுடன் ஒப்பிடவும்.',
+    uploadBankCsv: 'வங்கி CSV கோப்பைப் பதிவேற்றவும்',
+    autoApplyPayments: 'பொருந்திய கட்டணங்களை தானாகவே அங்கீகரித்து பதிவுசெய்',
+    processStatement: 'அறிக்கையை சரிபார்',
+    matchedTransactions: 'பொருந்திய கட்டணங்கள்',
+    unmatchedTransactions: 'பொருந்தாதவை / பரிசீலனையில்',
+    noMatchedTransactions: 'பொருந்திய கட்டணங்கள் எதுவும் கண்டறியப்படவில்லை.',
+    noUnmatchedTransactions: 'அனைத்து பரிவர்த்தனைகளும் வெற்றிகரமாக சரிபார்க்கப்பட்டன!',
+    enterUtr: '12-இலக்க UPI UTR / குறிப்பு எண்ணை உள்ளிடவும்',
+    utrPlaceholder: 'எ.கா. 428190123456',
+    utrSubmitted: 'சரிபார்ப்பிற்காக UTR சமர்ப்பிக்கப்பட்டது',
+    previousPage: 'முந்தைய',
+    nextPage: 'அடுத்தது',
+    pageOf: 'பக்கம் {page} / {total}',
+    rowsPerPage: 'பக்கத்திற்கு வரிசைகள்:'
   }
 };
 

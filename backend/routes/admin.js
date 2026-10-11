@@ -47,9 +47,22 @@ const documentFields = [
   { name: 'agreementFile', maxCount: 1 }
 ];
 
-// 1. Dashboard Statistics
+// In-Memory Dashboard Cache (1-2 minutes TTL to minimize DB scans)
+let dashboardCache = { data: null, timestamp: 0 };
+const DASHBOARD_CACHE_TTL = 90 * 1000; // 90 seconds
+
+export function invalidateDashboardCache() {
+  dashboardCache = { data: null, timestamp: 0 };
+}
+
+// 1. Dashboard Statistics (Cached for high performance)
 router.get('/dashboard-stats', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
+    if (dashboardCache.data && (Date.now() - dashboardCache.timestamp < DASHBOARD_CACHE_TTL)) {
+      res.setHeader('X-Cache', 'HIT');
+      return res.json(dashboardCache.data);
+    }
+
     const customers = await db.find('customers');
     const payments = await db.find('payments');
 
@@ -98,7 +111,7 @@ router.get('/dashboard-stats', authenticateToken, authorizeRole(['admin']), asyn
         monthlyProfit[month] += (Number(p.interestPaid) || 0) + (Number(p.lateFeePaid) || 0);
       });
 
-    res.json({
+    const statsResult = {
       totalCustomers,
       activeCustomers,
       completedCustomers,
@@ -114,17 +127,21 @@ router.get('/dashboard-stats', authenticateToken, authorizeRole(['admin']), asyn
         collections: monthlyCollection.map(v => Math.round(v)),
         profits: monthlyProfit.map(v => Math.round(v))
       }
-    });
+    };
+
+    dashboardCache = { data: statsResult, timestamp: Date.now() };
+    res.setHeader('X-Cache', 'MISS');
+    res.json(statsResult);
   } catch (error) {
     console.error('Stats fetch error:', error);
     res.status(500).json({ message: 'Error loading dashboard statistics' });
   }
 });
 
-// 2. Customer List (with filters and search)
+// 2. Customer List (with server-side filtering, search, and pagination)
 router.get('/customers', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
-    const { search, loanStatus, paymentStatus } = req.query;
+    const { search, loanStatus, paymentStatus, page, limit } = req.query;
     let customers = await db.find('customers');
 
     // Run active calculations to ensure penalty/days-late is absolutely up to date when viewed
@@ -150,11 +167,34 @@ router.get('/customers', authenticateToken, authorizeRole(['admin']), async (req
       customers = customers.filter(c => c.paymentStatus === paymentStatus);
     }
 
+    // Sort newest first
+    customers.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
     // Mask Aadhaar for all customers in list
     const safeCustomers = customers.map(c => ({
       ...c,
       aadhaarNumber: maskAadhaar(c.aadhaarNumber)
     }));
+
+    // Server-side pagination support if page query param provided
+    if (page !== undefined) {
+      const pageNum = Math.max(1, parseInt(page) || 1);
+      const limitNum = Math.max(1, Math.min(100, parseInt(limit) || 10));
+      const total = safeCustomers.length;
+      const totalPages = Math.ceil(total / limitNum) || 1;
+      const skip = (pageNum - 1) * limitNum;
+      const paginatedData = safeCustomers.slice(skip, skip + limitNum);
+
+      return res.json({
+        customers: paginatedData,
+        pagination: {
+          total,
+          page: pageNum,
+          limit: limitNum,
+          totalPages
+        }
+      });
+    }
 
     res.json(safeCustomers);
   } catch (error) {
@@ -297,6 +337,7 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
       read: false
     });
 
+    invalidateDashboardCache();
     res.status(201).json(customer);
   } catch (error) {
     console.error('Create customer error:', error);
@@ -367,11 +408,12 @@ router.get('/documents/view/:docId', async (req, res) => {
   }
 });
 
-// 5. Edit Customer Details
+// 5. Edit Customer Details (Owner / Staff Portal)
 router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload.fields(documentFields), async (req, res) => {
   try {
     const rawData = req.body;
-    const oldCustomer = await db.findOne('customers', { _id: req.params.id });
+    const oldCustomer = (await db.findOne('customers', { _id: req.params.id })) || 
+                        (await db.findOne('customers', { customerId: req.params.id }));
 
     if (!oldCustomer) {
       return res.status(404).json({ message: 'Customer record not found' });
@@ -385,19 +427,22 @@ router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload
       }
     }
 
+    const pin = rawData.pinCode || rawData.pincode || oldCustomer.pinCode || oldCustomer.pincode || '';
+
     const updatedCustomer = {
       ...oldCustomer,
-      fullName: rawData.fullName || oldCustomer.fullName,
+      fullName: rawData.fullName ? rawData.fullName.trim() : oldCustomer.fullName,
       fatherName: rawData.fatherName !== undefined ? rawData.fatherName : oldCustomer.fatherName,
       motherName: rawData.motherName !== undefined ? rawData.motherName : oldCustomer.motherName,
-      mobileNumber: rawData.mobileNumber || oldCustomer.mobileNumber,
+      mobileNumber: rawData.mobileNumber ? rawData.mobileNumber.trim() : oldCustomer.mobileNumber,
       alternateNumber: rawData.alternateNumber !== undefined ? rawData.alternateNumber : oldCustomer.alternateNumber,
-      email: rawData.email !== undefined ? rawData.email : oldCustomer.email,
+      email: rawData.email !== undefined ? rawData.email.trim().toLowerCase() : oldCustomer.email,
       address: rawData.address !== undefined ? rawData.address : oldCustomer.address,
       city: rawData.city !== undefined ? rawData.city : oldCustomer.city,
       district: rawData.district !== undefined ? rawData.district : oldCustomer.district,
       state: rawData.state !== undefined ? rawData.state : oldCustomer.state,
-      pinCode: rawData.pinCode !== undefined ? rawData.pinCode : oldCustomer.pinCode,
+      pinCode: pin,
+      pincode: pin,
       aadhaarNumber: rawData.aadhaarNumber !== undefined ? maskAadhaar(rawData.aadhaarNumber) : maskAadhaar(oldCustomer.aadhaarNumber),
       panNumber: rawData.panNumber !== undefined ? rawData.panNumber : oldCustomer.panNumber,
       occupation: rawData.occupation !== undefined ? rawData.occupation : oldCustomer.occupation,
@@ -417,17 +462,30 @@ router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload
       latitude: rawData.latitude !== undefined ? (rawData.latitude ? Number(rawData.latitude) : null) : oldCustomer.latitude,
       longitude: rawData.longitude !== undefined ? (rawData.longitude ? Number(rawData.longitude) : null) : oldCustomer.longitude,
       remarks: rawData.remarks !== undefined ? rawData.remarks : oldCustomer.remarks,
-      documents: updatedDocs
+      documents: updatedDocs,
+      updatedAt: new Date().toISOString()
     };
 
-    // If financial fields change, schedule should not be dynamically updated since payments might be made already,
-    // unless requested. We assume modifications are for metadata. 
     // Save customer
-    const saved = await db.updateOne('customers', { _id: req.params.id }, updatedCustomer);
+    const saved = await db.updateOne('customers', { _id: oldCustomer._id }, updatedCustomer);
 
+    // Synchronize login credentials in users table if name or mobile changed
+    if (updatedCustomer.fullName !== oldCustomer.fullName || updatedCustomer.mobileNumber !== oldCustomer.mobileNumber) {
+      const userAccount = await db.findOne('users', { customerId: oldCustomer.customerId });
+      if (userAccount) {
+        const userUpdate = { username: updatedCustomer.fullName.trim() };
+        if (updatedCustomer.mobileNumber !== oldCustomer.mobileNumber) {
+          const salt = await bcrypt.genSalt(10);
+          userUpdate.password = await bcrypt.hash(updatedCustomer.mobileNumber.trim(), salt);
+        }
+        await db.updateOne('users', { _id: userAccount._id }, userUpdate);
+      }
+    }
+
+    invalidateDashboardCache();
     await logAdminAction(req.user.username, 'EDIT_CUSTOMER', oldCustomer.customerId, { edits: Object.keys(rawData) });
 
-    res.json(saved);
+    res.json(saved || updatedCustomer);
   } catch (error) {
     console.error('Edit customer error:', error);
     res.status(500).json({ message: 'Error editing customer details' });
@@ -437,28 +495,30 @@ router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload
 // 6. Delete Customer
 router.delete('/customers/:id', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
-    const customer = await db.findOne('customers', { _id: req.params.id });
+    const customer = (await db.findOne('customers', { _id: req.params.id })) ||
+                     (await db.findOne('customers', { customerId: req.params.id }));
     if (!customer) {
       return res.status(404).json({ message: 'Customer record not found' });
     }
 
     // Delete customer
-    await db.deleteOne('customers', { _id: req.params.id });
+    await db.deleteOne('customers', { _id: customer._id });
     // Delete corresponding customer user
     await db.deleteOne('users', { customerId: customer.customerId });
 
+    invalidateDashboardCache();
     await logAdminAction(req.user.username, 'DELETE_CUSTOMER', customer.customerId, { name: customer.fullName });
 
-    res.json({ message: `Successfully deleted customer ${customer.fullName} and their log files.` });
+    res.json({ message: `Successfully deleted customer ${customer.fullName} and their records.` });
   } catch (error) {
     console.error('Delete customer error:', error);
     res.status(500).json({ message: 'Error deleting customer' });
   }
 });
 
-// 7. Update Payment (Mark EMI as Paid)
+// 7. Update Payment (Mark EMI as Paid, record UTR & calculate late fee on-demand)
 router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), async (req, res) => {
-  const { customerId, emiNumber, paymentDate, remarks, email } = req.body;
+  const { customerId, emiNumber, paymentDate, remarks, email, utrNumber } = req.body;
 
   if (!customerId || !emiNumber) {
     return res.status(400).json({ message: 'Customer ID and EMI Number are required' });
@@ -499,13 +559,14 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       });
     }
 
-    // Calculate late fee and total paid amount accurately
+    // Calculate late fee and total paid amount accurately on demand
     const paidDate = paymentDate ? new Date(paymentDate) : new Date();
     const recalculated = recalculateCustomerEmiStatus(customer, paidDate);
     const emiAtPaidDate = recalculated.emiSchedule[scheduleIndex];
     const lateFee = Number(emiAtPaidDate?.lateFee || 0);
     const baseEmi = Number(emi.emiAmount || 0);
     const totalPaidAmount = Math.round((baseEmi + lateFee) * 100) / 100;
+    const finalUtr = utrNumber ? String(utrNumber).trim() : (customer.submittedUtr || '');
 
     // Mark paid in schedule
     customer.emiSchedule[scheduleIndex].status = 'Paid';
@@ -513,7 +574,15 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
     customer.emiSchedule[scheduleIndex].paidDate = paidDate.toISOString().split('T')[0];
     customer.emiSchedule[scheduleIndex].lateFee = lateFee;
     customer.emiSchedule[scheduleIndex].totalOutstanding = 0;
-    customer.emiSchedule[scheduleIndex].remarks = remarks || 'Marked paid by admin';
+    customer.emiSchedule[scheduleIndex].utrNumber = finalUtr;
+    customer.emiSchedule[scheduleIndex].remarks = remarks || (finalUtr ? `Paid via UPI (UTR: ${finalUtr})` : 'Marked paid by admin');
+
+    // Clear requestingEmi and submittedUtr if matching this EMI
+    if (customer.requestingEmi === Number(emiNumber)) {
+      delete customer.requestingEmi;
+      delete customer.submittedUtr;
+      delete customer.submittedUtrAt;
+    }
 
     // Recalculate customer loan levels
     const updatedCustomer = recalculateCustomerEmiStatus(customer, new Date());
@@ -533,15 +602,19 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       principalPaid: Number(emi.principalPaid || 0),
       lateFeePaid: lateFee,
       daysLate: Number(emiAtPaidDate?.daysLate || 0),
+      utrNumber: finalUtr,
       status: 'Paid',
-      remarks: remarks || 'Standard payment'
+      remarks: remarks || (finalUtr ? `Paid via UPI (UTR: ${finalUtr})` : 'Standard payment')
     });
+
+    invalidateDashboardCache();
 
     // Create log
     await logAdminAction(req.user.username, 'MARK_EMI_PAID', customerId, {
       emiNumber,
       paidAmount: totalPaidAmount,
-      receiptId
+      receiptId,
+      utrNumber: finalUtr
     });
 
     // Create notifications
@@ -549,7 +622,7 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       customerId,
       role: 'customer',
       title: 'Payment Confirmation',
-      message: `Your payment of ₹${paymentRecord.paidAmount.toLocaleString('en-IN')} for EMI #${emiNumber} has been received. Receipt ID: ${receiptId}.`,
+      message: `Your payment of ₹${paymentRecord.paidAmount.toLocaleString('en-IN')} for EMI #${emiNumber} has been confirmed. Receipt ID: ${receiptId}.${finalUtr ? ` (UTR: ${finalUtr})` : ''}`,
       type: 'Payment_Received_Cust',
       read: false
     });
@@ -558,7 +631,7 @@ router.post('/payments/mark-paid', authenticateToken, authorizeRole(['admin']), 
       role: 'admin',
       customerId,
       title: 'Payment Received',
-      message: `Payment of ₹${paymentRecord.paidAmount.toLocaleString('en-IN')} received from ${customer.fullName} for EMI #${emiNumber}.`,
+      message: `Payment of ₹${paymentRecord.paidAmount.toLocaleString('en-IN')} confirmed from ${customer.fullName} for EMI #${emiNumber}.${finalUtr ? ` UTR: ${finalUtr}` : ''}`,
       type: 'Payment_Received_Admin',
       read: false
     });
@@ -716,6 +789,7 @@ router.post('/payments/partial-payment', authenticateToken, authorizeRole(['admi
       read: false
     });
 
+    invalidateDashboardCache();
     res.json({
       message: paymentSummary.isFullySettled ? `EMI #${emiNumber} fully paid!` : `Partial payment of ₹${amount} recorded for EMI #${emiNumber}.`,
       payment: paymentRecord,
@@ -797,6 +871,7 @@ router.post('/loans/early-closure', authenticateToken, authorizeRole(['admin']),
       read: false
     });
 
+    invalidateDashboardCache();
     res.json({
       message: 'Loan successfully foreclosed and settled early!',
       payment: paymentRecord,
@@ -862,6 +937,7 @@ router.post('/loans/part-prepayment', authenticateToken, authorizeRole(['admin']
       read: false
     });
 
+    invalidateDashboardCache();
     res.json({
       message: `Part-prepayment of ₹${amount} applied successfully!`,
       payment: paymentRecord,
@@ -931,6 +1007,8 @@ router.delete('/payments/delete-payment', authenticateToken, authorizeRole(['adm
       await db.deleteOne('payments', { _id: matchingPayment._id });
     }
 
+    invalidateDashboardCache();
+
     await logAdminAction(req.user.username, 'DELETE_EMI_PAYMENT', customerId, {
       emiNumber,
       note: 'EMI payment reversed to Pending by admin'
@@ -950,6 +1028,245 @@ router.delete('/payments/delete-payment', authenticateToken, authorizeRole(['adm
   } catch (error) {
     console.error('Delete payment error:', error);
     res.status(500).json({ message: 'Error deleting payment record' });
+  }
+});
+
+// 8b. Bank Statement CSV Reconciler (Match by Amount + UTR or Narration)
+router.post('/reconcile-bank-csv', authenticateToken, authorizeRole(['admin']), upload.single('csvFile'), async (req, res) => {
+  try {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ message: 'Please upload a bank statement CSV file.' });
+    }
+
+    const autoApply = req.body.autoApply === 'true' || req.body.autoApply === true;
+    const csvContent = req.file.buffer.toString('utf-8');
+    const lines = csvContent.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+    if (lines.length < 2) {
+      return res.status(400).json({ message: 'CSV file is empty or missing data lines.' });
+    }
+
+    // Robust CSV parser supporting quotes and commas
+    const parseCsvLine = (line) => {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    };
+
+    // Find header line (supporting preface headers in Indian bank statements)
+    let headerIdx = -1;
+    let headers = [];
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+      const cols = parseCsvLine(lines[i]).map(c => c.toLowerCase().replace(/[^a-z0-9]/g, ''));
+      if (cols.some(c => c.includes('date')) && 
+         (cols.some(c => c.includes('narration') || c.includes('desc') || c.includes('particular')) ||
+          cols.some(c => c.includes('credit') || c.includes('amount') || c.includes('deposit')))) {
+        headerIdx = i;
+        headers = parseCsvLine(lines[i]);
+        break;
+      }
+    }
+
+    if (headerIdx === -1) {
+      headerIdx = 0;
+      headers = parseCsvLine(lines[0]);
+    }
+
+    const headerLower = headers.map(h => h.toLowerCase());
+    const dateIdx = headerLower.findIndex(h => h.includes('date'));
+    const descIdx = headerLower.findIndex(h => h.includes('narration') || h.includes('desc') || h.includes('particular') || h.includes('remark') || h.includes('details'));
+    const refIdx = headerLower.findIndex(h => h.includes('ref') || h.includes('utr') || h.includes('chq') || h.includes('cheque') || h.includes('txn'));
+    let creditIdx = headerLower.findIndex(h => h.includes('credit') || h.includes('deposit') || h.includes('cr'));
+    if (creditIdx === -1) {
+      creditIdx = headerLower.findIndex(h => h.includes('amount'));
+    }
+
+    const rawRows = lines.slice(headerIdx + 1);
+    const customers = await db.find('customers');
+    const matched = [];
+    const unmatched = [];
+
+    const extractUtr = (str) => {
+      if (!str) return '';
+      const match = str.match(/\b\d{12}\b/);
+      return match ? match[0] : '';
+    };
+
+    const parseAmount = (val) => {
+      if (!val) return 0;
+      const clean = String(val).replace(/[^0-9.-]/g, '');
+      const num = parseFloat(clean);
+      return isNaN(num) ? 0 : Math.round(num * 100) / 100;
+    };
+
+    for (let rIdx = 0; rIdx < rawRows.length; rIdx++) {
+      const row = parseCsvLine(rawRows[rIdx]);
+      if (row.length === 0 || row.every(c => !c)) continue;
+
+      const dateVal = dateIdx !== -1 ? row[dateIdx] : '';
+      const narrationVal = descIdx !== -1 ? row[descIdx] : '';
+      const rawRefVal = refIdx !== -1 ? row[refIdx] : '';
+      const creditVal = creditIdx !== -1 ? row[creditIdx] : '';
+      const amount = parseAmount(creditVal);
+
+      // Only evaluate inward credits
+      if (amount <= 0) continue;
+
+      const utr = extractUtr(rawRefVal) || extractUtr(narrationVal) || rawRefVal.replace(/[^0-9a-zA-Z]/g, '');
+
+      let matchedCustomer = null;
+      let matchedEmi = null;
+      let matchReason = '';
+
+      for (const cust of customers) {
+        if (!cust.emiSchedule || cust.loanStatus === 'Completed') continue;
+
+        const pendingEmis = cust.emiSchedule.filter(e => e.status !== 'Paid');
+        if (pendingEmis.length === 0) continue;
+
+        // 1. Customer submitted matching UTR
+        if (utr && cust.submittedUtr && cust.submittedUtr === utr) {
+          const emiToMatch = cust.emiSchedule.find(e => e.emiNumber === cust.requestingEmi && e.status !== 'Paid') || pendingEmis[0];
+          matchedCustomer = cust;
+          matchedEmi = emiToMatch;
+          matchReason = `Customer submitted UTR match (${utr})`;
+          break;
+        }
+
+        // 2. Narration matches Customer ID or Mobile + Amount matches EMI
+        const narrationClean = narrationVal.toLowerCase();
+        const matchesMobile = cust.mobileNumber && narrationClean.includes(cust.mobileNumber.toLowerCase());
+        const matchesId = cust.customerId && narrationClean.includes(cust.customerId.toLowerCase());
+        const matchesName = cust.fullName && cust.fullName.length > 3 && narrationClean.includes(cust.fullName.toLowerCase());
+
+        const amountMatchEmi = pendingEmis.find(e => {
+          const expected = Number(e.emiAmount) + Number(e.lateFee || 0);
+          return Math.abs(expected - amount) <= 5 || Math.abs(Number(e.emiAmount) - amount) <= 5;
+        });
+
+        if (amountMatchEmi && (matchesMobile || matchesId || matchesName)) {
+          matchedCustomer = cust;
+          matchedEmi = amountMatchEmi;
+          matchReason = `Amount (₹${amount}) + Identifier in narration (${matchesId ? cust.customerId : (matchesMobile ? cust.mobileNumber : cust.fullName)})`;
+          break;
+        }
+
+        // 3. Exact 12-digit UTR with pending EMI amount
+        if (utr && utr.length >= 10 && amountMatchEmi && cust.requestingEmi === amountMatchEmi.emiNumber) {
+          matchedCustomer = cust;
+          matchedEmi = amountMatchEmi;
+          matchReason = `Exact UTR (${utr}) and EMI #${amountMatchEmi.emiNumber} amount match`;
+          break;
+        }
+      }
+
+      const txItem = {
+        row: rIdx + 1,
+        date: dateVal,
+        narration: narrationVal,
+        amount,
+        utr: utr || rawRefVal || 'N/A'
+      };
+
+      if (matchedCustomer && matchedEmi) {
+        matched.push({
+          ...txItem,
+          customerId: matchedCustomer.customerId,
+          customerName: matchedCustomer.fullName,
+          customerRecordId: matchedCustomer._id,
+          emiNumber: matchedEmi.emiNumber,
+          expectedAmount: matchedEmi.emiAmount,
+          matchReason,
+          status: 'Matched'
+        });
+
+        if (autoApply) {
+          const paidDate = dateVal ? new Date(dateVal) : new Date();
+          const validPaidDate = isNaN(paidDate.getTime()) ? new Date() : paidDate;
+          
+          const schedIdx = matchedCustomer.emiSchedule.findIndex(e => e.emiNumber === matchedEmi.emiNumber);
+          if (schedIdx !== -1 && matchedCustomer.emiSchedule[schedIdx].status !== 'Paid') {
+            matchedCustomer.emiSchedule[schedIdx].status = 'Paid';
+            matchedCustomer.emiSchedule[schedIdx].paidAmount = amount;
+            matchedCustomer.emiSchedule[schedIdx].paidDate = validPaidDate.toISOString().split('T')[0];
+            matchedCustomer.emiSchedule[schedIdx].utrNumber = utr || '';
+            matchedCustomer.emiSchedule[schedIdx].remarks = `Reconciled via Bank CSV (${utr || 'Auto'})`;
+            
+            delete matchedCustomer.requestingEmi;
+            delete matchedCustomer.submittedUtr;
+            delete matchedCustomer.submittedUtrAt;
+
+            const recalculated = recalculateCustomerEmiStatus(matchedCustomer, new Date());
+            await db.updateOne('customers', { _id: matchedCustomer._id }, recalculated);
+
+            const receiptId = `REC-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+            await db.create('payments', {
+              receiptId,
+              customerId: matchedCustomer.customerId,
+              customerName: matchedCustomer.fullName,
+              emiNumber: matchedEmi.emiNumber,
+              paymentDate: validPaidDate.toISOString().split('T')[0],
+              paidAmount: amount,
+              baseEmiAmount: matchedEmi.emiAmount,
+              interestPaid: matchedEmi.interestPaid || 0,
+              principalPaid: matchedEmi.principalPaid || 0,
+              lateFeePaid: matchedEmi.lateFee || 0,
+              utrNumber: utr || '',
+              status: 'Paid',
+              remarks: `Reconciled via Bank CSV Statement (${utr || 'Matched'})`
+            });
+
+            await db.create('notifications', {
+              customerId: matchedCustomer.customerId,
+              role: 'customer',
+              title: 'Payment Reconciled & Approved',
+              message: `Your payment of ₹${amount.toLocaleString('en-IN')} for EMI #${matchedEmi.emiNumber} has been verified via Bank statement. Receipt: ${receiptId}.`,
+              type: 'Payment_Received_Cust',
+              read: false
+            });
+          }
+        }
+      } else {
+        unmatched.push({
+          ...txItem,
+          reason: 'No matching pending EMI or customer found for this amount/narration.'
+        });
+      }
+    }
+
+    if (autoApply && matched.length > 0) {
+      invalidateDashboardCache();
+      await logAdminAction(req.user.username, 'BANK_CSV_RECONCILIATION', 'ALL', {
+        matchedCount: matched.length,
+        unmatchedCount: unmatched.length
+      });
+    }
+
+    res.json({
+      success: true,
+      totalProcessed: matched.length + unmatched.length,
+      matchedCount: matched.length,
+      unmatchedCount: unmatched.length,
+      autoApplied: autoApply,
+      matched,
+      unmatched
+    });
+  } catch (error) {
+    console.error('Bank CSV reconcile error:', error);
+    res.status(500).json({ message: 'Error processing bank CSV reconciliation: ' + error.message });
   }
 });
 

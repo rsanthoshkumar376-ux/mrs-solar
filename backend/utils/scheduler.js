@@ -74,19 +74,16 @@ export async function runDailyInterestAndPenaltyCheck(checkDate = new Date(), op
 
       const prevLateFee = Number(customer.latePaymentCharges) || 0;
 
-      // Recalculate status and penalty
-      const updatedCustomer = recalculateCustomerEmiStatus({ ...customer }, checkDate);
-      const newLateFee = Number(updatedCustomer.latePaymentCharges) || 0;
+      // On-Demand Calculation: compute penalties in-memory without daily DB writes
+      const evaluatedCustomer = recalculateCustomerEmiStatus({ ...customer }, checkDate);
+      const newLateFee = Number(evaluatedCustomer.latePaymentCharges) || 0;
       if (newLateFee > prevLateFee) {
         totalPenaltiesCalculated += (newLateFee - prevLateFee);
       }
-
-      // Save updated customer record
-      await db.updateOne('customers', { _id: customer._id }, updatedCustomer);
       updatedCount++;
 
       // Generate strictly deduplicated notifications
-      const notifCount = await processCustomerNotifications(customer._id, customer, updatedCustomer, checkDate);
+      const notifCount = await processCustomerNotifications(customer._id, customer, evaluatedCustomer, checkDate);
       totalNotificationsCreated += notifCount;
     }
 

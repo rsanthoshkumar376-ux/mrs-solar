@@ -1,4 +1,5 @@
 import { getISTDateString, runDailyInterestAndPenaltyCheck } from '../utils/scheduler.js';
+import { recalculateCustomerEmiStatus } from '../utils/calculations.js';
 import { verifyCronAuth } from '../routes/cron.js';
 import { db } from '../database/db.js';
 
@@ -78,11 +79,12 @@ describe('Midnight Audit Idempotency & Scheduler Tests', () => {
       expect(ledgerEntry).toBeDefined();
       expect(ledgerEntry.status).toBe('SUCCESS');
 
-      // Verify customer penalty was calculated: 5000 * 0.01 * 5 days = 250
-      const updatedCustomer = await db.findOne('customers', { customerId: testCustomerId });
-      expect(updatedCustomer.latePaymentCharges).toBe(250);
-      expect(updatedCustomer.paymentStatus).toBe('Overdue');
-      expect(updatedCustomer.emiSchedule[0].lateFee).toBe(250);
+      // Verify customer penalty is computed on-demand accurately: 5000 * 0.01 * 5 days = 250
+      const storedCustomer = await db.findOne('customers', { customerId: testCustomerId });
+      const liveCustomer = recalculateCustomerEmiStatus(storedCustomer, testDate);
+      expect(liveCustomer.latePaymentCharges).toBe(250);
+      expect(liveCustomer.paymentStatus).toBe('Overdue');
+      expect(liveCustomer.emiSchedule[0].lateFee).toBe(250);
     });
 
     test('Second run on the same date with force=false skips execution (idempotency guarantee)', async () => {
@@ -91,7 +93,8 @@ describe('Midnight Audit Idempotency & Scheduler Tests', () => {
       expect(run1.alreadyRun).toBe(false);
 
       const customerAfterRun1 = await db.findOne('customers', { customerId: testCustomerId });
-      const initialLateFee = customerAfterRun1.latePaymentCharges;
+      const liveAfterRun1 = recalculateCustomerEmiStatus(customerAfterRun1, testDate);
+      const initialLateFee = liveAfterRun1.latePaymentCharges;
       expect(initialLateFee).toBe(250);
 
       const notifsCountAfterRun1 = (await db.find('notifications', { customerId: testCustomerId })).length;
@@ -104,7 +107,8 @@ describe('Midnight Audit Idempotency & Scheduler Tests', () => {
 
       // Penalty must NOT be charged twice
       const customerAfterRun2 = await db.findOne('customers', { customerId: testCustomerId });
-      expect(customerAfterRun2.latePaymentCharges).toBe(initialLateFee);
+      const liveAfterRun2 = recalculateCustomerEmiStatus(customerAfterRun2, testDate);
+      expect(liveAfterRun2.latePaymentCharges).toBe(initialLateFee);
 
       // Notifications must NOT be duplicated
       const notifsCountAfterRun2 = (await db.find('notifications', { customerId: testCustomerId })).length;
@@ -121,9 +125,10 @@ describe('Midnight Audit Idempotency & Scheduler Tests', () => {
       expect(forceResult.success).toBe(true);
       expect(forceResult.alreadyRun).toBe(false);
 
-      // Verify penalties remain exact (no double charge)
+      // Verify penalties remain exact on-demand (no double charge)
       const customer = await db.findOne('customers', { customerId: testCustomerId });
-      expect(customer.latePaymentCharges).toBe(250);
+      const liveCustomer = recalculateCustomerEmiStatus(customer, testDate);
+      expect(liveCustomer.latePaymentCharges).toBe(250);
 
       // Verify 0 duplicate notifications were created
       const notifsCountRun2 = (await db.find('notifications', { customerId: testCustomerId })).length;

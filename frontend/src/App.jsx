@@ -6,25 +6,37 @@ import Layout from './components/Layout.jsx';
 
 // Pages
 import Login from './pages/Login.jsx';
-// Admin Portal
-import AdminDashboard from './pages/admin/AdminDashboard.jsx';
-import CustomerManager from './pages/admin/CustomerManager.jsx';
-import CustomerDetails from './pages/admin/CustomerDetails.jsx';
-import EmiManagement from './pages/admin/EmiManagement.jsx';
-import AuditLogs from './pages/admin/AuditLogs.jsx';
-import BackupRestore from './pages/admin/BackupRestore.jsx';
-import EmailSettings from './pages/admin/EmailSettings.jsx';
-// Customer Portal
-import CustomerDashboard from './pages/customer/CustomerDashboard.jsx';
-import EmiHistory from './pages/customer/EmiHistory.jsx';
+
+// Admin Portal (Lazy loaded for fast cold start and small initial bundle)
+const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard.jsx'));
+const CustomerManager = React.lazy(() => import('./pages/admin/CustomerManager.jsx'));
+const CustomerDetails = React.lazy(() => import('./pages/admin/CustomerDetails.jsx'));
+const EmiManagement = React.lazy(() => import('./pages/admin/EmiManagement.jsx'));
+const AuditLogs = React.lazy(() => import('./pages/admin/AuditLogs.jsx'));
+const BackupRestore = React.lazy(() => import('./pages/admin/BackupRestore.jsx'));
+const EmailSettings = React.lazy(() => import('./pages/admin/EmailSettings.jsx'));
+
+// Customer Portal (Lazy loaded)
+const CustomerDashboard = React.lazy(() => import('./pages/customer/CustomerDashboard.jsx'));
+const EmiHistory = React.lazy(() => import('./pages/customer/EmiHistory.jsx'));
+
+function PageFallback() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
+      <div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mb-3" />
+      <p className="text-xs font-semibold text-slate-500 animate-pulse tracking-wide">Loading portal view...</p>
+    </div>
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
+        <React.Suspense fallback={<PageFallback />}>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
 
           {/* Owner/Admin Portal Routes */}
           <Route
@@ -123,6 +135,7 @@ export default function App() {
           {/* Fallback Catch */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+      </React.Suspense>
       </AuthProvider>
     </BrowserRouter>
   );

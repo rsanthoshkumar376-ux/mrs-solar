@@ -7,15 +7,19 @@ import {
   Copy, Check, Leaf, Printer, Phone, Download, AlertCircle
 } from 'lucide-react';
 import { openCustomerSupportChat } from '../../utils/whatsapp.js';
-import SolarSiteMap from '../../components/SolarSiteMap.jsx';
-import LoanStatementModal from '../../components/LoanStatementModal.jsx';
 import { translations, getLanguage } from '../../utils/translations.js';
+
+// Lazy load heavy Leaflet map and PDF statement modal for performance
+const SolarSiteMap = React.lazy(() => import('../../components/SolarSiteMap.jsx'));
+const LoanStatementModal = React.lazy(() => import('../../components/LoanStatementModal.jsx'));
 
 export default function CustomerDashboard() {
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showQrModal, setShowQrModal] = useState(false);
   const [selectedEmi, setSelectedEmi] = useState(null);
+  const [customerUtr, setCustomerUtr] = useState('');
+  const [submittingUtr, setSubmittingUtr] = useState(false);
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedMobile, setCopiedMobile] = useState(false);
@@ -107,6 +111,7 @@ export default function CustomerDashboard() {
 
   const openPaymentModal = (emi) => {
     setSelectedEmi(emi);
+    setCustomerUtr(customer?.submittedUtr || '');
     setShowQrModal(true);
   };
 
@@ -374,7 +379,9 @@ export default function CustomerDashboard() {
       </div>
 
       {/* SOLAR ROOFTOP SITE MAP & GPS NAVIGATION */}
-      <SolarSiteMap customer={customer} />
+      <React.Suspense fallback={<div className="h-64 rounded-3xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs text-slate-400">Loading Solar Site Map...</div>}>
+        <SolarSiteMap customer={customer} />
+      </React.Suspense>
 
       {/* LIVE EMI CALCULATOR SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -460,15 +467,24 @@ export default function CustomerDashboard() {
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.currentScheduledEmi}</span>
                     <h4 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{t.emiLabel} #{nextPendingEmi.emiNumber}</h4>
                   </div>
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase ${
-                    nextPendingEmi.status === 'Overdue' 
-                      ? 'bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400 border border-red-200/30'
-                      : nextPendingEmi.status === 'Due Soon'
-                      ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 border border-orange-200/30'
-                      : 'bg-teal-50 text-teal-600 dark:bg-teal-950/20 dark:text-teal-400 border border-teal-200/30'
-                  }`}>
-                    {nextPendingEmi.status === 'Overdue' ? t.statusOverdue : nextPendingEmi.status === 'Due Soon' ? t.statusDueSoon : t.statusActive}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase ${
+                      customer.requestingEmi === nextPendingEmi.emiNumber
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300/50'
+                        : nextPendingEmi.status === 'Overdue' 
+                        ? 'bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400 border border-red-200/30'
+                        : nextPendingEmi.status === 'Due Soon'
+                        ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 border border-orange-200/30'
+                        : 'bg-teal-50 text-teal-600 dark:bg-teal-950/20 dark:text-teal-400 border border-teal-200/30'
+                    }`}>
+                      {customer.requestingEmi === nextPendingEmi.emiNumber 
+                        ? 'Verification Pending' 
+                        : nextPendingEmi.status === 'Overdue' ? t.statusOverdue : nextPendingEmi.status === 'Due Soon' ? t.statusDueSoon : t.statusActive}
+                    </span>
+                    {customer.requestingEmi === nextPendingEmi.emiNumber && customer.submittedUtr && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono">UTR: {customer.submittedUtr}</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
@@ -669,33 +685,72 @@ export default function CustomerDashboard() {
                   </div>
                 </div>
               </div>
+              {/* UTR / UPI Reference Number Submission */}
+              <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 space-y-2 text-left">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
+                  {t.enterUtr}
+                </label>
+                <input
+                  type="text"
+                  maxLength={16}
+                  value={customerUtr}
+                  onChange={(e) => setCustomerUtr(e.target.value.replace(/[^0-9a-zA-Z]/g, ''))}
+                  placeholder={t.utrPlaceholder}
+                  className="w-full px-3 py-2 text-xs font-mono font-bold bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none text-slate-800 dark:text-white"
+                />
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  💡 Check your Google Pay, PhonePe, or Paytm receipt for the 12-digit UPI Reference / UTR number.
+                </p>
+              </div>
             </div>
 
             <button
               onClick={async () => {
+                if (!customerUtr || customerUtr.trim().length < 6) {
+                  alert('Please enter your 12-digit UPI UTR / Reference number from your payment app so MRS Solar can verify and credit your installment.');
+                  return;
+                }
+                setSubmittingUtr(true);
                 try {
-                  await api.post('/customer/notify-payment', { emiNumber: selectedEmi.emiNumber });
-                  alert(t.paymentNotifyAlert);
-                } catch (err) {
-                  alert(t.paymentRecordAlert);
-                } finally {
+                  await api.post('/customer/notify-payment', { 
+                    emiNumber: selectedEmi.emiNumber,
+                    utrNumber: customerUtr.trim()
+                  });
+                  alert(`Payment reference submitted successfully!\nUTR: ${customerUtr.trim()}.\nOur team will verify with bank records and confirm your payment receipt.`);
                   setShowQrModal(false);
+                  fetchDashboardData();
+                } catch (err) {
+                  alert(err.response?.data?.message || 'Error submitting payment reference.');
+                } finally {
+                  setSubmittingUtr(false);
                 }
               }}
-              className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition-colors text-xs"
+              disabled={submittingUtr}
+              className="w-full py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 text-white font-bold rounded-xl transition-colors text-xs flex items-center justify-center space-x-2 shadow-lg shadow-teal-500/10"
             >
-              {t.iHaveCompletedPayment}
+              {submittingUtr ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Submit UTR for Owner Verification</span>
+                </>
+              )}
             </button>
           </div>
         </div>
       )}
 
       {/* OFFICIAL LOAN STATEMENT & CERTIFICATE MODAL */}
-      <LoanStatementModal
-        customer={customer}
-        isOpen={showStatementModal}
-        onClose={() => setShowStatementModal(false)}
-      />
+      <React.Suspense fallback={<div />}>
+        {showStatementModal && (
+          <LoanStatementModal
+            customer={customer}
+            isOpen={showStatementModal}
+            onClose={() => setShowStatementModal(false)}
+          />
+        )}
+      </React.Suspense>
 
       {/* FLOATING WHATSAPP SUPPORT BUTTON */}
       <button
