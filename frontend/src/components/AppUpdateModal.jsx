@@ -6,7 +6,7 @@ import {
 import api from '../utils/api.js';
 import { translations, getLanguage } from '../utils/translations.js';
 
-export const CURRENT_APP_VERSION = 'v1.1.0';
+export const CURRENT_APP_VERSION = 'v1.3.0';
 export const BUILD_DATE = '11 Oct 2026';
 
 export default function AppUpdateModal({ isOpen, onClose }) {

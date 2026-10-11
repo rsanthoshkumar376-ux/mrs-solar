@@ -1,5 +1,5 @@
 // MRS SOLAR Progressive Web App - Service Worker
-const CACHE_NAME = 'mrs-solar-v1.1.0';
+const CACHE_NAME = 'mrs-solar-v1.3.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

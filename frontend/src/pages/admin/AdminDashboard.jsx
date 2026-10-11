@@ -118,10 +118,10 @@ export default function AdminDashboard() {
       </div>
 
       {/* DASHBOARD STATS CARD GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
         
         {/* STAT 1: Customers */}
-        <div className="glass-premium rounded-3xl p-6 shadow-sm flex items-center space-x-4 border-l-4 border-l-teal-600 hover-scale">
+        <div className="glass-premium rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm flex items-center space-x-3.5 border-l-4 border-l-teal-600 hover-scale">
           <div className="p-3 bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 rounded-2xl">
             <Users className="w-6 h-6" />
           </div>
@@ -137,7 +137,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* STAT 2: Solar Projects */}
-        <div className="glass-premium rounded-3xl p-6 shadow-sm flex items-center space-x-4 border-l-4 border-l-yellow-500 hover-scale">
+        <div className="glass-premium rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm flex items-center space-x-3.5 border-l-4 border-l-yellow-500 hover-scale">
           <div className="p-3 bg-yellow-50 dark:bg-yellow-950/40 text-yellow-500 dark:text-yellow-400 rounded-2xl">
             <Zap className="w-6 h-6" />
           </div>
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* STAT 3: Loan Volume */}
-        <div className="glass-premium rounded-3xl p-6 shadow-sm flex items-center space-x-4 border-l-4 border-l-indigo-600 hover-scale">
+        <div className="glass-premium rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm flex items-center space-x-3.5 border-l-4 border-l-indigo-600 hover-scale">
           <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-2xl">
             <DollarSign className="w-6 h-6" />
           </div>
@@ -161,7 +161,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* STAT 4: Collected */}
-        <div className="glass-premium rounded-3xl p-6 shadow-sm flex items-center space-x-4 border-l-4 border-l-emerald-500 hover-scale">
+        <div className="glass-premium rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm flex items-center space-x-3.5 border-l-4 border-l-emerald-500 hover-scale">
           <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 dark:text-emerald-400 rounded-2xl">
             <Wallet className="w-6 h-6" />
           </div>
@@ -173,7 +173,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* STAT 5: Overdue Count */}
-        <div className="glass-premium rounded-3xl p-6 shadow-sm flex items-center space-x-4 border-l-4 border-l-red-500 hover-scale">
+        <div className="glass-premium rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm flex items-center space-x-3.5 border-l-4 border-l-red-500 hover-scale">
           <div className="p-3 bg-red-50 dark:bg-red-950/40 text-red-500 dark:text-red-400 rounded-2xl">
             <ShieldAlert className="w-6 h-6 animate-pulse" />
           </div>
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* STAT 6: Pending EMIs */}
-        <div className="glass-premium rounded-3xl p-6 shadow-sm flex items-center space-x-4 border-l-4 border-l-orange-500 hover-scale">
+        <div className="glass-premium rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm flex items-center space-x-3.5 border-l-4 border-l-orange-500 hover-scale">
           <div className="p-3 bg-orange-50 dark:bg-orange-950/40 text-orange-50 dark:text-orange-400 rounded-2xl">
             <Clock className="w-6 h-6" />
           </div>
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* STAT 7: Profit */}
-        <div className="glass-premium rounded-3xl p-6 shadow-sm flex items-center space-x-4 border-l-4 border-l-amber-500 hover-scale">
+        <div className="glass-premium rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm flex items-center space-x-3.5 border-l-4 border-l-amber-500 hover-scale">
           <div className="p-3 bg-amber-50 dark:bg-amber-950/40 text-amber-500 dark:text-amber-400 rounded-2xl">
             <TrendingUp className="w-6 h-6" />
           </div>
@@ -213,7 +213,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* STAT 8: Activity */}
-        <div className="glass-premium rounded-3xl p-6 shadow-sm flex items-center space-x-4 border-l-4 border-l-slate-500 hover-scale">
+        <div className="glass-premium rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm flex items-center space-x-3.5 border-l-4 border-l-slate-500 hover-scale">
           <div className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl">
             <Activity className="w-6 h-6" />
           </div>
@@ -238,46 +238,80 @@ export default function AdminDashboard() {
       </div>
 
       {/* CHARTS & RECENT ALERTS SPLIT GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* CHART: COLLECTIONS IN CURRENT YEAR */}
-        <div className="lg:col-span-2 glass-premium rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
-          <div>
-            <h3 className="font-bold text-slate-800 dark:text-white text-lg">{t.monthlyIncomeProgression}</h3>
-            <p className="text-xs text-slate-500">
-              {t.collectedRepaymentsSplit 
-                ? t.collectedRepaymentsSplit.replace('{year}', new Date().getFullYear())
-                : `Collected repayments split by month during ${new Date().getFullYear()}.`}
-            </p>
+        <div className="lg:col-span-2 glass-premium rounded-3xl p-4 sm:p-6 md:p-8 shadow-sm space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800/80">
+            <div>
+              <h3 className="font-bold text-slate-800 dark:text-white text-base sm:text-lg">{t.monthlyIncomeProgression}</h3>
+              <p className="text-[11px] sm:text-xs text-slate-500">
+                {t.collectedRepaymentsSplit 
+                  ? t.collectedRepaymentsSplit.replace('{year}', new Date().getFullYear())
+                  : `Collected repayments split by month during ${new Date().getFullYear()}.`}
+              </p>
+            </div>
+
+            {/* Quick summary metrics */}
+            <div className="flex items-center space-x-2">
+              <div className="bg-teal-50 dark:bg-teal-950/60 border border-teal-200/50 dark:border-teal-800/50 px-2.5 py-1 rounded-xl text-right">
+                <span className="text-[9px] uppercase tracking-wider text-teal-600 dark:text-teal-400 font-bold block">{t.annualTotal || 'Year Total'}</span>
+                <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white font-mono">
+                  {formatCurrency((stats?.chartData?.collections || []).reduce((a, b) => a + b, 0), false)}
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* SVG/HTML Bar Chart */}
-          <div className="h-64 flex items-end justify-between gap-1 pt-6 px-4">
+          {/* SVG/HTML Bar Chart with Reference Grid */}
+          <div className="relative h-44 sm:h-52 md:h-60 flex items-end justify-between gap-1 pt-6 px-1 sm:px-4">
+            {/* Background reference lines */}
+            <div className="absolute inset-x-0 top-6 bottom-7 pointer-events-none flex flex-col justify-between opacity-30 dark:opacity-20">
+              <div className="border-b border-dashed border-slate-300 dark:border-slate-700 w-full flex justify-end">
+                <span className="text-[9px] font-mono text-slate-400 pr-1 -mt-3">{formatCurrency(maxCollection, false)}</span>
+              </div>
+              <div className="border-b border-dashed border-slate-300 dark:border-slate-700 w-full flex justify-end">
+                <span className="text-[9px] font-mono text-slate-400 pr-1 -mt-3">{formatCurrency(Math.round(maxCollection / 2), false)}</span>
+              </div>
+              <div className="border-b border-slate-300 dark:border-slate-700 w-full"></div>
+            </div>
+
             {stats?.chartData?.collections.map((val, idx) => {
-              const heightPct = Math.max(8, Math.round((val / maxCollection) * 100));
+              const heightPct = val > 0 
+                ? Math.max(12, Math.round((val / maxCollection) * 100))
+                : 4; // Minimal baseline dot for zero months
               const defaultMonthName = stats.chartData.months[idx];
               const monthName = (t.monthsShort && t.monthsShort[idx]) || defaultMonthName;
               const isCurrentMonth = new Date().getMonth() === idx;
 
               return (
-                <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end z-10">
                   {/* Tooltip */}
-                  <div className="absolute bottom-full mb-2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap shadow">
-                    {t.collTooltip || 'Coll'}: {formatCurrency(val, false)}
+                  <div className="absolute bottom-full mb-2 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-20 whitespace-nowrap shadow-lg pointer-events-none">
+                    {monthName}: {formatCurrency(val, false)}
                   </div>
+
+                  {/* Value callout for peak or active months on mobile */}
+                  {val > 0 && (
+                    <span className="text-[9px] font-bold text-teal-600 dark:text-teal-400 mb-1 scale-90 sm:scale-100 hidden sm:block">
+                      {val >= 1000 ? `₹${Math.round(val / 1000)}k` : `₹${val}`}
+                    </span>
+                  )}
                   
                   {/* Bar */}
                   <div 
                     style={{ height: `${heightPct}%` }}
-                    className={`w-full rounded-t-lg transition-all duration-500 cursor-pointer ${
-                      isCurrentMonth
-                        ? 'bg-gradient-to-t from-yellow-500 to-amber-400 glow-yellow'
-                        : 'bg-gradient-to-t from-teal-600 to-emerald-500 group-hover:from-teal-500 group-hover:to-emerald-400'
+                    className={`w-full max-w-[28px] rounded-t-lg transition-all duration-500 cursor-pointer ${
+                      val === 0 
+                        ? 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700' 
+                        : isCurrentMonth
+                        ? 'bg-gradient-to-t from-yellow-500 to-amber-400 glow-yellow shadow-md shadow-amber-500/20'
+                        : 'bg-gradient-to-t from-teal-600 to-emerald-500 group-hover:from-teal-500 group-hover:to-emerald-400 shadow-sm'
                     }`}
                   ></div>
                   
                   {/* Month Label */}
-                  <span className={`text-[10px] font-bold mt-2 ${isCurrentMonth ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400'}`}>
+                  <span className={`text-[9px] sm:text-[10px] font-bold mt-2 truncate ${isCurrentMonth ? 'text-teal-600 dark:text-teal-400 underline decoration-2' : 'text-slate-400'}`}>
                     {monthName}
                   </span>
                 </div>

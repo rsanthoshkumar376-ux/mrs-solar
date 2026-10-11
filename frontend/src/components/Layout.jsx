@@ -491,13 +491,13 @@ export default function Layout({ children }) {
         </header>
 
         {/* PAGE CONTENT CONTAINER */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-24 lg:pb-8">
+        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 md:p-8 pb-28 sm:pb-24 lg:pb-8">
           {children}
         </main>
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <div className="fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 lg:hidden flex justify-around items-center px-1 sm:px-2 py-1.5 sm:py-2 shadow-lg">
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 lg:hidden flex justify-around items-center px-1 sm:px-2 pt-2 pb-5 sm:pb-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
         {mobileLinks.map((link) => {
           const Icon = link.icon;
           if (link.action) {
@@ -506,10 +506,10 @@ export default function Layout({ children }) {
                 key={link.label}
                 type="button"
                 onClick={link.action}
-                className="flex-1 flex flex-col items-center py-1 px-1 rounded-xl text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 transition-all"
+                className="flex-1 flex flex-col items-center py-1 px-1 rounded-xl text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 transition-all active:scale-95"
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-[10px] mt-0.5 truncate max-w-full">{link.label}</span>
+                <span className="text-[10px] mt-0.5 truncate max-w-full font-medium">{link.label}</span>
               </button>
             );
           }
@@ -518,14 +518,19 @@ export default function Layout({ children }) {
             <Link
               key={link.path}
               to={link.path}
-              className={`flex-1 flex flex-col items-center py-1 px-1 rounded-xl transition-all ${
+              className={`flex-1 flex flex-col items-center py-1 px-1 rounded-xl transition-all active:scale-95 ${
                 isActive
                   ? 'text-teal-600 dark:text-teal-400 font-bold scale-105'
                   : 'text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="text-[10px] mt-0.5 truncate max-w-full">{link.label}</span>
+              <div className="relative">
+                <Icon className="w-5 h-5" />
+                {isActive && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-teal-500"></span>
+                )}
+              </div>
+              <span className="text-[10px] mt-0.5 truncate max-w-full font-medium">{link.label}</span>
             </Link>
           );
         })}

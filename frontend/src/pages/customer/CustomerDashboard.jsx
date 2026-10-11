@@ -12,6 +12,7 @@ import { translations, getLanguage } from '../../utils/translations.js';
 // Lazy load heavy Leaflet map and PDF statement modal for performance
 const SolarSiteMap = React.lazy(() => import('../../components/SolarSiteMap.jsx'));
 const LoanStatementModal = React.lazy(() => import('../../components/LoanStatementModal.jsx'));
+import UpiPaymentModal from '../../components/UpiPaymentModal.jsx';
 
 export default function CustomerDashboard() {
   const [customer, setCustomer] = useState(null);
@@ -313,8 +314,11 @@ export default function CustomerDashboard() {
             return (
               <div 
                 key={emi.emiNumber}
-                className={`border rounded-xl p-2.5 text-center flex flex-col items-center justify-center transition-all hover:scale-105 cursor-help ${color}`}
-                title={`Due: ${formatDate(emi.dueDate)}\nAmount: ${formatCurrency(emi.emiAmount + (emi.lateFee || 0))}`}
+                onClick={() => emi.status !== 'Paid' && openPaymentModal(emi)}
+                className={`border rounded-xl p-2.5 text-center flex flex-col items-center justify-center transition-all hover:scale-105 ${
+                  emi.status !== 'Paid' ? 'cursor-pointer active:scale-95 hover:shadow-md' : 'cursor-default'
+                } ${color}`}
+                title={`Due: ${formatDate(emi.dueDate)}\nAmount: ${formatCurrency(emi.emiAmount + (emi.lateFee || 0))}${emi.status !== 'Paid' ? '\nClick to Pay' : ''}`}
               >
                 <span className="text-[10px] uppercase font-bold tracking-wider opacity-85">{t.emiLabel}</span>
                 <span className="text-lg font-black mt-0.5">#{emi.emiNumber}</span>
@@ -613,233 +617,17 @@ export default function CustomerDashboard() {
 
       </div>
 
-      {/* QR PAYMENT POPUP MODAL */}
-      {showQrModal && selectedEmi && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl relative space-y-6">
-            <button 
-              onClick={() => setShowQrModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">{t.scanQrToPay}</h3>
-              <p className="text-xs text-slate-500">{t.emiLabel} #{selectedEmi.emiNumber} | {customer.fullName}</p>
-            </div>
-
-            {/* Simulated UPI QR Code */}
-            <div className="w-52 h-52 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center mx-auto relative overflow-hidden p-3 shadow-inner">
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=rsanthoshkumar376@oksbi%26pn=Mr%20Santhoshkumar%20R%26am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}%26cu=INR%26tn=EMI_${selectedEmi.emiNumber}_${customer.customerId}`}
-                alt="Payment QR Code"
-                className="w-full h-full object-contain rounded"
-              />
-            </div>
-
-            {/* Save QR to Gallery Button */}
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={handleDownloadQr}
-                className="py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
-              >
-                <Download className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                <span>{t.saveQrImage}</span>
-              </button>
-            </div>
-
-            <div className="text-center space-y-1">
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">{t.amountToTransfer}</p>
-              <p className="text-3xl font-black text-teal-600 dark:text-teal-400">{formatCurrency(selectedEmi.emiAmount + (selectedEmi.lateFee || 0))}</p>
-              <p className="text-[11px] text-slate-500 font-medium">A/c: Mr Santhoshkumar R (rsanthoshkumar376@oksbi)</p>
-            </div>
-
-            {/* MULTI-APP UPI PAYMENT SELECTOR */}
-            <div className="space-y-2 pt-1">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
-                {t.oneTapPayment}
-              </p>
-
-              <div className="grid grid-cols-2 gap-2">
-                {/* Google Pay */}
-                <button
-                  type="button"
-                  onClick={() => handleLaunchUpi('gpay')}
-                  className="py-2.5 px-3 bg-white hover:bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105 active:scale-95"
-                  title="Open Google Pay"
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
-                  <span className="truncate">
-                    {launchingApp === 'gpay' ? (lang === 'ta' ? 'திறக்கிறது...' : 'Opening...') : t.openGPay}
-                  </span>
-                </button>
-
-                {/* PhonePe */}
-                <button
-                  type="button"
-                  onClick={() => handleLaunchUpi('phonepe')}
-                  className="py-2.5 px-3 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105 active:scale-95"
-                  title="Open PhonePe"
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-white shrink-0"></span>
-                  <span className="truncate">
-                    {launchingApp === 'phonepe' ? (lang === 'ta' ? 'திறக்கிறது...' : 'Opening...') : t.openPhonePe}
-                  </span>
-                </button>
-
-                {/* Paytm */}
-                <button
-                  type="button"
-                  onClick={() => handleLaunchUpi('paytm')}
-                  className="py-2.5 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105 active:scale-95"
-                  title="Open Paytm"
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-200 shrink-0"></span>
-                  <span className="truncate">
-                    {launchingApp === 'paytm' ? (lang === 'ta' ? 'திறக்கிறது...' : 'Opening...') : t.openPaytm}
-                  </span>
-                </button>
-
-                {/* Any UPI App */}
-                <button
-                  type="button"
-                  onClick={() => handleLaunchUpi('any')}
-                  className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105 active:scale-95"
-                  title="Open Any UPI App"
-                >
-                  <Zap className="w-3.5 h-3.5 text-yellow-300 fill-current shrink-0" />
-                  <span className="truncate">
-                    {launchingApp === 'any' ? (lang === 'ta' ? 'திறக்கிறது...' : 'Opening...') : t.openAnyUpi}
-                  </span>
-                </button>
-              </div>
-
-              {/* Direct Native Link Anchor (Fallback for WebViews) */}
-              <div className="pt-0.5">
-                <a
-                  href={`upi://pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI_${selectedEmi.emiNumber}_${(customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`}
-                  className="w-full py-2 px-3 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800 text-teal-700 dark:text-teal-300 font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors"
-                >
-                  <Zap className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
-                  <span>{lang === 'ta' ? 'நேரடியாக UPI செயலியைத் திறக்க கிளிக் செய்க' : 'Tap here to launch UPI Chooser directly'}</span>
-                </a>
-              </div>
-
-              {/* Copy Mobile Number (Recommended for Paytm Protect / PhonePe bypass) */}
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText('8072454996');
-                  setCopiedMobile(true);
-                  setTimeout(() => setCopiedMobile(false), 2000);
-                }}
-                className="w-full py-2 px-3 rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50/70 dark:bg-teal-950/40 text-xs text-teal-700 dark:text-teal-300 font-bold flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
-              >
-                {copiedMobile ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-emerald-600">{t.copiedMobileSuccess}</span>
-                  </>
-                ) : (
-                  <>
-                    <Phone className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                    <span>{t.copyUpiMobile}</span>
-                  </>
-                )}
-              </button>
-
-              {/* Copy UPI ID Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText('rsanthoshkumar376@oksbi');
-                  setCopiedUpi(true);
-                  setTimeout(() => setCopiedUpi(false), 2000);
-                }}
-                className="w-full py-1.5 px-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-[11px] text-slate-500 hover:text-teal-600 dark:hover:text-teal-400 flex items-center justify-center space-x-1.5 transition-colors"
-              >
-                {copiedUpi ? (
-                  <>
-                    <Check className="w-3 h-3 text-emerald-600" />
-                    <span className="text-emerald-600 font-bold">{t.copiedUpiSuccess}</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3 h-3" />
-                    <span>{t.copyUpiId}</span>
-                  </>
-                )}
-              </button>
-
-              {/* Helpful Paytm / PhonePe Risk Policy Explainer */}
-              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl p-2.5 text-left">
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold text-[11px] text-amber-800 dark:text-amber-300">{t.upiRiskHelpTitle}</p>
-                    <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
-                      {t.upiRiskHelpDesc}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              {/* UTR / UPI Reference Number Submission */}
-              <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 space-y-2 text-left">
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
-                  {t.enterUtr}
-                </label>
-                <input
-                  type="text"
-                  maxLength={16}
-                  value={customerUtr}
-                  onChange={(e) => setCustomerUtr(e.target.value.replace(/[^0-9a-zA-Z]/g, ''))}
-                  placeholder={t.utrPlaceholder}
-                  className="w-full px-3 py-2 text-xs font-mono font-bold bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none text-slate-800 dark:text-white"
-                />
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                  💡 Check your Google Pay, PhonePe, or Paytm receipt for the 12-digit UPI Reference / UTR number.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={async () => {
-                if (!customerUtr || customerUtr.trim().length < 6) {
-                  alert('Please enter your 12-digit UPI UTR / Reference number from your payment app so MRS Solar can verify and credit your installment.');
-                  return;
-                }
-                setSubmittingUtr(true);
-                try {
-                  await api.post('/customer/notify-payment', { 
-                    emiNumber: selectedEmi.emiNumber,
-                    utrNumber: customerUtr.trim()
-                  });
-                  alert(`Payment reference submitted successfully!\nUTR: ${customerUtr.trim()}.\nOur team will verify with bank records and confirm your payment receipt.`);
-                  setShowQrModal(false);
-                  fetchDashboardData();
-                } catch (err) {
-                  alert(err.response?.data?.message || 'Error submitting payment reference.');
-                } finally {
-                  setSubmittingUtr(false);
-                }
-              }}
-              disabled={submittingUtr}
-              className="w-full py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 text-white font-bold rounded-xl transition-colors text-xs flex items-center justify-center space-x-2 shadow-lg shadow-teal-500/10"
-            >
-              {submittingUtr ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>Submit UTR for Owner Verification</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* SECURE MULTI-APP UPI PAYMENT MODAL */}
+      <UpiPaymentModal
+        isOpen={showQrModal && !!selectedEmi}
+        onClose={() => setShowQrModal(false)}
+        emi={selectedEmi}
+        customer={customer}
+        mode="customer"
+        onPaymentSubmitted={() => {
+          fetchDashboardData();
+        }}
+      />
 
       {/* OFFICIAL LOAN STATEMENT & CERTIFICATE MODAL */}
       <React.Suspense fallback={<div />}>
