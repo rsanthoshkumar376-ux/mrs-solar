@@ -23,6 +23,7 @@ export default function CustomerDashboard() {
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedMobile, setCopiedMobile] = useState(false);
+  const [launchingApp, setLaunchingApp] = useState(null);
   const [lang, setLang] = useState(getLanguage);
 
   useEffect(() => {
@@ -78,6 +79,76 @@ export default function CustomerDashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleLaunchUpi = (appKey) => {
+    if (!selectedEmi) return;
+    setLaunchingApp(appKey);
+    const amount = (selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2);
+    const payeeVpa = 'rsanthoshkumar376@oksbi';
+    const payeeName = 'Mr Santhoshkumar R';
+    const cleanCustId = (customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '');
+    const note = `EMI_${selectedEmi.emiNumber}_${cleanCustId}`;
+
+    const upiQuery = `pa=${payeeVpa}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+    const universalUpi = `upi://pay?${upiQuery}`;
+    const encodedUniversal = encodeURIComponent(universalUpi);
+
+    // Auto-copy UPI ID to clipboard as convenience
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(payeeVpa).catch(() => {});
+      setCopiedUpi(true);
+      setTimeout(() => setCopiedUpi(false), 3000);
+    }
+
+    const ua = (navigator.userAgent || '').toLowerCase();
+    const isAndroid = ua.includes('android');
+    const isApp = ua.includes('mrssolarapp');
+
+    const packageMap = {
+      gpay: 'com.google.android.apps.nbu.paisa.user',
+      phonepe: 'com.phonepe.app',
+      paytm: 'net.one97.paytm'
+    };
+
+    let targetUrl = universalUpi;
+
+    if (isAndroid && !isApp && packageMap[appKey]) {
+      // In mobile Chrome / external Android browser: Use targeted Android Intent
+      targetUrl = `intent://pay?${upiQuery}#Intent;scheme=upi;package=${packageMap[appKey]};S.browser_fallback_url=${encodedUniversal};end`;
+    } else {
+      // In APK (MRSSolarApp) or universal: Use standard upi://pay
+      targetUrl = universalUpi;
+    }
+
+    // 1. Direct location change
+    try {
+      window.location.href = targetUrl;
+    } catch (e) {
+      window.location.href = universalUpi;
+    }
+
+    // 2. Dynamic link click fallback
+    try {
+      const link = document.createElement('a');
+      link.href = targetUrl;
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        if (document.body.contains(link)) document.body.removeChild(link);
+      }, 500);
+    } catch (err) {}
+
+    // 3. Fallback to universal UPI if still on page after 1.5s
+    setTimeout(() => {
+      setLaunchingApp(null);
+      if (document.visibilityState === 'visible' && targetUrl !== universalUpi) {
+        try {
+          window.location.href = universalUpi;
+        } catch (err) {}
+      }
+    }, 1500);
   };
 
   if (loading) {
@@ -592,40 +663,67 @@ export default function CustomerDashboard() {
               </p>
 
               <div className="grid grid-cols-2 gap-2">
-                <a
-                  href={`gpay://upi/pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
-                  className="py-2.5 px-3 bg-white hover:bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
+                {/* Google Pay */}
+                <button
+                  type="button"
+                  onClick={() => handleLaunchUpi('gpay')}
+                  className="py-2.5 px-3 bg-white hover:bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105 active:scale-95"
                   title="Open Google Pay"
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                  <span>{t.openGPay}</span>
-                </a>
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
+                  <span className="truncate">
+                    {launchingApp === 'gpay' ? (lang === 'ta' ? 'திறக்கிறது...' : 'Opening...') : t.openGPay}
+                  </span>
+                </button>
 
-                <a
-                  href={`phonepe://pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
-                  className="py-2.5 px-3 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
+                {/* PhonePe */}
+                <button
+                  type="button"
+                  onClick={() => handleLaunchUpi('phonepe')}
+                  className="py-2.5 px-3 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105 active:scale-95"
                   title="Open PhonePe"
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-white"></span>
-                  <span>{t.openPhonePe}</span>
-                </a>
+                  <span className="w-2.5 h-2.5 rounded-full bg-white shrink-0"></span>
+                  <span className="truncate">
+                    {launchingApp === 'phonepe' ? (lang === 'ta' ? 'திறக்கிறது...' : 'Opening...') : t.openPhonePe}
+                  </span>
+                </button>
 
-                <a
-                  href={`paytmmp://pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
-                  className="py-2.5 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
+                {/* Paytm */}
+                <button
+                  type="button"
+                  onClick={() => handleLaunchUpi('paytm')}
+                  className="py-2.5 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105 active:scale-95"
                   title="Open Paytm"
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-200"></span>
-                  <span>{t.openPaytm}</span>
-                </a>
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-200 shrink-0"></span>
+                  <span className="truncate">
+                    {launchingApp === 'paytm' ? (lang === 'ta' ? 'திறக்கிறது...' : 'Opening...') : t.openPaytm}
+                  </span>
+                </button>
 
-                <a
-                  href={`upi://pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI%20${selectedEmi.emiNumber}%20${customer.customerId}`}
-                  className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105"
+                {/* Any UPI App */}
+                <button
+                  type="button"
+                  onClick={() => handleLaunchUpi('any')}
+                  className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all hover:scale-105 active:scale-95"
                   title="Open Any UPI App"
                 >
-                  <Zap className="w-3.5 h-3.5 text-yellow-300 fill-current" />
-                  <span>{t.openAnyUpi}</span>
+                  <Zap className="w-3.5 h-3.5 text-yellow-300 fill-current shrink-0" />
+                  <span className="truncate">
+                    {launchingApp === 'any' ? (lang === 'ta' ? 'திறக்கிறது...' : 'Opening...') : t.openAnyUpi}
+                  </span>
+                </button>
+              </div>
+
+              {/* Direct Native Link Anchor (Fallback for WebViews) */}
+              <div className="pt-0.5">
+                <a
+                  href={`upi://pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI_${selectedEmi.emiNumber}_${(customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`}
+                  className="w-full py-2 px-3 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800 text-teal-700 dark:text-teal-300 font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors"
+                >
+                  <Zap className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                  <span>{lang === 'ta' ? 'நேரடியாக UPI செயலியைத் திறக்க கிளிக் செய்க' : 'Tap here to launch UPI Chooser directly'}</span>
                 </a>
               </div>
 

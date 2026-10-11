@@ -159,11 +159,44 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean handleCustomUrl(String url) {
         if (url == null) return false;
-        
-        // Handle WhatsApp, Phone calls, Email, and external intents
+
+        // Handle UPI payment schemes and Android Intents (GPay, PhonePe, Paytm, BHIM)
+        if (url.startsWith("upi:") || url.startsWith("intent:") || url.startsWith("gpay:") || url.startsWith("phonepe:") || url.startsWith("paytmmp:")) {
+            try {
+                Intent intent;
+                if (url.startsWith("intent:")) {
+                    intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                } else {
+                    intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                }
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                return true;
+            } catch (Exception e) {
+                // If specific intent failed (e.g. app not installed), fallback to generic upi://pay if query contains payee
+                try {
+                    if (url.contains("pa=")) {
+                        int paStart = url.indexOf("pa=");
+                        int hashStart = url.indexOf("#Intent;");
+                        String queryString = (hashStart > paStart) ? url.substring(paStart, hashStart) : url.substring(paStart);
+                        Intent fallbackIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("upi://pay?" + queryString));
+                        fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(fallbackIntent);
+                        return true;
+                    }
+                } catch (Exception fallbackErr) {
+                    // Ignore
+                }
+                Toast.makeText(this, "UPI payment app not found or could not be opened. Please scan the QR code to pay.", Toast.LENGTH_LONG).show();
+                return true;
+            }
+        }
+
+        // Handle WhatsApp, Phone calls, Email, and external SMS
         if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("whatsapp:") || url.startsWith("sms:")) {
             try {
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
                 return true;
             } catch (Exception e) {
@@ -180,6 +213,7 @@ public class MainActivity extends AppCompatActivity {
         // External links open in default browser
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
             return true;
         } catch (Exception e) {
