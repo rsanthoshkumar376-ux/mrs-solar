@@ -640,8 +640,8 @@ export default function CustomerDashboard() {
 
       {/* ORIGINAL QUICK PAY QR PAYMENT POPUP MODAL */}
       {showQrModal && selectedEmi && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl relative space-y-5 animate-scale-up">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in no-print">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl relative space-y-5 animate-scale-up my-auto max-h-[92vh] overflow-y-auto">
             <button 
               onClick={() => setShowQrModal(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"

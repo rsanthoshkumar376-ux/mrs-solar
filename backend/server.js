@@ -91,17 +91,17 @@ app.get('/api/health', (req, res) => {
 // App Version & Update Info Endpoint
 app.get('/api/version', (req, res) => {
   res.json({
-    version: '1.1.0',
-    buildNumber: 110,
+    version: '1.4.0',
+    buildNumber: 140,
     releaseDate: '2026-10-11',
     apkDownloadUrl: '/api/download-apk',
     cloudMirrorUrl: 'https://github.com/rsanthoshkumar376-ux/mrs-solar/releases/download/app-release/MRS-SOLAR.apk',
     changelog: [
+      'Admin UPI Settings: Configure & dynamically select active payment UPI',
+      'Dynamic Customer Quick Pay QR Code with 1-Tap GPay / PhonePe / Paytm',
       'Customer record editing (Personal, Bank, Solar specs)',
       '12-digit UPI UTR payment verification & receipts',
-      'Automated Bank CSV Statement Reconciler',
-      'On-demand late fee computation (zero daily DB writes)',
-      'Faster initial loads with client-side image compression'
+      'Automated Bank CSV Statement Reconciler'
     ]
   });
 });

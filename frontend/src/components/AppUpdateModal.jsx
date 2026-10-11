@@ -116,24 +116,24 @@ export default function AppUpdateModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in no-print">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-up relative">
+    <div className="fixed inset-0 z-50 overflow-y-auto p-3 sm:p-6 flex items-center justify-center bg-slate-900/75 backdrop-blur-sm animate-fade-in no-print">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl animate-scale-up relative flex flex-col max-h-[85vh] sm:max-h-[88vh] my-auto overflow-hidden">
         
         {/* CLOSE BUTTON */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10"
+          className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/20 transition-colors z-20"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* MODAL HEADER */}
-        <div className="p-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 text-white relative overflow-hidden">
+        <div className="shrink-0 p-5 sm:p-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 text-white relative overflow-hidden pr-12">
           <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
           <div className="flex items-center space-x-3 relative z-10">
-            <div className="w-12 h-12 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 shadow-inner">
-              <RefreshCw className={`w-6 h-6 text-white ${checking || updating ? 'animate-spin' : ''}`} />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 shadow-inner shrink-0">
+              <RefreshCw className={`w-5 h-5 sm:w-6 sm:h-6 text-white ${checking || updating ? 'animate-spin' : ''}`} />
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -145,14 +145,14 @@ export default function AppUpdateModal({ isOpen, onClose }) {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
                 </span>
               </div>
-              <h2 className="text-xl font-black mt-1">{t.appUpdateTitle || 'App Updates & Upgrade'}</h2>
-              <p className="text-xs text-teal-100/90">{t.appUpdateSubtitle || 'Keep MRS SOLAR running with the latest security and features'}</p>
+              <h2 className="text-lg sm:text-xl font-black mt-0.5 sm:mt-1 leading-snug">{t.appUpdateTitle || 'App Updates & Upgrade'}</h2>
+              <p className="text-xs text-teal-100/90 leading-tight">{t.appUpdateSubtitle || 'Keep MRS SOLAR running with the latest security and features'}</p>
             </div>
           </div>
         </div>
 
         {/* BODY */}
-        <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <div className="p-5 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1 min-h-0">
 
           {/* Current Version Card */}
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
@@ -239,7 +239,7 @@ export default function AppUpdateModal({ isOpen, onClose }) {
         </div>
 
         {/* FOOTER */}
-        <div className="px-6 py-3.5 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-xs text-slate-500">
+        <div className="shrink-0 px-5 sm:px-6 py-3 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-xs text-slate-500">
           <div className="flex items-center space-x-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
             <ShieldCheck className="w-4 h-4" />
             <span>Secure Signed Software</span>
@@ -247,7 +247,7 @@ export default function AppUpdateModal({ isOpen, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-semibold"
+            className="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 font-semibold transition-colors"
           >
             {t.cancel || 'Close'}
           </button>
