@@ -2,29 +2,84 @@ import React, { useState, useEffect } from 'react';
 import { Smartphone, Download, X } from 'lucide-react';
 import AppDownloadModal from './AppDownloadModal.jsx';
 
+const isRunningInApp = () => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const ua = (window.navigator.userAgent || '').toLowerCase();
+    
+    // 1. Android APK native WebView custom User-Agent identifier
+    if (ua.includes('mrssolarapp') || ua.includes('; wv') || (ua.includes('android') && ua.includes('version/'))) {
+      return true;
+    }
+
+    // 2. Standalone PWA display mode
+    if (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      window.matchMedia('(display-mode: minimal-ui)').matches ||
+      window.navigator.standalone === true
+    ) {
+      return true;
+    }
+
+    // 3. Android app referrer or launch flag
+    if (document.referrer && document.referrer.startsWith('android-app://')) {
+      return true;
+    }
+
+    // 4. Capacitor / Cordova / Native environment
+    if (window.Capacitor !== undefined || window.cordova !== undefined || window._isNativeApp === true) {
+      return true;
+    }
+
+    // 5. Query parameter flag (e.g. ?app=true or ?source=apk)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('app') === 'true' || urlParams.get('source') === 'apk' || urlParams.get('standalone') === 'true') {
+      return true;
+    }
+  } catch (err) {
+    console.warn('App environment check error:', err);
+  }
+  return false;
+};
+
 export default function InstallAppBanner({ compact = false }) {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(isRunningInApp);
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('mrs_install_banner_dismissed') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
-    // Check if already installed as standalone app
-    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+    if (isRunningInApp()) {
       setIsInstalled(true);
     }
   }, []);
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem('mrs_install_banner_dismissed', 'true');
+    } catch (e) {
+      console.warn(e);
+    }
+  };
 
   const handleOpenModal = () => {
     setShowDownloadModal(true);
   };
 
   if (isInstalled || dismissed) {
-    return (
+    return showDownloadModal ? (
       <AppDownloadModal 
         isOpen={showDownloadModal} 
         onClose={() => setShowDownloadModal(false)} 
       />
-    );
+    ) : null;
   }
 
   // Compact Button (Navbar / Header)
@@ -79,7 +134,7 @@ export default function InstallAppBanner({ compact = false }) {
           </button>
           <button
             type="button"
-            onClick={() => setDismissed(true)}
+            onClick={handleDismiss}
             className="p-2 text-teal-300/60 hover:text-white rounded-lg transition"
             title="Dismiss"
           >
