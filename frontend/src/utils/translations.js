@@ -388,7 +388,23 @@ export const translations = {
     previousPage: 'Previous',
     nextPage: 'Next',
     pageOf: 'Page {page} of {total}',
-    rowsPerPage: 'Rows per page:'
+    rowsPerPage: 'Rows per page:',
+    
+    // App Update
+    updateApp: 'Update App',
+    checkForUpdates: 'Check for Updates',
+    appUpdateTitle: 'App Updates & Upgrade',
+    appUpdateSubtitle: 'Keep MRS SOLAR running with the latest security and features',
+    currentVersion: 'Current Version',
+    latestVersionInstalled: 'You have the latest version installed',
+    checkingUpdates: 'Checking for updates...',
+    instantOtaUpdate: 'Instant Web Update (Clear Cache & Refresh)',
+    instantOtaDesc: 'Applies newest portal features over-the-air without redownloading.',
+    downloadLatestApkBtn: 'Download Latest Android APK',
+    downloadLatestApkDesc: 'Full standalone APK installer for Android phones.',
+    whatsNewInUpdate: "What's New in This Version",
+    refreshingApp: 'Refreshing app files...',
+    appUpdatedSuccess: 'App refreshed to the latest version!'
   },
   
   ta: {
@@ -777,7 +793,23 @@ export const translations = {
     previousPage: 'முந்தைய',
     nextPage: 'அடுத்தது',
     pageOf: 'பக்கம் {page} / {total}',
-    rowsPerPage: 'பக்கத்திற்கு வரிசைகள்:'
+    rowsPerPage: 'பக்கத்திற்கு வரிசைகள்:',
+    
+    // App Update
+    updateApp: 'ஆப் அப்டேட்',
+    checkForUpdates: 'அப்டேட்டை சரிபார்க்கவும்',
+    appUpdateTitle: 'ஆப் அப்டேட் மற்றும் மேம்பாடுகள்',
+    appUpdateSubtitle: 'புதிய வசதிகளுடன் MRS SOLAR ஆப்பை புதுப்பிக்கவும்',
+    currentVersion: 'தற்போதைய பதிப்பு',
+    latestVersionInstalled: 'சமீபத்திய புதிய பதிப்பு இயங்குகிறது',
+    checkingUpdates: 'அப்டேட் சரிபார்க்கிறது...',
+    instantOtaUpdate: 'உடனடி புதுப்பிப்பு (கேச் அழித்து புதுப்பிக்க)',
+    instantOtaDesc: 'மீண்டும் டவுன்லோட் செய்யாமல் புதிய வசதிகளை உடனே பெறலாம்.',
+    downloadLatestApkBtn: 'புதிய ஆண்ட்ராய்டு APK டவுன்லோட்',
+    downloadLatestApkDesc: 'ஆண்ட்ராய்டு போன்களுக்கான முழுமையான ஆப் கோப்பு.',
+    whatsNewInUpdate: 'இந்த பதிப்பில் புதிதாக உள்ளவை',
+    refreshingApp: 'ஆப் புதுப்பிக்கப்படுகிறது...',
+    appUpdatedSuccess: 'ஆப் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!'
   }
 };
 

@@ -88,6 +88,24 @@ app.get('/api/health', (req, res) => {
   res.json({ message: 'MRS SOLAR Solar Panel Loan API is running' });
 });
 
+// App Version & Update Info Endpoint
+app.get('/api/version', (req, res) => {
+  res.json({
+    version: '1.1.0',
+    buildNumber: 110,
+    releaseDate: '2026-10-11',
+    apkDownloadUrl: '/api/download-apk',
+    cloudMirrorUrl: 'https://github.com/rsanthoshkumar376-ux/mrs-solar/releases/download/app-release/MRS-SOLAR.apk',
+    changelog: [
+      'Customer record editing (Personal, Bank, Solar specs)',
+      '12-digit UPI UTR payment verification & receipts',
+      'Automated Bank CSV Statement Reconciler',
+      'On-demand late fee computation (zero daily DB writes)',
+      'Faster initial loads with client-side image compression'
+    ]
+  });
+});
+
 // SPA Fallback for Client-Side Routing (React Router)
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {

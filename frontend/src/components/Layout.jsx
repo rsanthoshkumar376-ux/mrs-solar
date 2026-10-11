@@ -9,6 +9,7 @@ import {
   Search, Languages, Mic
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
+import { AppUpdateModalButton } from './AppUpdateModal.jsx';
 import { translations, getLanguage, setLanguage } from '../utils/translations.js';
 
 export default function Layout({ children }) {
@@ -266,9 +267,14 @@ export default function Layout({ children }) {
               </p>
             </div>
           </div>
+
+          <div className="mt-3 flex justify-center">
+            <AppUpdateModalButton />
+          </div>
+
           <button
             onClick={handleLogout}
-            className="flex items-center justify-center space-x-2 w-full mt-3 px-4 py-2.5 bg-slate-100 hover:bg-red-50 dark:bg-slate-800/80 dark:hover:bg-red-950/30 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-xl text-sm font-semibold transition-colors outline-none"
+            className="flex items-center justify-center space-x-2 w-full mt-2.5 px-4 py-2.5 bg-slate-100 hover:bg-red-50 dark:bg-slate-800/80 dark:hover:bg-red-950/30 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-xl text-sm font-semibold transition-colors outline-none"
           >
             <LogOut className="w-4 h-4" />
             <span>{t.signOut}</span>
@@ -378,6 +384,9 @@ export default function Layout({ children }) {
 
             {/* Install Mobile/Desktop App Button */}
             <InstallAppBanner compact={true} />
+
+            {/* App Update Checker & Installer */}
+            <AppUpdateModalButton compact={true} />
 
             {/* Theme Toggle */}
             <button

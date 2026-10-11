@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Sun, Moon, Lock, User, ShieldAlert, Eye, EyeOff, Languages } from 'lucide-react';
 import InstallAppBanner from '../components/InstallAppBanner.jsx';
+import { AppUpdateModalButton } from '../components/AppUpdateModal.jsx';
 import { translations, getLanguage, setLanguage } from '../utils/translations.js';
 
 export default function Login() {
@@ -91,8 +92,10 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-teal-50/20 to-emerald-50/10 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-950 transition-colors duration-300 px-4">
-      {/* Top action controls: Language Switcher & Dark Mode Switcher */}
+      {/* Top action controls: App Update, Language Switcher & Dark Mode Switcher */}
       <div className="absolute top-4 right-4 flex items-center space-x-2">
+        <AppUpdateModalButton />
+
         <button
           type="button"
           onClick={() => {
