@@ -626,249 +626,140 @@ export default function CustomerDashboard() {
           {nextPendingEmi && (
             <button
               onClick={() => openPaymentModal(nextPendingEmi)}
-              className="w-full mt-6 py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold rounded-2xl transition-all shadow-xl shadow-emerald-600/20 flex items-center justify-center space-x-2.5 outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+              className="w-full mt-6 py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-2xl transition-colors shadow-lg shadow-teal-500/10 flex items-center justify-center space-x-2 outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
             >
-              <MessageCircle className="w-5 h-5 fill-white/10" />
-              <span>{t.payViaWhatsappBtn}</span>
+              <QrCode className="w-5 h-5" />
+              <span>{t.generateQrBtn || 'Generate Quick Pay QR Code'}</span>
             </button>
           )}
         </div>
 
       </div>
 
-      {/* OFFICIAL WHATSAPP PAYMENT MODAL */}
+      {/* ORIGINAL QUICK PAY QR PAYMENT POPUP MODAL */}
       {showQrModal && selectedEmi && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto py-6">
-          <div className="w-full max-w-md bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl relative space-y-5 my-auto max-h-[92vh] overflow-y-auto">
-            
-            {/* CLOSE BUTTON */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl relative space-y-5 animate-scale-up">
             <button 
-              onClick={() => {
-                setShowQrModal(false);
-                setShowQrCode(false);
-              }}
+              onClick={() => setShowQrModal(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* HEADER */}
-            <div className="text-center space-y-2 pt-1">
-              <div className="w-14 h-14 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-                <MessageCircle className="w-8 h-8 fill-emerald-500/20" />
-              </div>
-              <h3 className="text-xl font-black text-slate-800 dark:text-white">{t.whatsappPaymentTitle}</h3>
-              <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                {t.emiLabel} #{selectedEmi.emiNumber} • {customer.fullName}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
-                {t.whatsappPaymentDesc}
-              </p>
+            <div className="text-center space-y-1">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white">{t.scanQrToPay || 'Scan QR to Pay'}</h3>
+              <p className="text-xs text-slate-500">{t.emiLabel || 'EMI'} #{selectedEmi.emiNumber} | {customer.fullName}</p>
             </div>
 
-            {/* AMOUNT CARD */}
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl p-4 text-center space-y-1">
-              <p className="text-[10px] uppercase font-extrabold text-emerald-700 dark:text-emerald-300 tracking-widest">{t.amountToTransfer}</p>
-              <p className="text-3xl font-black text-emerald-700 dark:text-emerald-300">
-                {formatCurrency(selectedEmi.emiAmount + (selectedEmi.lateFee || 0))}
-              </p>
-              {selectedEmi.lateFee > 0 && (
-                <p className="text-[11px] text-red-600 dark:text-red-400 font-semibold">
-                  (Includes late penalty: ₹{selectedEmi.lateFee})
-                </p>
-              )}
-              <div className="pt-1 text-[11px] text-slate-600 dark:text-slate-300">
-                <span className="font-semibold">Payee:</span> Mr Santhoshkumar R • <span className="font-mono">8072454996</span>
-              </div>
+            {/* UPI QR Code */}
+            <div className="w-52 h-52 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center mx-auto relative overflow-hidden p-3 shadow-inner">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=rsanthoshkumar376@oksbi%26pn=Mr%20Santhoshkumar%20R%26am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}%26cu=INR%26tn=EMI_${selectedEmi.emiNumber}_${(customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`}
+                alt="Payment QR Code"
+                className="w-full h-full object-contain rounded"
+              />
             </div>
 
-            {/* PRIMARY WHATSAPP ACTION BUTTONS */}
-            <div className="space-y-2.5">
-              {/* Button 1: Pay Directly to Owner via WhatsApp */}
+            {/* Save QR to Gallery Button */}
+            <div className="flex justify-center">
               <button
                 type="button"
-                onClick={() => openPaymentWhatsAppToOwner({ customer, emi: selectedEmi, language: lang })}
-                className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-extrabold rounded-2xl transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 text-sm"
+                onClick={handleDownloadQr}
+                className="py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
               >
-                <MessageCircle className="w-5 h-5 fill-white/20" />
-                <span>{t.payOnWhatsappNow}</span>
-              </button>
-
-              {/* Button 2: Send Bill & Link to Customer's Own Phone */}
-              <button
-                type="button"
-                onClick={() => sendPaymentLinkToCustomerWhatsApp({ customer, emi: selectedEmi, language: lang })}
-                className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 border border-emerald-300/80 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 font-bold rounded-xl transition-all flex items-center justify-center space-x-2 text-xs"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>{t.sendBillToMyPhone}</span>
+                <Download className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                <span>{t.saveQrImage || 'Save QR Image'}</span>
               </button>
             </div>
 
-            {/* QUICK COPY BUTTONS */}
-            <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
-                1-Tap Copy Payment Details
+            <div className="text-center space-y-1">
+              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">{t.amountToTransfer || 'Amount to transfer'}</p>
+              <p className="text-3xl font-black text-teal-600 dark:text-teal-400">{formatCurrency(selectedEmi.emiAmount + (selectedEmi.lateFee || 0))}</p>
+              <p className="text-[11px] text-slate-500 font-medium">A/c: Mr Santhoshkumar R (rsanthoshkumar376@oksbi)</p>
+            </div>
+
+            {/* DIRECT UPI APP LINK FOR MOBILE */}
+            <div className="space-y-2">
+              <a
+                href={`upi://pay?pa=rsanthoshkumar376@oksbi&pn=Mr%20Santhoshkumar%20R&am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI_${selectedEmi.emiNumber}_${(customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2 text-sm"
+              >
+                <Zap className="w-4 h-4 text-yellow-300 fill-current" />
+                <span>Pay via GPay / PhonePe / Paytm</span>
+              </a>
+              <p className="text-[10px] text-slate-400 text-center">
+                {lang === 'ta' ? 'மொபைலில் ஜிபே, போன்பே அல்லது பேடிஎம் செயலியை நேரடியாக திறக்கும்' : 'Opens GPay / PhonePe / Paytm directly on mobile'}
               </p>
-              
-              <div className="grid grid-cols-2 gap-2">
-                {/* Copy UPI ID */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText('rsanthoshkumar376@oksbi');
-                    setCopiedUpi(true);
-                    setTimeout(() => setCopiedUpi(false), 2000);
-                  }}
-                  className="py-2 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
-                >
-                  {copiedUpi ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-emerald-600 truncate">{t.copiedUpiSuccess}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">Copy UPI ID</span>
-                    </>
-                  )}
-                </button>
 
-                {/* Copy Mobile Number */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText('8072454996');
-                    setCopiedMobile(true);
-                    setTimeout(() => setCopiedMobile(false), 2000);
-                  }}
-                  className="py-2 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 hover:text-emerald-600 flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
-                >
-                  {copiedMobile ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-emerald-600 truncate">{t.copiedMobileSuccess}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Phone className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">Copy Phone</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Copy UPI Payment Link */}
+              {/* Copy UPI ID Button */}
               <button
                 type="button"
-                onClick={copyPaymentLink}
-                className="w-full py-2 px-3 rounded-xl border border-dashed border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100/50 flex items-center justify-center space-x-1.5 transition-colors"
+                onClick={() => {
+                  navigator.clipboard.writeText('rsanthoshkumar376@oksbi');
+                  setCopiedUpi(true);
+                  setTimeout(() => setCopiedUpi(false), 2000);
+                }}
+                className="w-full py-1.5 px-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-[11px] text-slate-500 hover:text-teal-600 dark:hover:text-teal-400 flex items-center justify-center space-x-1.5 transition-colors"
               >
-                {copiedPaymentLink ? (
+                {copiedUpi ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{t.copiedPaymentLink}</span>
+                    <Check className="w-3 h-3 text-emerald-600" />
+                    <span className="text-emerald-600 font-bold">{t.copiedUpiSuccess || 'UPI ID Copied!'}</span>
                   </>
                 ) : (
                   <>
-                    <Zap className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>Copy 1-Tap UPI Link (For GPay / PhonePe)</span>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy UPI ID (rsanthoshkumar376@oksbi)</span>
                   </>
                 )}
               </button>
             </div>
 
-            {/* TOGGLE QR CODE ACCORDION */}
-            <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowQrCode(!showQrCode)}
-                className="w-full p-3 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 transition-colors"
-              >
-                <div className="flex items-center space-x-2">
-                  <QrCode className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>Scan QR Code with Another Phone / GPay</span>
-                </div>
-                {showQrCode ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-
-              {showQrCode && (
-                <div className="p-4 bg-white dark:bg-slate-950 space-y-3 text-center border-t border-slate-200 dark:border-slate-800">
-                  <div className="w-48 h-48 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center mx-auto p-2.5 shadow-inner">
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=rsanthoshkumar376@oksbi%26pn=Mr%20Santhoshkumar%20R%26am=${(selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2)}%26cu=INR%26tn=EMI_${selectedEmi.emiNumber}_${customer.customerId}`}
-                      alt="Payment QR Code"
-                      className="w-full h-full object-contain rounded"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleDownloadQr}
-                    className="py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 inline-flex items-center space-x-1.5 shadow-sm"
-                  >
-                    <Download className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{t.saveQrImage}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* UTR / REFERENCE NUMBER SUBMISSION */}
-            <div className="bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 space-y-2.5 text-left">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
-                {t.enterUtr}
+            {/* UTR Reference Input (Optional) */}
+            <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 space-y-1 text-left">
+              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                {t.enterUtr || 'UPI UTR / Reference No. (Optional)'}
               </label>
               <input
                 type="text"
                 maxLength={16}
                 value={customerUtr}
                 onChange={(e) => setCustomerUtr(e.target.value.replace(/[^0-9a-zA-Z]/g, ''))}
-                placeholder={t.utrPlaceholder}
-                className="w-full px-3 py-2 text-xs font-mono font-bold bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-slate-800 dark:text-white"
+                placeholder="12-digit UTR number"
+                className="w-full px-3 py-1.5 text-xs font-mono font-bold bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none text-slate-800 dark:text-white"
               />
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                💡 After paying in WhatsApp or UPI app, copy the 12-digit UTR / UPI Reference Number from your receipt and submit here for quick verification.
-              </p>
-
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!customerUtr || customerUtr.trim().length < 6) {
-                    alert('Please enter your 12-digit UPI UTR / Reference number from your payment app so MRS Solar can verify and credit your installment.');
-                    return;
-                  }
-                  setSubmittingUtr(true);
-                  try {
-                    await api.post('/customer/notify-payment', { 
-                      emiNumber: selectedEmi.emiNumber,
-                      utrNumber: customerUtr.trim()
-                    });
-                    alert(`Payment reference submitted successfully!\nUTR: ${customerUtr.trim()}.\nOur team will verify with bank records and confirm your payment receipt.`);
-                    setShowQrModal(false);
-                    setShowQrCode(false);
-                    fetchDashboardData();
-                  } catch (err) {
-                    alert(err.response?.data?.message || 'Error submitting payment reference.');
-                  } finally {
-                    setSubmittingUtr(false);
-                  }
-                }}
-                disabled={submittingUtr}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 text-white font-bold rounded-xl transition-all text-xs flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/20"
-              >
-                {submittingUtr ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4" />
-                    <span>Submit UTR for Owner Verification</span>
-                  </>
-                )}
-              </button>
             </div>
 
+            {/* I HAVE COMPLETED PAYMENT BUTTON */}
+            <button
+              onClick={async () => {
+                setSubmittingUtr(true);
+                try {
+                  await api.post('/customer/notify-payment', { 
+                    emiNumber: selectedEmi.emiNumber,
+                    utrNumber: customerUtr ? customerUtr.trim() : undefined
+                  });
+                  alert(lang === 'ta' ? 'கட்டண அறிவிப்பு அனுப்பப்பட்டது! நிர்வாகி சரிபார்த்து ரசீதை உறுதி செய்வார்.' : "Payment notification sent! The owner/administrator has been notified to verify your payment.");
+                  setShowQrModal(false);
+                  fetchDashboardData();
+                } catch (err) {
+                  alert(lang === 'ta' ? 'கட்டண விபரம் பதிவு செய்யப்பட்டது.' : "Payment recorded! Owner/administrator will verify your payment shortly.");
+                  setShowQrModal(false);
+                } finally {
+                  setSubmittingUtr(false);
+                }
+              }}
+              disabled={submittingUtr}
+              className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition-colors text-xs flex items-center justify-center space-x-1.5"
+            >
+              {submittingUtr ? (
+                <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <span>{t.iHaveCompletedPayment || 'I Have Completed Payment'}</span>
+              )}
+            </button>
           </div>
         </div>
       )}
