@@ -185,37 +185,4 @@ router.post('/submit-utr', authenticateToken, authorizeRole(['customer']), async
   }
 });
 
-// 6. Active Merchant Payment Configuration (Public / Customer Access)
-router.get('/payment-settings', async (req, res) => {
-  try {
-    const setting = await db.findOne('settings', { key: 'payment' });
-    const paymentConfig = {
-      merchantUpiId: setting?.merchantUpiId || 'rsanthoshkumar376@oksbi',
-      merchantName: setting?.merchantName || 'MRS SOLAR ENERGY',
-      merchantPhone: setting?.merchantPhone || '8072454996',
-      businessType: setting?.businessType || 'Google Pay for Business',
-      accountNumber: setting?.accountNumber || '',
-      ifscCode: setting?.ifscCode || '',
-      bankName: setting?.bankName || 'State Bank of India',
-      accountHolderName: setting?.accountHolderName || 'MRS SOLAR ENERGY',
-      qrNote: setting?.qrNote || 'MRS SOLAR EMI Payment'
-    };
-
-    res.json(paymentConfig);
-  } catch (error) {
-    console.error('Get customer payment settings error:', error);
-    res.json({
-      merchantUpiId: 'rsanthoshkumar376@oksbi',
-      merchantName: 'MRS SOLAR ENERGY',
-      merchantPhone: '8072454996',
-      businessType: 'Google Pay for Business',
-      accountNumber: '',
-      ifscCode: '',
-      bankName: 'State Bank of India',
-      accountHolderName: 'MRS SOLAR ENERGY',
-      qrNote: 'MRS SOLAR EMI Payment'
-    });
-  }
-});
-
 export default router;

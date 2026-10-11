@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Download, Copy, Check, ExternalLink, Zap, 
   Phone, ShieldCheck, CreditCard, ArrowRight, CheckCircle2,
-  AlertCircle, Smartphone, Building
+  AlertCircle, Smartphone
 } from 'lucide-react';
 import api from '../utils/api.js';
 import { formatCurrency, formatDate } from '../utils/format.js';
@@ -20,25 +20,11 @@ export default function UpiPaymentModal({
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedMobile, setCopiedMobile] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
-  const [copiedAccount, setCopiedAccount] = useState(false);
-  const [copiedIfsc, setCopiedIfsc] = useState(false);
   const [submittingUtr, setSubmittingUtr] = useState(false);
   const [utrNumber, setUtrNumber] = useState('');
   const [utrSuccess, setUtrSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [activeTab, setActiveTab] = useState('upi'); // 'upi', 'qr', or 'bank'
-
-  // Dynamic Merchant Payment Configuration
-  const [merchantConfig, setMerchantConfig] = useState({
-    merchantUpiId: 'rsanthoshkumar376@oksbi',
-    merchantName: 'MRS SOLAR ENERGY',
-    merchantPhone: '8072454996',
-    businessType: 'Google Pay for Business',
-    accountNumber: '',
-    ifscCode: '',
-    bankName: 'State Bank of India',
-    accountHolderName: 'MRS SOLAR ENERGY'
-  });
+  const [activeTab, setActiveTab] = useState('upi'); // 'upi' or 'qr'
 
   useEffect(() => {
     const handleLangChange = () => setLang(getLanguage());
@@ -51,28 +37,15 @@ export default function UpiPaymentModal({
       setUtrNumber(customer?.submittedUtr || '');
       setUtrSuccess(false);
       setErrorMessage('');
-
-      // Fetch dynamic active merchant settings
-      api.get('/customer/payment-settings')
-        .then(res => {
-          if (res.data) {
-            setMerchantConfig(res.data);
-          }
-        })
-        .catch(err => {
-          console.warn('Using default payment settings:', err);
-        });
     }
   }, [isOpen, customer]);
 
   if (!isOpen || !emi) return null;
 
   const t = translations[lang] || translations.en;
-  const payeeVpa = merchantConfig.merchantUpiId || 'rsanthoshkumar376@oksbi';
-  const payeeName = merchantConfig.merchantName || 'MRS SOLAR ENERGY';
-  const payeeMobile = merchantConfig.merchantPhone || '8072454996';
-  const isMerchantAccount = payeeVpa !== 'rsanthoshkumar376@oksbi' || merchantConfig.businessType?.includes('Business');
-
+  const payeeVpa = 'rsanthoshkumar376@oksbi';
+  const payeeName = 'Mr Santhoshkumar R';
+  const payeeMobile = '8072454996';
   const totalAmountNum = (Number(emi.emiAmount) || 0) + (Number(emi.lateFee) || 0);
   const formattedAmount = totalAmountNum.toFixed(2);
   const cleanCustId = (customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '');
@@ -107,12 +80,6 @@ export default function UpiPaymentModal({
     } else if (type === 'amount') {
       setCopiedAmount(true);
       setTimeout(() => setCopiedAmount(false), 2500);
-    } else if (type === 'account') {
-      setCopiedAccount(true);
-      setTimeout(() => setCopiedAccount(false), 2500);
-    } else if (type === 'ifsc') {
-      setCopiedIfsc(true);
-      setTimeout(() => setCopiedIfsc(false), 2500);
     }
   };
 
@@ -127,6 +94,7 @@ export default function UpiPaymentModal({
   };
 
   const handleOpenExternalBrowser = () => {
+    // Opens payment in external Chrome/browser which has 100% permissions to dispatch UPI intents
     const payPageUrl = `https://mrs-solar1.onrender.com/?pay=true&emi=${emi.emiNumber}&cust=${cleanCustId}&amt=${formattedAmount}`;
     window.open(payPageUrl, '_blank');
   };
@@ -143,50 +111,45 @@ export default function UpiPaymentModal({
     setErrorMessage('');
     try {
       if (mode === 'admin') {
+        // Admin marking payment directly
         await api.post('/admin/payments/mark-paid', {
           customerId: customer.customerId || customer._id,
           emiNumber: emi.emiNumber,
           amount: totalAmountNum,
           baseEmiAmount: emi.emiAmount,
           lateFeePaid: emi.lateFee || 0,
-          paymentMethod: 'UPI',
+          paymentDate: new Date().toISOString().split('T')[0],
+          paymentMode: 'UPI',
           referenceNumber: cleanUtr,
-          paymentDate: new Date().toISOString()
+          remarks: `UPI Payment verified with UTR ${cleanUtr}`
         });
+        setUtrSuccess(true);
+        if (onPaymentSubmitted) onPaymentSubmitted();
+        setTimeout(() => onClose(), 1500);
       } else {
-        await api.post('/customer/notify-payment', {
+        // Customer submitting UTR for approval
+        await api.post('/customer/submit-utr', {
           emiNumber: emi.emiNumber,
-          amount: totalAmountNum,
-          utrNumber: cleanUtr
+          utr: cleanUtr
         });
+        setUtrSuccess(true);
+        if (onPaymentSubmitted) onPaymentSubmitted();
       }
-
-      setUtrSuccess(true);
-      if (onPaymentSubmitted) {
-        onPaymentSubmitted(cleanUtr);
-      }
-      setTimeout(() => {
-        onClose();
-      }, 3000);
     } catch (err) {
-      console.error(err);
-      setErrorMessage(err.response?.data?.message || 'Failed to submit payment reference');
+      setErrorMessage(err.response?.data?.message || err.message || 'Failed to submit payment reference.');
     } finally {
       setSubmittingUtr(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in">
-      <div 
-        className="bg-white dark:bg-slate-950 w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden relative"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/75 backdrop-blur-sm animate-fade-in no-print overflow-y-auto">
+      <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-up relative my-auto">
         
         {/* CLOSE BUTTON */}
         <button
           onClick={onClose}
-          className="absolute top-3.5 right-3.5 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-20 cursor-pointer"
+          className="absolute top-3.5 right-3.5 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-20"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
@@ -197,9 +160,8 @@ export default function UpiPaymentModal({
           <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
           <div className="relative z-10">
             <div className="flex items-center space-x-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full flex items-center space-x-1">
-                <ShieldCheck className="w-3 h-3 text-emerald-200" />
-                <span>{mode === 'admin' ? (lang === 'ta' ? 'நிர்வாகி UPI வசூல்' : 'Admin UPI Collection') : (lang === 'ta' ? 'பாதுகாப்பான UPI கட்டணம்' : 'Secure UPI Repayment')}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full">
+                {mode === 'admin' ? (lang === 'ta' ? 'நிர்வாகி UPI வசூல்' : 'Admin UPI Collection') : (lang === 'ta' ? 'பாதுகாப்பான UPI கட்டணம்' : 'Secure UPI Repayment')}
               </span>
               <span className="px-2 py-0.5 bg-emerald-400/30 text-emerald-100 text-[10px] font-bold rounded-full">
                 {t.emiLabel || 'EMI'} #{emi.emiNumber}
@@ -219,86 +181,58 @@ export default function UpiPaymentModal({
           </div>
         </div>
 
-        {/* TAB TOGGLE: 1-Tap UPI Apps vs QR Code vs Bank Transfer */}
-        <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-1.5 gap-1 text-[11px] sm:text-xs font-bold">
+        {/* TAB TOGGLE: 1-Tap UPI Apps vs QR Code */}
+        <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-1.5 gap-1.5 text-xs font-bold">
           <button
             type="button"
             onClick={() => setActiveTab('upi')}
-            className={`flex-1 py-2 px-2.5 rounded-xl flex items-center justify-center space-x-1 transition-all cursor-pointer ${
+            className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center space-x-1.5 transition-all ${
               activeTab === 'upi'
                 ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm'
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span className="truncate">{lang === 'ta' ? 'UPI செயலிகள்' : 'UPI Apps'}</span>
+            <Smartphone className="w-4 h-4" />
+            <span>{lang === 'ta' ? '1-கிளிக் UPI செயலிகள்' : '1-Tap UPI Apps'}</span>
           </button>
           
           <button
             type="button"
             onClick={() => setActiveTab('qr')}
-            className={`flex-1 py-2 px-2.5 rounded-xl flex items-center justify-center space-x-1 transition-all cursor-pointer ${
+            className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center space-x-1.5 transition-all ${
               activeTab === 'qr'
                 ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm'
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            <Zap className="w-3.5 h-3.5" />
-            <span className="truncate">{lang === 'ta' ? 'QR ஸ்கேன்' : 'QR Scan'}</span>
+            <Zap className="w-4 h-4" />
+            <span>{lang === 'ta' ? 'QR ஸ்கேன் & விவரம்' : 'QR Scan & Details'}</span>
           </button>
-
-          {merchantConfig.accountNumber && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('bank')}
-              className={`flex-1 py-2 px-2.5 rounded-xl flex items-center justify-center space-x-1 transition-all cursor-pointer ${
-                activeTab === 'bank'
-                  ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Building className="w-3.5 h-3.5" />
-              <span className="truncate">{lang === 'ta' ? 'வங்கி பரிமாற்றம்' : 'Bank IMPS'}</span>
-            </button>
-          )}
         </div>
 
         {/* MODAL BODY */}
         <div className="p-4 sm:p-5 space-y-4 max-h-[68vh] overflow-y-auto">
 
-          {activeTab === 'upi' && (
+          {activeTab === 'upi' ? (
             /* TAB 1: 1-TAP UPI APP LAUNCHERS */
             <div className="space-y-3.5">
               
-              {/* Active Merchant Banner / Bank Info */}
-              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl p-3 text-left">
+              {/* Self-Transfer Notice & Helpful Tip */}
+              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 rounded-2xl p-3 text-left">
                 <div className="flex items-start space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                  <div className="text-[11px] leading-relaxed text-emerald-950 dark:text-emerald-200">
-                    <p className="font-bold flex items-center space-x-1.5">
-                      <span>{payeeName}</span>
-                      <span className="text-[10px] bg-emerald-200/70 dark:bg-emerald-800/70 text-emerald-800 dark:text-emerald-100 px-1.5 py-0.2 rounded font-normal">
-                        {merchantConfig.businessType || 'Verified Merchant'}
-                      </span>
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="text-[11px] leading-relaxed text-amber-900 dark:text-amber-200">
+                    <p className="font-bold">
+                      {lang === 'ta' ? 'வங்கி பரிமாற்ற குறிப்பு (Self-Payment Note):' : 'Bank Payment Notice:'}
                     </p>
-                    <p className="mt-0.5 text-emerald-800 dark:text-emerald-300 font-mono text-[10px]">
-                      VPA: <strong>{payeeVpa}</strong> • 0% Fee
+                    <p className="mt-0.5 text-amber-800 dark:text-amber-300">
+                      {lang === 'ta'
+                        ? 'உங்கள் சொந்த கூகுள் பே அல்லது SBI கணக்கிலிருந்து உங்களுக்கே பணம் அனுப்பினால், UPI விதிகள் படி வங்கி "Payment Failed / Technical Issue" என நிராகரிக்கும். வாடிக்கையாளரின் வேறு வங்கிக் கணக்கிலிருந்து செலுத்தவும் அல்லது கீழே உள்ள PhonePe / மொபைல் எண்ணை பயன்படுத்தவும்.'
+                        : 'If you are testing from your own phone linked to rsanthoshkumar376@oksbi, UPI rules automatically reject paying to your own account ("Payment Failed / Technical Issue"). Please test from a customer\'s phone or pay via PhonePe / UPI Number below.'}
                     </p>
                   </div>
                 </div>
               </div>
-
-              {/* Self-Payment Warning (Only if personal account is still active) */}
-              {!isMerchantAccount && (
-                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 rounded-2xl p-2.5 text-left text-[11px] text-amber-900 dark:text-amber-200 flex items-start space-x-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <p>
-                    {lang === 'ta'
-                      ? 'குறிப்பு: உங்கள் சொந்த Google Pay கணக்கிலிருந்து உங்களுக்கே பணம் அனுப்பினால் வங்கி நிராகரிக்கும். வாடிக்கையாளரின் வேறு போனில் இருந்து செலுத்தவும்.'
-                      : 'Note: If testing from your own phone linked to this bank account, UPI rejects paying oneself. Test from a customer phone or use PhonePe.'}
-                  </p>
-                </div>
-              )}
 
               {/* GRID OF DIRECT ANCHOR LINKS (Guaranteed gesture handling in Android) */}
               <div className="grid grid-cols-2 gap-2.5">
@@ -306,7 +240,7 @@ export default function UpiPaymentModal({
                 <a
                   href={gpayIntent}
                   onClick={() => copyToClipboard(payeeVpa, 'upi')}
-                  className="py-3 px-3.5 bg-white hover:bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-800 dark:text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-sm transition-all hover:scale-105 active:scale-95 text-center group cursor-pointer"
+                  className="py-3 px-3.5 bg-white hover:bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-800 dark:text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-sm transition-all hover:scale-105 active:scale-95 text-center group"
                 >
                   <span className="w-3 h-3 rounded-full bg-blue-500 shrink-0 group-hover:scale-110 transition-transform"></span>
                   <span className="truncate">Google Pay</span>
@@ -316,7 +250,7 @@ export default function UpiPaymentModal({
                 <a
                   href={phonepeIntent}
                   onClick={() => copyToClipboard(payeeVpa, 'upi')}
-                  className="py-3 px-3.5 bg-purple-700 hover:bg-purple-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center space-x-2 shadow-sm transition-all hover:scale-105 active:scale-95 text-center group cursor-pointer"
+                  className="py-3 px-3.5 bg-purple-700 hover:bg-purple-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center space-x-2 shadow-sm transition-all hover:scale-105 active:scale-95 text-center group"
                 >
                   <span className="w-3 h-3 rounded-full bg-white shrink-0 group-hover:scale-110 transition-transform"></span>
                   <span className="truncate">PhonePe</span>
@@ -326,17 +260,17 @@ export default function UpiPaymentModal({
                 <a
                   href={paytmIntent}
                   onClick={() => copyToClipboard(payeeVpa, 'upi')}
-                  className="py-3 px-3.5 bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center space-x-2 shadow-sm transition-all hover:scale-105 active:scale-95 text-center group cursor-pointer"
+                  className="py-3 px-3.5 bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center space-x-2 shadow-sm transition-all hover:scale-105 active:scale-95 text-center group"
                 >
                   <span className="w-3 h-3 rounded-full bg-cyan-200 shrink-0 group-hover:scale-110 transition-transform"></span>
                   <span className="truncate">Paytm</span>
                 </a>
 
-                {/* Any UPI / CRED */}
+                {/* CRED / Any UPI */}
                 <a
                   href={universalUpi}
                   onClick={() => copyToClipboard(payeeVpa, 'upi')}
-                  className="py-3 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center space-x-2 shadow-sm transition-all hover:scale-105 active:scale-95 text-center group cursor-pointer"
+                  className="py-3 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center space-x-2 shadow-sm transition-all hover:scale-105 active:scale-95 text-center group"
                 >
                   <Zap className="w-3.5 h-3.5 text-yellow-300 fill-current shrink-0 group-hover:scale-110 transition-transform" />
                   <span className="truncate">{lang === 'ta' ? 'அனைத்து UPI' : 'All UPI Apps'}</span>
@@ -348,13 +282,13 @@ export default function UpiPaymentModal({
                 <button
                   type="button"
                   onClick={() => copyToClipboard(payeeMobile, 'mobile')}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center space-x-2 shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors cursor-pointer"
+                  className="w-full py-2.5 px-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center space-x-2 shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
                 >
                   <Phone className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                   <span>
                     {copiedMobile 
                       ? (lang === 'ta' ? 'நகலெடுக்கப்பட்டது! Google Pay / PhonePe-ல் ஒட்டவும்' : 'Copied! Paste in GPay / PhonePe to Pay')
-                      : (lang === 'ta' ? `மொபைல் எண் மூலம் செலுத்த: ${payeeMobile}` : `Pay via UPI Mobile Number: ${payeeMobile}`)}
+                      : (lang === 'ta' ? 'மொபைல் எண் மூலம் செலுத்த: 8072454996' : 'Pay via UPI Mobile Number: 8072454996')}
                   </span>
                 </button>
               </div>
@@ -364,7 +298,7 @@ export default function UpiPaymentModal({
                 <a
                   href={universalUpi}
                   onClick={() => copyToClipboard(payeeVpa, 'upi')}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800 text-teal-700 dark:text-teal-300 font-bold text-xs flex items-center justify-center space-x-2 shadow-sm hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors cursor-pointer"
+                  className="w-full py-2.5 px-3 rounded-2xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800 text-teal-700 dark:text-teal-300 font-bold text-xs flex items-center justify-center space-x-2 shadow-sm hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors"
                 >
                   <Zap className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
                   <span>{lang === 'ta' ? 'நேரடியாக UPI தேர்வியை திறக்கவும் (UPI Chooser)' : 'Launch Android UPI App Chooser Directly'}</span>
@@ -376,7 +310,7 @@ export default function UpiPaymentModal({
                 <button
                   type="button"
                   onClick={handleOpenExternalBrowser}
-                  className="inline-flex items-center space-x-1.5 text-[11px] font-semibold text-slate-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors cursor-pointer"
+                  className="inline-flex items-center space-x-1.5 text-[11px] font-semibold text-slate-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>{lang === 'ta' ? 'செயலியில் திறக்கவில்லையா? குரோம் உலாவியில் திறக்க' : "App not opening? Open payment in Chrome browser"}</span>
@@ -384,9 +318,7 @@ export default function UpiPaymentModal({
               </div>
 
             </div>
-          )}
-
-          {activeTab === 'qr' && (
+          ) : (
             /* TAB 2: QR CODE & MANUAL UPI DETAILS */
             <div className="space-y-4">
               
@@ -404,7 +336,7 @@ export default function UpiPaymentModal({
                 <button
                   type="button"
                   onClick={handleDownloadQr}
-                  className="py-1.5 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center space-x-1.5 transition-colors shadow-sm cursor-pointer"
+                  className="py-1.5 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
                 >
                   <Download className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                   <span>{lang === 'ta' ? 'QR படத்தை சேமிக்கவும் (Save QR)' : 'Save QR to Gallery'}</span>
@@ -422,7 +354,7 @@ export default function UpiPaymentModal({
                     <button
                       type="button"
                       onClick={() => copyToClipboard(payeeVpa, 'upi')}
-                      className="p-1 rounded-lg text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/50 cursor-pointer"
+                      className="p-1 rounded-lg text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/50"
                       title="Copy UPI ID"
                     >
                       {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -438,7 +370,7 @@ export default function UpiPaymentModal({
                     <button
                       type="button"
                       onClick={() => copyToClipboard(payeeMobile, 'mobile')}
-                      className="p-1 rounded-lg text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/50 cursor-pointer"
+                      className="p-1 rounded-lg text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/50"
                       title="Copy Mobile Number"
                     >
                       {copiedMobile ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -454,7 +386,7 @@ export default function UpiPaymentModal({
                     <button
                       type="button"
                       onClick={() => copyToClipboard(formattedAmount, 'amount')}
-                      className="p-1 rounded-lg text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/50 cursor-pointer"
+                      className="p-1 rounded-lg text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/50"
                       title="Copy Exact Amount"
                     >
                       {copiedAmount ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -464,64 +396,6 @@ export default function UpiPaymentModal({
 
               </div>
 
-            </div>
-          )}
-
-          {activeTab === 'bank' && merchantConfig.accountNumber && (
-            /* TAB 3: DIRECT BANK TRANSFER (IMPS / NEFT) */
-            <div className="space-y-3.5">
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-2xl text-[11px] text-blue-900 dark:text-blue-200 flex items-start space-x-2">
-                <Building className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <p>
-                  {lang === 'ta'
-                    ? 'UPI தொழில்நுட்ப சிக்கல்கள் உள்ளதா? உங்கள் நெட் பேங்கிங் மூலம் இந்த வங்கிக் கணக்கிற்கு நேரடியாக IMPS/NEFT பணப் பரிமாற்றம் செய்யவும்.'
-                    : 'Experiencing UPI issues? You can transfer directly to our bank account via IMPS or NEFT through any Net Banking or YONO app.'}
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs">
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Bank:</span>
-                  <span className="font-bold text-slate-800 dark:text-white">{merchantConfig.bankName || 'State Bank of India'}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Account Name:</span>
-                  <span className="font-bold text-slate-800 dark:text-white">{merchantConfig.accountHolderName || payeeName}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Account No:</span>
-                  <div className="flex items-center space-x-1.5">
-                    <span className="font-mono font-bold text-slate-800 dark:text-white">{merchantConfig.accountNumber}</span>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(merchantConfig.accountNumber, 'account')}
-                      className="p-1 rounded-lg text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/50 cursor-pointer"
-                      title="Copy Account Number"
-                    >
-                      {copiedAccount ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">IFSC Code:</span>
-                  <div className="flex items-center space-x-1.5">
-                    <span className="font-mono font-bold uppercase text-slate-800 dark:text-white">{merchantConfig.ifscCode}</span>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(merchantConfig.ifscCode, 'ifsc')}
-                      className="p-1 rounded-lg text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/50 cursor-pointer"
-                      title="Copy IFSC Code"
-                    >
-                      {copiedIfsc ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
-
-              </div>
             </div>
           )}
 
@@ -546,7 +420,7 @@ export default function UpiPaymentModal({
                   <button
                     type="submit"
                     disabled={submittingUtr || !utrNumber.trim()}
-                    className="py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 text-white font-bold rounded-xl text-xs shadow-md shadow-teal-600/10 transition-all shrink-0 cursor-pointer"
+                    className="py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 text-white font-bold rounded-xl text-xs shadow-md shadow-teal-600/10 transition-all shrink-0"
                   >
                     {submittingUtr 
                       ? (lang === 'ta' ? 'பதிவாகிறது...' : 'Submitting...') 
@@ -588,7 +462,7 @@ export default function UpiPaymentModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-semibold cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-semibold"
           >
             {t.cancel || 'Close'}
           </button>
