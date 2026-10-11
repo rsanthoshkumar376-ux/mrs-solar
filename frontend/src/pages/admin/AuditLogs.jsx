@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
 import { formatDate } from '../../utils/format.js';
-import { FolderLock, Shield, User, Clock, Terminal } from 'lucide-react';
+import { FolderLock, Shield, User, Clock, Terminal, Trash2, RefreshCw } from 'lucide-react';
 import { translations, getLanguage } from '../../utils/translations.js';
 
 export default function AuditLogs() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
   const [lang, setLang] = useState(getLanguage);
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export default function AuditLogs() {
   const t = translations[lang] || translations.en;
 
   const fetchLogs = async () => {
+    setLoading(true);
     try {
       const response = await api.get('/admin/audit-logs');
       setLogs(response.data);
@@ -28,6 +30,26 @@ export default function AuditLogs() {
     }
   };
 
+  const handleClearAll = async () => {
+    if (logs.length === 0) return;
+    const confirmMsg = t.confirmClearAudits || 'Are you sure you want to clear all admin activity audit logs? This cannot be undone.';
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    setClearing(true);
+    try {
+      await api.delete('/admin/audit-logs');
+      setLogs([]);
+      alert(t.auditsClearedSuccess || 'All admin activity audit logs have been successfully cleared.');
+    } catch (error) {
+      console.error('Error clearing audit logs:', error);
+      alert(t.auditsClearError || 'Failed to clear audit logs. Please try again.');
+    } finally {
+      setClearing(false);
+    }
+  };
+
   useEffect(() => {
     fetchLogs();
   }, []);
@@ -35,10 +57,35 @@ export default function AuditLogs() {
   return (
     <div className="space-y-6">
       
-      {/* HEADER */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t.adminActivityAudits || 'Admin Activity Audits'}</h2>
-        <p className="text-sm text-slate-500">{t.adminAuditsSubtitle || 'Chronological ledger recording owner administrative events and adjustments.'}</p>
+      {/* HEADER WITH ACTIONS */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t.adminActivityAudits || 'Admin Activity Audits'}</h2>
+          <p className="text-sm text-slate-500">{t.adminAuditsSubtitle || 'Chronological ledger recording owner administrative events and adjustments.'}</p>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={fetchLogs}
+            disabled={loading}
+            className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors shadow-sm"
+            title={t.refresh || 'Refresh'}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>{t.refresh || 'Refresh'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleClearAll}
+            disabled={clearing || logs.length === 0}
+            className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-red-600/10 hover:bg-red-600 text-red-600 hover:text-white border border-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{clearing ? (t.clearingAudits || 'Clearing...') : (t.clearAllAudits || 'Clear All Audits')}</span>
+          </button>
+        </div>
       </div>
 
       {/* AUDITS TABLE */}

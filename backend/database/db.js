@@ -171,6 +171,15 @@ class JsonDatabaseEngine {
     await this.writeCollection(collection, data);
     return { deletedCount: 1 };
   }
+
+  async deleteMany(collection, query = {}) {
+    const data = await this.readCollection(collection);
+    const initialLen = data.length;
+    const remaining = data.filter(item => !matchQuery(item, query));
+    const deletedCount = initialLen - remaining.length;
+    await this.writeCollection(collection, remaining);
+    return { deletedCount };
+  }
 }
 
 const jsonDb = new JsonDatabaseEngine();
@@ -285,6 +294,26 @@ class MySQLDatabaseEngine {
     } catch (err) {
       console.error(`MySQL deleteOne error on ${collection}:`, err.message);
       return jsonDb.deleteOne(collection, query);
+    }
+  }
+
+  async deleteMany(collection, query = {}) {
+    try {
+      if (Object.keys(query).length === 0) {
+        const [res] = await mysqlPool.query(`DELETE FROM mrs_${collection}`);
+        await jsonDb.deleteMany(collection, query).catch(() => {});
+        return { deletedCount: res.affectedRows };
+      }
+      const items = await this.find(collection, query);
+      let count = 0;
+      for (const item of items) {
+        await this.deleteOne(collection, { _id: item._id });
+        count++;
+      }
+      return { deletedCount: count };
+    } catch (err) {
+      console.error(`MySQL deleteMany error on ${collection}:`, err.message);
+      return jsonDb.deleteMany(collection, query);
     }
   }
 }
@@ -455,6 +484,21 @@ class UnifiedDatabase {
       }
     }
     return jsonDb.deleteOne(collection, query);
+  }
+
+  async deleteMany(collection, query = {}) {
+    if (isMySQLConnected()) return mysqlDb.deleteMany(collection, query);
+    if (isMongoConnected()) {
+      try {
+        const Model = getModel(collection);
+        const result = await Model.deleteMany(query);
+        await jsonDb.deleteMany(collection, query).catch(() => {});
+        return { deletedCount: result.deletedCount };
+      } catch (err) {
+        console.error(`MongoDB deleteMany error on ${collection}:`, err.message);
+      }
+    }
+    return jsonDb.deleteMany(collection, query);
   }
 
   async countDocuments(collection, query = {}) {

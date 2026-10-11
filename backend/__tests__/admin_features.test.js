@@ -233,3 +233,46 @@ describe('UPI Settings & Dynamic Payment Routing Engine', () => {
     );
   });
 });
+
+describe('Audit Logs Clearance & db.deleteMany', () => {
+  beforeEach(async () => {
+    await db.deleteMany('test_audits_cleanup', {});
+  });
+
+  test('db.deleteMany deletes matching records and returns deletedCount', async () => {
+    await db.create('test_audits_cleanup', { type: 'LOGIN', user: 'admin' });
+    await db.create('test_audits_cleanup', { type: 'LOGIN', user: 'agent' });
+    await db.create('test_audits_cleanup', { type: 'PAYMENT', user: 'customer' });
+
+    const beforeCount = await db.countDocuments('test_audits_cleanup');
+    expect(beforeCount).toBe(3);
+
+    // Delete type LOGIN
+    const deleteRes = await db.deleteMany('test_audits_cleanup', { type: 'LOGIN' });
+    expect(deleteRes.deletedCount).toBe(2);
+
+    const remaining = await db.find('test_audits_cleanup');
+    expect(remaining.length).toBe(1);
+    expect(remaining[0].type).toBe('PAYMENT');
+
+    // Clear all remaining
+    const clearAllRes = await db.deleteMany('test_audits_cleanup', {});
+    expect(clearAllRes.deletedCount).toBe(1);
+
+    const finalCount = await db.countDocuments('test_audits_cleanup');
+    expect(finalCount).toBe(0);
+  });
+
+  test('clearing audit_logs leaves collection empty', async () => {
+    await db.create('audit_logs', { action: 'TEST_ACTION', username: 'admin' });
+    let logs = await db.find('audit_logs');
+    expect(logs.length).toBeGreaterThanOrEqual(1);
+
+    const clearRes = await db.deleteMany('audit_logs', {});
+    expect(clearRes.deletedCount).toBeGreaterThanOrEqual(1);
+
+    const afterLogs = await db.find('audit_logs');
+    expect(afterLogs.length).toBe(0);
+  });
+});
+

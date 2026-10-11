@@ -1318,6 +1318,20 @@ router.get('/audit-logs', authenticateToken, authorizeRole(['admin']), async (re
   }
 });
 
+// 9a. Clear All Audit Logs
+router.delete('/audit-logs', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const result = await db.deleteMany('audit_logs', {});
+    res.json({ 
+      message: 'All audit logs cleared successfully',
+      deletedCount: result.deletedCount || 0
+    });
+  } catch (error) {
+    console.error('Audit logs clear error:', error);
+    res.status(500).json({ message: 'Error clearing audit logs' });
+  }
+});
+
 // 9b. Email Settings & Diagnostics
 router.get('/email-settings', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
