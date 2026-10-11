@@ -51,8 +51,11 @@ export default function UpiPaymentModal({
   const cleanCustId = (customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '');
   const note = `EMI_${emi.emiNumber}_${cleanCustId}`;
 
+  // Unique Transaction Reference (tr required by NPCI & Google Pay for session validation)
+  const tr = `MRS${emi.emiNumber}${Date.now()}`.substring(0, 30);
+
   // Standard UPI URI and targeted Android Intents
-  const upiQuery = `pa=${payeeVpa}&pn=${encodeURIComponent(payeeName)}&am=${formattedAmount}&cu=INR&tn=${encodeURIComponent(note)}`;
+  const upiQuery = `pa=${payeeVpa}&pn=${encodeURIComponent(payeeName)}&tr=${tr}&am=${formattedAmount}&cu=INR&tn=${encodeURIComponent(note)}`;
   const universalUpi = `upi://pay?${upiQuery}`;
   const encodedUniversal = encodeURIComponent(universalUpi);
 
@@ -214,13 +217,21 @@ export default function UpiPaymentModal({
             /* TAB 1: 1-TAP UPI APP LAUNCHERS */
             <div className="space-y-3.5">
               
-              <div className="text-center">
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                  {lang === 'ta' ? 'கீழேயுள்ள செயலியைத் தொட்டு கட்டணத்தை செலுத்தவும்:' : 'Tap below to launch your installed payment app:'}
-                </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {lang === 'ta' ? 'தொகை மற்றும் கணக்கு தானாக நிரப்பப்படும்' : 'Payee and exact EMI amount will be pre-filled automatically'}
-                </p>
+              {/* Self-Transfer Notice & Helpful Tip */}
+              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 rounded-2xl p-3 text-left">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="text-[11px] leading-relaxed text-amber-900 dark:text-amber-200">
+                    <p className="font-bold">
+                      {lang === 'ta' ? 'வங்கி பரிமாற்ற குறிப்பு (Self-Payment Note):' : 'Bank Payment Notice:'}
+                    </p>
+                    <p className="mt-0.5 text-amber-800 dark:text-amber-300">
+                      {lang === 'ta'
+                        ? 'உங்கள் சொந்த கூகுள் பே அல்லது SBI கணக்கிலிருந்து உங்களுக்கே பணம் அனுப்பினால், UPI விதிகள் படி வங்கி "Payment Failed / Technical Issue" என நிராகரிக்கும். வாடிக்கையாளரின் வேறு வங்கிக் கணக்கிலிருந்து செலுத்தவும் அல்லது கீழே உள்ள PhonePe / மொபைல் எண்ணை பயன்படுத்தவும்.'
+                        : 'If you are testing from your own phone linked to rsanthoshkumar376@oksbi, UPI rules automatically reject paying to your own account ("Payment Failed / Technical Issue"). Please test from a customer\'s phone or pay via PhonePe / UPI Number below.'}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* GRID OF DIRECT ANCHOR LINKS (Guaranteed gesture handling in Android) */}
@@ -266,8 +277,24 @@ export default function UpiPaymentModal({
                 </a>
               </div>
 
-              {/* Direct UPI Universal Chooser fallback */}
+              {/* Pay via UPI Mobile Number Option */}
               <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(payeeMobile, 'mobile')}
+                  className="w-full py-2.5 px-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center space-x-2 shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                >
+                  <Phone className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span>
+                    {copiedMobile 
+                      ? (lang === 'ta' ? 'நகலெடுக்கப்பட்டது! Google Pay / PhonePe-ல் ஒட்டவும்' : 'Copied! Paste in GPay / PhonePe to Pay')
+                      : (lang === 'ta' ? 'மொபைல் எண் மூலம் செலுத்த: 8072454996' : 'Pay via UPI Mobile Number: 8072454996')}
+                  </span>
+                </button>
+              </div>
+
+              {/* Direct UPI Universal Chooser fallback */}
+              <div className="pt-0.5">
                 <a
                   href={universalUpi}
                   onClick={() => copyToClipboard(payeeVpa, 'upi')}
