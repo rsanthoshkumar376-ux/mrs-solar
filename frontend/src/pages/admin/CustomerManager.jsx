@@ -5,7 +5,7 @@ import { formatCurrency } from '../../utils/format.js';
 import { 
   Users, UserPlus, Search, SlidersHorizontal, DownloadCloud, Eye, Trash2, X, FileText, 
   MessageCircle, MapPin, Crosshair, Edit2, UploadCloud, CheckCircle2, AlertCircle, 
-  ChevronLeft, ChevronRight, FileSpreadsheet, Check
+  ChevronLeft, ChevronRight, FileSpreadsheet, Check, FilterX, RotateCcw
 } from 'lucide-react';
 import { openWhatsApp } from '../../utils/whatsapp.js';
 import { exportCustomersToCsv } from '../../utils/exportCsv.js';
@@ -29,6 +29,15 @@ export default function CustomerManager() {
   const [search, setSearch] = useState('');
   const [loanStatus, setLoanStatus] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('');
+
+  const hasActiveFilters = Boolean(search.trim() || loanStatus || paymentStatus);
+
+  const handleClearFilters = () => {
+    setSearch('');
+    setLoanStatus('');
+    setPaymentStatus('');
+    setPage(1);
+  };
 
   // Server-side Pagination state
   const [page, setPage] = useState(1);
@@ -437,10 +446,27 @@ export default function CustomerManager() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             placeholder={t.searchCustomerPlaceholder || "Search by name, ID, phone number, village..."}
-            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-800 dark:text-white outline-none transition-all"
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 rounded-xl py-2 pl-9 pr-9 text-xs text-slate-800 dark:text-white outline-none transition-all"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setPage(1);
+              }}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              title={lang === 'ta' ? 'தேடலை நீக்கு' : 'Clear search'}
+              aria-label="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Filters */}
@@ -448,8 +474,13 @@ export default function CustomerManager() {
           {/* Loan Status */}
           <select
             value={loanStatus}
-            onChange={(e) => setLoanStatus(e.target.value)}
-            className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 py-2 px-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+            onChange={(e) => {
+              setLoanStatus(e.target.value);
+              setPage(1);
+            }}
+            className={`w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-900 border text-xs text-slate-700 dark:text-slate-300 py-2 px-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-colors ${
+              loanStatus ? 'border-teal-500/70 font-semibold' : 'border-slate-200 dark:border-slate-800'
+            }`}
           >
             <option value="">{t.allLoanStatus || 'All Loan Status'}</option>
             <option value="Active">{t.statusActive}</option>
@@ -459,8 +490,13 @@ export default function CustomerManager() {
           {/* Payment Status */}
           <select
             value={paymentStatus}
-            onChange={(e) => setPaymentStatus(e.target.value)}
-            className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 py-2 px-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+            onChange={(e) => {
+              setPaymentStatus(e.target.value);
+              setPage(1);
+            }}
+            className={`w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-900 border text-xs text-slate-700 dark:text-slate-300 py-2 px-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-colors ${
+              paymentStatus ? 'border-teal-500/70 font-semibold' : 'border-slate-200 dark:border-slate-800'
+            }`}
           >
             <option value="">{t.allRepaymentStatus || 'All Repayments Status'}</option>
             <option value="Paid">{t.statusPaid}</option>
@@ -468,6 +504,23 @@ export default function CustomerManager() {
             <option value="Overdue">{t.statusOverdue}</option>
             <option value="Pending">{t.statusPending}</option>
           </select>
+
+          {/* Clear All Filters Button */}
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            disabled={!hasActiveFilters}
+            className={`col-span-2 sm:col-auto w-full sm:w-auto py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all border ${
+              hasActiveFilters
+                ? 'bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 shadow-sm cursor-pointer active:scale-95'
+                : 'bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50'
+            }`}
+            title={t.clearFilters || (lang === 'ta' ? 'அனைத்து வடிப்பான்களையும் நீக்கு' : 'Clear All Filters')}
+            aria-label={t.clearFilters || 'Clear All Filters'}
+          >
+            <FilterX className="w-4 h-4 shrink-0" />
+            <span className="inline">{t.clearFilters || (lang === 'ta' ? 'வடிப்பான்களை நீக்கு' : 'Clear Filters')}</span>
+          </button>
         </div>
       </div>
 
