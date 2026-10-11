@@ -194,6 +194,15 @@ export default function Layout({ children }) {
 
   const links = user?.role === 'admin' ? adminLinks : customerLinks;
 
+  const mobileLinks = user?.role === 'admin'
+    ? [
+        { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
+        { label: t.customers, path: '/admin/customers', icon: Users },
+        { label: t.emiManagement, path: '/admin/emis', icon: DollarSign },
+        { label: t.moreMenu || 'More', action: () => setSidebarOpen(true), icon: Menu }
+      ]
+    : customerLinks;
+
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
       
@@ -286,13 +295,13 @@ export default function Layout({ children }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
         {/* HEADER */}
-        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md flex items-center justify-between px-6 z-30">
+        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md flex items-center justify-between px-3 sm:px-6 z-30">
           
           {/* Hamburger toggle */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 lg:hidden"
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 lg:hidden"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -365,7 +374,7 @@ export default function Layout({ children }) {
           )}
 
           {/* Right Header items */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1.5 sm:space-x-3">
             
             {/* Language Switcher */}
             <button
@@ -375,7 +384,7 @@ export default function Layout({ children }) {
                 setLang(nextLang);
                 setLanguage(nextLang);
               }}
-              className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="inline-flex items-center space-x-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
               title="Switch Language / மொழி மாற்றுக"
             >
               <Languages className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
@@ -391,21 +400,21 @@ export default function Layout({ children }) {
             {/* Theme Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
               aria-label="Toggle theme"
             >
-              {darkMode ? <Sun className="w-5 h-5 text-teal-400" /> : <Moon className="w-5 h-5 text-slate-500" />}
+              {darkMode ? <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-teal-400" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />}
             </button>
 
             {/* Notifications Alert Dropdown */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative"
+                className="p-1.5 sm:p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative"
               >
-                <Bell className="w-5 h-5" />
+                <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-yellow-500 text-[10px] font-bold text-white rounded-full flex items-center justify-center animate-bounce">
+                  <span className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 w-4 h-4 bg-yellow-500 text-[10px] font-bold text-white rounded-full flex items-center justify-center animate-bounce">
                     {unreadCount}
                   </span>
                 )}
@@ -488,22 +497,35 @@ export default function Layout({ children }) {
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <div className="fixed bottom-0 inset-x-0 z-30 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 lg:hidden flex justify-around items-center px-2 py-2 shadow-lg">
-        {links.map((link) => {
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 lg:hidden flex justify-around items-center px-1 sm:px-2 py-1.5 sm:py-2 shadow-lg">
+        {mobileLinks.map((link) => {
           const Icon = link.icon;
+          if (link.action) {
+            return (
+              <button
+                key={link.label}
+                type="button"
+                onClick={link.action}
+                className="flex-1 flex flex-col items-center py-1 px-1 rounded-xl text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200 transition-all"
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-[10px] mt-0.5 truncate max-w-full">{link.label}</span>
+              </button>
+            );
+          }
           const isActive = location.pathname === link.path;
           return (
             <Link
               key={link.path}
               to={link.path}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition-all ${
+              className={`flex-1 flex flex-col items-center py-1 px-1 rounded-xl transition-all ${
                 isActive
                   ? 'text-teal-600 dark:text-teal-400 font-bold scale-105'
-                  : 'text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700'
+                  : 'text-slate-500 dark:text-slate-400 font-normal hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
               <Icon className="w-5 h-5" />
-              <span className="text-[10px] mt-1">{link.label}</span>
+              <span className="text-[10px] mt-0.5 truncate max-w-full">{link.label}</span>
             </Link>
           );
         })}

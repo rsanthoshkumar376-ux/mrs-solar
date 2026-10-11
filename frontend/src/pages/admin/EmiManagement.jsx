@@ -74,21 +74,21 @@ export default function EmiManagement() {
           <p className="text-sm text-slate-500">{t.repaymentsSubtitle}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
           {/* Export to Excel */}
           <button
             type="button"
             onClick={() => exportEmisToCsv(filteredList)}
             disabled={filteredList.length === 0}
-            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all border border-slate-200/50 dark:border-slate-700/50"
+            className="flex-1 sm:flex-initial justify-center px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl flex items-center space-x-1.5 text-xs font-bold transition-all border border-slate-200/50 dark:border-slate-700/50 whitespace-nowrap"
             title="Download collection queue as Excel spreadsheet"
           >
-            <DownloadCloud className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <DownloadCloud className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
             <span>{t.exportExcelBtn || 'Export Excel'}</span>
           </button>
 
           {/* Tab Filters */}
-          <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl text-xs font-semibold">
+          <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl text-xs font-semibold overflow-x-auto max-w-full">
             {[
               { id: 'All', label: t.allTab || 'All' },
               { id: 'Overdue', label: t.overdueTab || 'Overdue' },
@@ -98,7 +98,7 @@ export default function EmiManagement() {
               <button
                 key={id}
                 onClick={() => setFilterType(id)}
-                className={`px-4 py-2 rounded-lg transition-all ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all whitespace-nowrap ${
                   filterType === id
                     ? 'bg-white dark:bg-slate-700 text-teal-600 dark:text-white shadow-sm'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -118,7 +118,102 @@ export default function EmiManagement() {
           <span className="font-bold text-slate-800 dark:text-white">{t.activePaymentQueue}</span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* MOBILE CARD VIEW (visible on mobile < md) */}
+        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {loading ? (
+            <div className="py-12 text-center text-slate-500">
+              <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            </div>
+          ) : filteredList.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 text-xs">
+              {t.noDuesMatched}
+            </div>
+          ) : (
+            filteredList.map((emi, index) => {
+              let statusColor = 'bg-slate-50 text-slate-500 border-slate-200';
+              if (emi.status === 'Overdue') statusColor = 'bg-red-50 text-red-600 border-red-200/50 dark:bg-red-950/20';
+              else if (emi.status === 'Due Soon') statusColor = 'bg-orange-50 text-orange-600 border-orange-200/50 dark:bg-orange-950/20';
+
+              return (
+                <div key={index} className="p-4 space-y-3 bg-white/40 dark:bg-slate-900/40 transition-colors">
+                  {/* Top: Customer ID, Name, EMI status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-mono text-xs font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded-md border border-teal-200/50 dark:border-teal-800/50">
+                          {emi.customerId}
+                        </span>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                          {t.emiLabel || 'EMI'} #{emi.emiNumber}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-800 dark:text-white mt-1.5">{emi.customerName}</h4>
+                    </div>
+                    <span className={`inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full font-bold text-[10px] tracking-wide uppercase border shrink-0 ${statusColor}`}>
+                      {emi.status === 'Overdue' ? t.statusOverdue : emi.status === 'Due Soon' ? t.statusDueSoon : t.statusPending}
+                    </span>
+                  </div>
+
+                  {/* 2-Column Info Grid */}
+                  <div className="grid grid-cols-2 gap-2.5 bg-slate-50/80 dark:bg-slate-800/40 p-3 rounded-2xl text-xs border border-slate-100 dark:border-slate-800">
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">{t.dueDateCol}</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-100 text-xs">
+                        {formatDate(emi.dueDate)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">{t.totalOutstandingCol}</span>
+                      <span className="font-black text-slate-800 dark:text-slate-100 text-sm">
+                        {formatCurrency(emi.emiAmount + emi.lateFee, false)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">{t.baseAmountCol}</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        {formatCurrency(emi.emiAmount, false)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">{t.latePenaltyCol}</span>
+                      <span className={`font-semibold ${emi.lateFee > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                        {emi.lateFee > 0 ? formatCurrency(emi.lateFee, false) : '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Mobile Action Bar */}
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setWhatsappModal({
+                        emi,
+                        customer: { fullName: emi.customerName, customerId: emi.customerId, mobileNumber: emi.customerMobile },
+                        language: 'ta'
+                      })}
+                      title={t.whatsappHelp}
+                      className="flex-1 inline-flex items-center justify-center space-x-1.5 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300/50 dark:border-emerald-700/50 rounded-xl transition-all shadow-sm"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>WhatsApp</span>
+                    </button>
+
+                    <Link
+                      to={`/admin/customers/${emi.customerDbId}`}
+                      className="flex-1 inline-flex items-center justify-center space-x-1.5 px-3 py-2 text-xs font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 border border-teal-200/50 dark:border-teal-800/50 rounded-xl transition-all"
+                    >
+                      <span>{t.ledgerBtn || 'Ledger'}</span>
+                      <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* DESKTOP TABLE VIEW (visible on md and above) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100/50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200/50 dark:border-slate-800/50">

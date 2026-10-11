@@ -331,7 +331,7 @@ export default function CustomerDetails() {
     <div className="space-y-8 pb-12">
       
       {/* HEADER CONTROLS */}
-      <div className="flex items-center justify-between no-print">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
         <button
           onClick={() => navigate('/admin/customers')}
           className="flex items-center space-x-2 text-slate-500 hover:text-slate-700 dark:hover:text-white transition-colors"
@@ -340,11 +340,11 @@ export default function CustomerDetails() {
           <span>{t.backToCustomers || 'Back to Customers'}</span>
         </button>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={openEditModal}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-bold border border-blue-200/60 dark:border-blue-800/60 transition-colors shadow-sm"
+            className="flex-1 sm:flex-initial justify-center inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-bold border border-blue-200/60 dark:border-blue-800/60 transition-colors shadow-sm whitespace-nowrap"
             title="Edit Customer Profile, Banking & Technical info"
           >
             <Edit className="w-3.5 h-3.5" />
@@ -353,13 +353,13 @@ export default function CustomerDetails() {
           <button
             type="button"
             onClick={() => setShowStatementModal(true)}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold border border-teal-200/60 dark:border-teal-800/60 transition-colors shadow-sm"
+            className="flex-1 sm:flex-initial justify-center inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold border border-teal-200/60 dark:border-teal-800/60 transition-colors shadow-sm whitespace-nowrap"
             title="Generate and print official loan amortization statement with stamp"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>{t.officialStatementPdf || 'Official Statement (PDF)'}</span>
           </button>
-          <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase border ${
+          <span className={`w-full sm:w-auto text-center px-3 py-1 text-xs font-bold rounded-full uppercase border ${
             customer.paymentStatus === 'Paid'
               ? 'bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/20'
               : customer.paymentStatus === 'Overdue'
@@ -651,7 +651,166 @@ export default function CustomerDetails() {
           <span className="font-bold text-slate-800 dark:text-white">Installment Repayment Amortisation Schedule</span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* MOBILE EMI SCHEDULE CARDS (mobile-only: screens below md) */}
+        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {(() => {
+            const nextUnpaidEmi = customer.emiSchedule.find(e => e.status !== 'Paid');
+            const lastPaidEmi = [...customer.emiSchedule].reverse().find(e => e.status === 'Paid');
+            return customer.emiSchedule.map((emi) => {
+              const isRequesting = emi.status !== 'Paid' && customer.requestingEmi === emi.emiNumber;
+              const isNextInOrder = nextUnpaidEmi && nextUnpaidEmi.emiNumber === emi.emiNumber;
+              const isLastPaid = lastPaidEmi && lastPaidEmi.emiNumber === emi.emiNumber;
+
+              let statusColor = 'bg-slate-50 text-slate-500 border-slate-200';
+              if (emi.status === 'Paid') statusColor = 'bg-emerald-50 text-emerald-600 border-emerald-200/50 dark:bg-emerald-950/20';
+              else if (isRequesting) statusColor = 'bg-amber-50 text-amber-600 border-amber-300/50 dark:bg-amber-950/20 animate-pulse';
+              else if (emi.status === 'Overdue') statusColor = 'bg-red-50 text-red-600 border-red-200/50 dark:bg-red-950/20 animate-pulse';
+              else if (emi.status === 'Due Soon') statusColor = 'bg-orange-50 text-orange-600 border-orange-200/50 dark:bg-orange-950/20';
+
+              return (
+                <div key={emi.emiNumber} className={`p-4 space-y-3 bg-white/40 dark:bg-slate-900/40 transition-colors ${isRequesting ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-mono text-xs font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded-md border border-teal-200/50 dark:border-teal-800/50">
+                        EMI #{emi.emiNumber}
+                      </span>
+                      <span className="text-xs text-slate-500 ml-2 font-medium">
+                        Due: {formatDate(emi.dueDate)}
+                      </span>
+                    </div>
+                    <span className={`inline-flex items-center justify-center whitespace-nowrap px-2.5 py-0.5 rounded-full font-bold text-[10px] tracking-wide uppercase border ${statusColor}`}>
+                      {isRequesting ? 'Requesting' : emi.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 bg-slate-50/80 dark:bg-slate-800/40 p-2.5 rounded-2xl text-xs border border-slate-100 dark:border-slate-800">
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">Base Installment</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(emi.emiAmount)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">Remaining Balance</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{formatCurrency(emi.remainingBalance)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">Principal / Interest</span>
+                      <span className="text-slate-600 dark:text-slate-400">{formatCurrency(emi.principalPaid)} / {formatCurrency(emi.interestPaid)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">Late Penalty</span>
+                      <span className={`font-semibold ${emi.lateFee > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                        {emi.lateFee > 0 ? formatCurrency(emi.lateFee) : '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap items-center justify-end gap-1.5 pt-1">
+                    {emi.status !== 'Paid' ? (
+                      isNextInOrder ? (
+                        <>
+                          <button
+                            onClick={() => openMarkModal(emi)}
+                            className="flex-1 inline-flex items-center justify-center space-x-1 text-xs font-bold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 bg-teal-50 dark:bg-teal-950/40 border border-teal-200/30 px-3 py-2 rounded-xl transition-all shadow-sm"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>{isRequesting ? 'Verify & Pay' : 'Mark Paid'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setWhatsappModal({
+                              type: 'reminder',
+                              emi,
+                              customer,
+                              language: 'ta'
+                            })}
+                            title="Send WhatsApp Payment Reminder"
+                            className="inline-flex items-center space-x-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300/40 px-3 py-2 rounded-xl transition-all"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>Remind</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span 
+                            className="flex-1 inline-flex items-center justify-center space-x-1 text-xs font-semibold text-slate-400 dark:text-slate-500 bg-slate-100/70 dark:bg-slate-850/50 border border-slate-200/40 dark:border-slate-800 px-3 py-2 rounded-xl cursor-not-allowed select-none"
+                            title={`Sequential order: Please verify EMI #${nextUnpaidEmi?.emiNumber} first`}
+                          >
+                            <Lock className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Pay #{nextUnpaidEmi?.emiNumber} First</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setWhatsappModal({
+                              type: 'reminder',
+                              emi,
+                              customer,
+                              language: 'ta'
+                            })}
+                            title="Send WhatsApp Payment Reminder"
+                            className="inline-flex items-center space-x-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300/40 px-3 py-2 rounded-xl transition-all"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => openReceipt(emi)}
+                          className="inline-flex items-center space-x-1 text-xs font-bold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-slate-100 dark:bg-slate-850 border border-slate-200/50 dark:border-slate-800 px-2.5 py-1.5 rounded-xl transition-all"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Receipt</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setWhatsappModal({
+                            type: 'receipt',
+                            emi,
+                            customer,
+                            language: 'ta'
+                          })}
+                          title="Send Receipt via WhatsApp"
+                          className="inline-flex items-center space-x-1 text-xs font-bold text-emerald-600 hover:text-white hover:bg-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/40 px-2.5 py-1.5 rounded-xl transition-all"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleSendEmailReceipt(emi.emiNumber)}
+                          title="Send Receipt to Customer Gmail"
+                          className="inline-flex items-center space-x-1 text-xs font-bold text-teal-600 hover:text-teal-800 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/30 border border-teal-200/40 px-2.5 py-1.5 rounded-xl transition-all"
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                        </button>
+                        {isLastPaid ? (
+                          <button
+                            onClick={() => handleDeletePayment(emi)}
+                            title="Delete latest payment (reset to Pending)"
+                            className="inline-flex items-center text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-950/30 border border-red-200/40 p-1.5 rounded-xl transition-all shadow-sm"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <span
+                            title={`Sequential Protection: Only the latest paid installment (EMI #${lastPaidEmi?.emiNumber}) can be deleted first.`}
+                            className="inline-flex items-center text-xs font-bold text-slate-300 dark:text-slate-600 bg-slate-100/50 dark:bg-slate-900/40 border border-slate-200/30 dark:border-slate-800/30 p-1.5 rounded-xl cursor-not-allowed select-none"
+                          >
+                            <Lock className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            });
+          })()}
+        </div>
+
+        {/* DESKTOP TABLE (visible on md and above) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100/50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200/50 dark:border-slate-800/50">

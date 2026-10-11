@@ -390,15 +390,15 @@ export default function CustomerManager() {
           <p className="text-sm text-slate-500">{t.customerRecordsSubtitle}</p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={handleExportToCsv}
             disabled={customers.length === 0}
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl flex items-center space-x-2 text-sm font-bold transition-all border border-slate-200/50 dark:border-slate-700/50"
+            className="flex-1 sm:flex-initial justify-center px-3 py-2 sm:px-4 sm:py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm font-bold transition-all border border-slate-200/50 dark:border-slate-700/50 whitespace-nowrap"
             title="Download full customer spreadsheet (.CSV / Excel)"
           >
-            <DownloadCloud className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <DownloadCloud className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
             <span>{t.exportToExcel}</span>
           </button>
           
@@ -409,29 +409,29 @@ export default function CustomerManager() {
               setReconcileResult(null);
               setReconcileFile(null);
             }}
-            className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-xl flex items-center space-x-2 text-sm font-bold transition-all border border-indigo-200/50 dark:border-indigo-700/50 shadow-sm"
+            className="flex-1 sm:flex-initial justify-center px-3 py-2 sm:px-4 sm:py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-xl flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm font-bold transition-all border border-indigo-200/50 dark:border-indigo-700/50 shadow-sm whitespace-nowrap"
             title="Upload bank statement CSV to match UPI/NEFT repayments with pending EMIs"
           >
-            <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
             <span>{t.bankCsvReconciler || 'Bank CSV Match'}</span>
           </button>
           
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl flex items-center space-x-2 text-sm font-bold transition-all shadow shadow-teal-500/10"
+            className="w-full sm:w-auto justify-center px-3 py-2 sm:px-4 sm:py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm font-bold transition-all shadow shadow-teal-500/10 whitespace-nowrap"
           >
-            <UserPlus className="w-4 h-4" />
+            <UserPlus className="w-4 h-4 shrink-0" />
             <span>{t.addCustomer}</span>
           </button>
         </div>
       </div>
 
       {/* FILTER SEARCH CRITERIA */}
-      <div className="glass-premium rounded-3xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="glass-premium rounded-3xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         
         {/* Search */}
         <div className="flex-1 relative">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
             <Search className="w-4 h-4" />
           </span>
           <input
@@ -444,18 +444,12 @@ export default function CustomerManager() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
-          
-          <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl text-xs text-slate-500">
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>{t.filtersLabel || 'Filters:'}</span>
-          </div>
-
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 w-full md:w-auto">
           {/* Loan Status */}
           <select
             value={loanStatus}
             onChange={(e) => setLoanStatus(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 py-2 px-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+            className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 py-2 px-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
           >
             <option value="">{t.allLoanStatus || 'All Loan Status'}</option>
             <option value="Active">{t.statusActive}</option>
@@ -466,7 +460,7 @@ export default function CustomerManager() {
           <select
             value={paymentStatus}
             onChange={(e) => setPaymentStatus(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 py-2 px-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+            className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 py-2 px-3 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
           >
             <option value="">{t.allRepaymentStatus || 'All Repayments Status'}</option>
             <option value="Paid">{t.statusPaid}</option>
@@ -474,13 +468,143 @@ export default function CustomerManager() {
             <option value="Overdue">{t.statusOverdue}</option>
             <option value="Pending">{t.statusPending}</option>
           </select>
-
         </div>
       </div>
 
-      {/* CUSTOMERS DATA TABLE */}
+      {/* CUSTOMERS DATA CONTAINER */}
       <div className="glass-premium rounded-3xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        
+        {/* MOBILE CUSTOMER CARD VIEW (visible on mobile < md) */}
+        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {loading ? (
+            <div className="py-12 text-center text-slate-500">
+              <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            </div>
+          ) : customers.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 text-xs">
+              {t.noCustomersFound}
+            </div>
+          ) : (
+            customers.map((c) => {
+              const paymentBadgeClass = c.paymentStatus === 'Paid'
+                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200/40'
+                : c.paymentStatus === 'Overdue'
+                ? 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400 border-red-200/40 animate-pulse-soft'
+                : c.paymentStatus === 'Due Soon'
+                ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400 border-orange-200/40'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200/40';
+
+              const paymentStatusText = c.paymentStatus === 'Paid' 
+                ? t.statusPaid 
+                : c.paymentStatus === 'Overdue' 
+                ? t.statusOverdue 
+                : c.paymentStatus === 'Due Soon' 
+                ? t.statusDueSoon 
+                : t.statusPending;
+
+              return (
+                <div key={c._id} className="p-4 space-y-3 bg-white/40 dark:bg-slate-900/40 transition-colors">
+                  {/* Top: ID, Name, Repayment Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-mono text-xs font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded-md border border-teal-200/50 dark:border-teal-800/50">
+                          {c.customerId}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border ${
+                          c.loanStatus === 'Completed' 
+                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-250/30'
+                            : 'bg-teal-50 text-teal-600 dark:bg-teal-950/20 dark:text-teal-400 border-teal-250/30'
+                        }`}>
+                          {c.loanStatus === 'Completed' ? t.statusCompleted : t.statusActive}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-800 dark:text-white mt-1.5">{c.fullName}</h4>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] uppercase border shrink-0 ${paymentBadgeClass}`}>
+                      {paymentStatusText}
+                    </span>
+                  </div>
+
+                  {/* 2-Column Info Grid */}
+                  <div className="grid grid-cols-2 gap-2.5 bg-slate-50/80 dark:bg-slate-800/40 p-3 rounded-2xl text-xs border border-slate-100 dark:border-slate-800">
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">{t.loanAmountCol}</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                        {formatCurrency(c.loanAmount, false)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">{t.monthlyEmiCol}</span>
+                      <span className="font-bold text-teal-600 dark:text-teal-400 text-sm">
+                        {formatCurrency(c.monthlyEmi, false)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">{t.solarBrandSizeCol}</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium truncate block">
+                        {c.solarBrand} ({c.solarCapacity} kW)
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold block">{t.mobile}</span>
+                      <div className="flex items-center space-x-1.5 mt-0.5">
+                        <span className="font-mono text-slate-700 dark:text-slate-300 text-xs truncate">{c.mobileNumber}</span>
+                        {c.mobileNumber && (
+                          <button
+                            type="button"
+                            onClick={() => openWhatsApp({
+                              phone: c.mobileNumber,
+                              message: `வணக்கம் ${c.fullName}, MRS SOLAR-ல் இருந்து தொடர்பு கொள்கிறோம்.`
+                            })}
+                            title={t.whatsappHelp}
+                            className="p-1 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-colors shrink-0"
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile Action Bar */}
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <Link
+                      to={`/admin/customers/${c._id}`}
+                      className="flex-1 inline-flex items-center justify-center space-x-1.5 px-3 py-2 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/50 dark:hover:bg-teal-900/60 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold transition-colors border border-teal-200/50 dark:border-teal-800/50"
+                      title={t.viewLedgerStatement || "View Ledger Statement"}
+                    >
+                      <Eye className="w-3.5 h-3.5 shrink-0" />
+                      <span>{t.preview || 'View'}</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal(c)}
+                      className="flex-1 inline-flex items-center justify-center space-x-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-bold transition-colors border border-blue-200/50 dark:border-blue-800/50"
+                      title={t.editCustomer || "Edit Customer Record"}
+                    >
+                      <Edit2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>{t.editCustomer || 'Edit'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCustomer(c._id, c.fullName)}
+                      className="p-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-xl text-xs transition-colors border border-red-200/50 dark:border-red-800/50 shrink-0"
+                      title={t.deleteLedger || "Delete Ledger"}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* DESKTOP TABLE VIEW (visible on md and above) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100/50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200/50 dark:border-slate-800/50">

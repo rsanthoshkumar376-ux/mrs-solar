@@ -127,33 +127,35 @@ export default function CustomerDashboard() {
             <h2 className="text-3xl font-extrabold mt-3">{t.welcome}, {customer.fullName}</h2>
             <p className="text-sm text-teal-100 mt-1">{t.customerId}: {customer.customerId} | {t.installationDate}: {formatDate(customer.installationDate)}</p>
           </div>
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/10 text-center">
-              <p className="text-xs text-teal-200">{t.totalOutstanding}</p>
-              <p className="text-2xl font-black mt-1">{formatCurrency(outstandingAmount)}</p>
+          <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
+            <div className="flex-1 min-w-[130px] bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2.5 sm:px-5 sm:py-3 border border-white/10 text-center">
+              <p className="text-[11px] sm:text-xs text-teal-200">{t.totalOutstanding}</p>
+              <p className="text-xl sm:text-2xl font-black mt-0.5">{formatCurrency(outstandingAmount)}</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/10 text-center">
-              <p className="text-xs text-teal-200">{t.nextEmiDate}</p>
-              <p className="text-2xl font-black mt-1">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : t.completed}</p>
+            <div className="flex-1 min-w-[130px] bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2.5 sm:px-5 sm:py-3 border border-white/10 text-center">
+              <p className="text-[11px] sm:text-xs text-teal-200">{t.nextEmiDate}</p>
+              <p className="text-xl sm:text-2xl font-black mt-0.5">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : t.completed}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowStatementModal(true)}
-              className="bg-white/20 hover:bg-white/30 text-white rounded-2xl px-4 py-3.5 border border-white/20 flex items-center space-x-2 text-xs font-bold shadow-lg transition-all"
-              title="View & Download official loan amortization statement with stamp"
-            >
-              <Printer className="w-4 h-4" />
-              <span>{t.loanStatementBtn}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => openCustomerSupportChat({ customer })}
-              className="bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl px-4 py-3.5 border border-white/20 flex items-center space-x-2 text-xs font-bold shadow-lg transition-all"
-              title="Chat with MRS SOLAR support on WhatsApp"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>{t.whatsappHelp}</span>
-            </button>
+            <div className="w-full flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowStatementModal(true)}
+                className="flex-1 justify-center bg-white/20 hover:bg-white/30 text-white rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3.5 border border-white/20 flex items-center space-x-1.5 sm:space-x-2 text-xs font-bold shadow-lg transition-all"
+                title="View & Download official loan amortization statement with stamp"
+              >
+                <Printer className="w-4 h-4 shrink-0" />
+                <span>{t.loanStatementBtn}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => openCustomerSupportChat({ customer })}
+                className="flex-1 justify-center bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3.5 border border-white/20 flex items-center space-x-1.5 sm:space-x-2 text-xs font-bold shadow-lg transition-all"
+                title="Chat with MRS SOLAR support on WhatsApp"
+              >
+                <MessageCircle className="w-4 h-4 shrink-0" />
+                <span>{t.whatsappHelp}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

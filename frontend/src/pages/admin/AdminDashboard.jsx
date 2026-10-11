@@ -106,12 +106,12 @@ export default function AdminDashboard() {
         <button
           onClick={triggerScheduler}
           disabled={schedulerRunning}
-          className="bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/60 text-white font-bold px-4 py-3 rounded-2xl flex items-center space-x-2 transition-colors shadow-lg shadow-teal-500/10 outline-none"
+          className="w-full sm:w-auto justify-center bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/60 text-white font-bold px-4 py-2.5 sm:py-3 rounded-2xl flex items-center space-x-2 transition-colors shadow-lg shadow-teal-500/10 outline-none text-xs sm:text-sm"
         >
           {schedulerRunning ? (
-            <RefreshCw className="w-5 h-5 animate-spin" />
+            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 animate-spin shrink-0" />
           ) : (
-            <PlayCircle className="w-5 h-5" />
+            <PlayCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
           )}
           <span>{schedulerRunning ? t.runningMidnightAudit : t.runMidnightAuditCheck}</span>
         </button>
