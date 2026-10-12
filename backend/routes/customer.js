@@ -114,6 +114,33 @@ router.post('/notifications/read', authenticateToken, async (req, res) => {
   }
 });
 
+// 4b. Clear / Delete Notifications
+router.delete('/notifications', authenticateToken, async (req, res) => {
+  const id = req.body?.id || req.query?.id;
+  try {
+    const { role, customerId } = req.user;
+    if (id) {
+      if (role === 'admin') {
+        await db.deleteOne('notifications', { _id: id });
+      } else if (role === 'customer' && customerId) {
+        await db.deleteOne('notifications', { _id: id, customerId });
+      }
+      return res.json({ message: 'Notification removed successfully' });
+    } else {
+      // Clear all notifications for the active user session
+      if (role === 'admin') {
+        await db.deleteMany('notifications', { role: 'admin' });
+      } else if (role === 'customer' && customerId) {
+        await db.deleteMany('notifications', { customerId, role: 'customer' });
+      }
+      return res.json({ message: 'All notifications cleared successfully' });
+    }
+  } catch (error) {
+    console.error('Clear notifications error:', error);
+    res.status(500).json({ message: 'Error clearing notifications' });
+  }
+});
+
 // 5. Notify Admin of Customer Payment & Submit UTR
 router.post('/notify-payment', authenticateToken, authorizeRole(['customer']), async (req, res) => {
   try {

@@ -6,7 +6,7 @@ import {
   Sun, Moon, LogOut, Menu, X, Bell, LayoutDashboard, 
   Users, DollarSign, History, Calculator, ShieldAlert,
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
-  Search, Languages, Mic, CreditCard
+  Search, Languages, Mic, CreditCard, Trash2
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -135,6 +135,29 @@ export default function Layout({ children }) {
       setUnreadCount(0);
     } catch (error) {
       console.error('Error marking notifications read:', error);
+    }
+  };
+
+  const clearAllNotifications = async (e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(t.clearAllConfirm || 'Are you sure you want to clear all notifications?')) return;
+    try {
+      await api.delete('/customer/notifications');
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+    }
+  };
+
+  const deleteSingleNotification = async (id, e) => {
+    if (e) e.stopPropagation();
+    try {
+      await api.delete(`/customer/notifications?id=${id}`);
+      setNotifications(prev => prev.filter(n => n._id !== id));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error deleting notification:', error);
     }
   };
 
@@ -427,14 +450,28 @@ export default function Layout({ children }) {
                   <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden">
                     <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
                       <span className="font-bold text-sm text-slate-800 dark:text-white">{t.notificationsTitle}</span>
-                      {unreadCount > 0 && (
-                        <button 
-                          onClick={markAllRead}
-                          className="text-xs text-teal-600 dark:text-teal-400 font-semibold hover:underline"
-                        >
-                          {t.markAllRead}
-                        </button>
-                      )}
+                      <div className="flex items-center space-x-2.5">
+                        {unreadCount > 0 && (
+                          <button 
+                            type="button"
+                            onClick={markAllRead}
+                            className="text-xs text-teal-600 dark:text-teal-400 font-semibold hover:underline"
+                          >
+                            {t.markAllRead}
+                          </button>
+                        )}
+                        {notifications.length > 0 && (
+                          <button 
+                            type="button"
+                            onClick={clearAllNotifications}
+                            className="text-xs text-red-500 hover:text-red-600 dark:text-red-400 font-semibold hover:underline flex items-center space-x-1"
+                            title={t.clearAllNotifications || 'Clear All'}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>{t.clearAllNotifications || 'Clear All'}</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
                       {notifications.length === 0 ? (
@@ -466,7 +503,17 @@ export default function Layout({ children }) {
                                   <p className="font-semibold text-slate-800 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
                                     {n.title}
                                   </p>
-                                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                                  <div className="flex items-center space-x-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => deleteSingleNotification(n._id, e)}
+                                      className="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors opacity-70 group-hover:opacity-100"
+                                      title="Clear this notification"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all" />
+                                  </div>
                                 </div>
                                 <p className="mt-0.5 leading-relaxed">{n.message}</p>
                                 <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-slate-100 dark:border-slate-850">

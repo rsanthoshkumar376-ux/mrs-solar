@@ -4,7 +4,7 @@ import api from '../../utils/api.js';
 import { formatCurrency } from '../../utils/format.js';
 import { 
   Users, Zap, DollarSign, Wallet, ShieldAlert, Clock, 
-  TrendingUp, Activity, BellRing, PlayCircle, RefreshCw, CheckCircle, ChevronRight
+  TrendingUp, Activity, BellRing, PlayCircle, RefreshCw, CheckCircle, ChevronRight, Trash2
 } from 'lucide-react';
 import { translations, getLanguage } from '../../utils/translations.js';
 
@@ -77,6 +77,27 @@ export default function AdminDashboard() {
       alert(t.auditFailedAlert || 'Failed to execute daily status audit check.');
     } finally {
       setSchedulerRunning(false);
+    }
+  };
+
+  const handleClearNotifications = async (e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(t.clearAllConfirm || 'Are you sure you want to clear all notifications?')) return;
+    try {
+      await api.delete('/customer/notifications');
+      setNotifications([]);
+    } catch (err) {
+      console.error('Error clearing notifications:', err);
+    }
+  };
+
+  const handleDeleteNotification = async (id, e) => {
+    if (e) e.stopPropagation();
+    try {
+      await api.delete(`/customer/notifications?id=${id}`);
+      setNotifications(prev => prev.filter(n => n._id !== id));
+    } catch (err) {
+      console.error('Error deleting notification:', err);
     }
   };
 
@@ -323,9 +344,22 @@ export default function AdminDashboard() {
         {/* RECENT ALERTS */}
         <div className="glass-premium rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
-              <BellRing className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-              <h3 className="font-bold text-slate-800 dark:text-white">{t.recentActivityAlerts}</h3>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
+              <div className="flex items-center space-x-2">
+                <BellRing className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                <h3 className="font-bold text-slate-800 dark:text-white">{t.recentActivityAlerts}</h3>
+              </div>
+              {notifications.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearNotifications}
+                  className="text-xs text-red-500 hover:text-red-600 dark:text-red-400 font-semibold flex items-center space-x-1 hover:underline"
+                  title={t.clearAllNotifications || 'Clear All'}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{t.clearAllNotifications || 'Clear All'}</span>
+                </button>
+              )}
             </div>
 
             <div className="space-y-3 overflow-y-auto max-h-[220px]">
@@ -362,7 +396,17 @@ export default function AdminDashboard() {
                           <p className="text-slate-500 dark:text-slate-400 mt-0.5">{n.message}</p>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" />
+                      <div className="flex items-center space-x-1 shrink-0 mt-0.5">
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteNotification(n._id, e)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors opacity-70 group-hover:opacity-100"
+                          title="Clear this alert"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all" />
+                      </div>
                     </div>
                   );
                 })
