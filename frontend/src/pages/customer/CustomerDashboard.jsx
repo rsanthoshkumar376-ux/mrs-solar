@@ -19,6 +19,7 @@ import { translations, getLanguage } from '../../utils/translations.js';
 // Lazy load heavy Leaflet map and PDF statement modal for performance
 const SolarSiteMap = React.lazy(() => import('../../components/SolarSiteMap.jsx'));
 const LoanStatementModal = React.lazy(() => import('../../components/LoanStatementModal.jsx'));
+import SolarTrackerCard from '../../components/SolarTrackerCard.jsx';
 
 export default function CustomerDashboard() {
   const [customer, setCustomer] = useState(null);
@@ -57,6 +58,16 @@ export default function CustomerDashboard() {
       console.error('Error fetching customer dashboard:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogReading = async (logData) => {
+    try {
+      await api.post('/customer/solar-log', logData);
+      alert(lang === 'ta' ? 'சோலார் அளவீடு வெற்றிகரமாக சேமிக்கப்பட்டது!' : 'Solar meter reading saved successfully!');
+      fetchDashboardData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save solar reading.');
     }
   };
 
@@ -256,51 +267,15 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
-      {/* GREEN ENERGY GENERATION & EB BILL SAVINGS */}
-      <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-amber-500/10 border border-emerald-500/20 dark:border-emerald-500/20 rounded-3xl p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-500/20">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <Leaf className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-800 dark:text-white text-sm">{t.greenTitle}</h3>
-              <p className="text-[11px] text-slate-500">{t.greenSubtitle}</p>
-            </div>
-          </div>
-          <span className="px-3 py-1 bg-emerald-600 text-white text-[11px] font-bold rounded-full self-start sm:self-auto shadow-sm">
-            {t.subsidyEligible}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 text-xs">
-          <div className="bg-white/80 dark:bg-slate-900/80 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
-            <span className="text-[10px] font-bold uppercase text-slate-400">{t.estGeneration}</span>
-            <p className="text-xl font-black text-slate-800 dark:text-white mt-0.5">
-              ~{Math.round((Number(customer.solarCapacity) || 3) * 120)} {t.unitsPerMonth}
-            </p>
-            <p className="text-[10px] text-slate-500 mt-1">{t.sunshineNote}</p>
-          </div>
-
-          <div className="bg-white/80 dark:bg-slate-900/80 p-3.5 rounded-2xl border border-emerald-300/40 dark:border-emerald-800/40">
-            <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">{t.estSavings}</span>
-            <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-              {formatCurrency(Math.round((Number(customer.solarCapacity) || 3) * 120 * 6.5), false)} <span className="text-xs font-normal text-slate-400">/ mo</span>
-            </p>
-            <p className="text-[10px] text-slate-500 mt-1">{t.ebSavingsNote}</p>
-          </div>
-
-          <div className="bg-white/80 dark:bg-slate-900/80 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
-            <span className="text-[10px] font-bold uppercase text-slate-400">{t.co2Offset}</span>
-            <p className="text-xl font-black text-teal-600 dark:text-teal-400 mt-0.5">
-              ~{Math.round((Number(customer.solarCapacity) || 3) * 120 * 0.82)} kg CO₂
-            </p>
-            <p className="text-[10px] text-slate-500 mt-1">
-              {t.treesPlantedNote.replace('{trees}', Math.round((Number(customer.solarCapacity) || 3) * 6))}
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* SOLAR USAGE, RUNTIME, CONSUMPTION & TNEB QUICK PAY INTEGRATION */}
+      <SolarTrackerCard 
+        solarStats={customer.solarStats}
+        customer={customer}
+        t={t}
+        lang={lang}
+        onLogReading={handleLogReading}
+        isAdmin={false}
+      />
 
       {/* LOAN PROGRESS TIMELINE */}
       <div className="glass-premium rounded-3xl p-6 md:p-8 shadow-sm">

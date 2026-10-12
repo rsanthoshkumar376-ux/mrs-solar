@@ -34,6 +34,7 @@ import {
   saveUpiAccount, 
   deleteUpiAccount 
 } from '../utils/upiConfig.js';
+import { calculateSolarStats, getFormattedDate } from '../utils/solarStats.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -305,11 +306,13 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
       installationAddress: rawData.installationAddress || '',
       latitude: rawData.latitude ? Number(rawData.latitude) : null,
       longitude: rawData.longitude ? Number(rawData.longitude) : null,
+      tnebConsumerNumber: rawData.tnebConsumerNumber ? String(rawData.tnebConsumerNumber).trim() : '',
       solarCapacity: Number(rawData.solarCapacity) || 0,
       solarBrand: rawData.solarBrand || '',
       solarCost: Number(rawData.solarCost) || 0,
       installationDate: rawData.installationDate || '',
       warrantyDetails: rawData.warrantyDetails || '',
+      solarLogs: [],
       loanAmount,
       downPayment: Number(rawData.downPayment) || 0,
       interestRate: Number(rawData.interestRate),
@@ -466,6 +469,7 @@ router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload
       },
       nomineeDetails: rawData.nomineeDetails !== undefined ? rawData.nomineeDetails : oldCustomer.nomineeDetails,
       installationAddress: rawData.installationAddress !== undefined ? rawData.installationAddress : oldCustomer.installationAddress,
+      tnebConsumerNumber: rawData.tnebConsumerNumber !== undefined ? String(rawData.tnebConsumerNumber).trim() : (oldCustomer.tnebConsumerNumber || ''),
       solarCapacity: rawData.solarCapacity !== undefined ? Number(rawData.solarCapacity) : oldCustomer.solarCapacity,
       solarBrand: rawData.solarBrand !== undefined ? rawData.solarBrand : oldCustomer.solarBrand,
       solarCost: rawData.solarCost !== undefined ? Number(rawData.solarCost) : oldCustomer.solarCost,
@@ -501,6 +505,75 @@ router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload
   } catch (error) {
     console.error('Edit customer error:', error);
     res.status(500).json({ message: 'Error editing customer details' });
+  }
+});
+
+// 5a. Solar Stats for Customer (Generation, Runtime, Consumption, Savings)
+router.get('/customers/:id/solar-stats', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const customer = (await db.findOne('customers', { _id: req.params.id })) || 
+                     (await db.findOne('customers', { customerId: req.params.id }));
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    const stats = calculateSolarStats(customer);
+    res.json(stats);
+  } catch (error) {
+    console.error('Customer solar stats error:', error);
+    res.status(500).json({ message: 'Error retrieving solar statistics' });
+  }
+});
+
+// 5b. Log Daily Solar Generation & Runtime for Customer
+router.post('/customers/:id/solar-log', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const customer = (await db.findOne('customers', { _id: req.params.id })) || 
+                     (await db.findOne('customers', { customerId: req.params.id }));
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    const { date, unitsGenerated, runtimeHours, unitsConsumed, gridExport, notes } = req.body;
+    const logDate = date || getFormattedDate();
+    const unitsGen = Number(unitsGenerated) || 0;
+    const runtime = Number(runtimeHours) || 0;
+    const consumed = unitsConsumed !== undefined ? Number(unitsConsumed) : Math.round(unitsGen * 0.75 * 10) / 10;
+    const exported = gridExport !== undefined ? Number(gridExport) : Math.max(0, Math.round((unitsGen - consumed) * 10) / 10);
+
+    const logs = Array.isArray(customer.solarLogs) ? [...customer.solarLogs] : [];
+    const existingIndex = logs.findIndex(l => l.date === logDate);
+
+    const logEntry = {
+      date: logDate,
+      unitsGenerated: unitsGen,
+      runtimeHours: runtime,
+      unitsConsumed: consumed,
+      gridExport: exported,
+      notes: notes || '',
+      loggedAt: new Date().toISOString(),
+      loggedBy: req.user.username
+    };
+
+    if (existingIndex >= 0) {
+      logs[existingIndex] = { ...logs[existingIndex], ...logEntry };
+    } else {
+      logs.push(logEntry);
+    }
+
+    // Sort newest first
+    logs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    await db.updateOne('customers', { _id: customer._id }, { solarLogs: logs });
+    await logAdminAction(req.user.username, 'LOG_SOLAR_READING', customer.customerId, { date: logDate, units: unitsGen, runtime });
+
+    const updatedCustomer = await db.findOne('customers', { _id: customer._id });
+    const stats = calculateSolarStats(updatedCustomer);
+
+    res.json({ success: true, message: 'Solar meter reading recorded successfully.', stats });
+  } catch (error) {
+    console.error('Solar log error:', error);
+    res.status(500).json({ message: 'Error saving solar meter reading' });
   }
 });
 

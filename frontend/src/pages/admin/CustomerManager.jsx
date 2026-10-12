@@ -68,7 +68,7 @@ export default function CustomerManager() {
     email: '', address: '', city: '', district: '', state: '', pinCode: '',
     aadhaarNumber: '', panNumber: '', occupation: '', monthlyIncome: '',
     bankName: '', accountNumber: '', ifscCode: '', nomineeDetails: '',
-    installationAddress: '', solarCapacity: '', solarBrand: '', solarCost: '',
+    installationAddress: '', tnebConsumerNumber: '', solarCapacity: '', solarBrand: '', solarCost: '',
     installationDate: '', warrantyDetails: '', loanAmount: '', downPayment: '',
     interestRate: '2', emiDuration: '12', loanStartDate: '', remarks: '',
     latitude: '', longitude: ''
@@ -240,7 +240,7 @@ export default function CustomerManager() {
         email: '', address: '', city: '', district: '', state: '', pinCode: '',
         aadhaarNumber: '', panNumber: '', occupation: '', monthlyIncome: '',
         bankName: '', accountNumber: '', ifscCode: '', nomineeDetails: '',
-        installationAddress: '', solarCapacity: '', solarBrand: '', solarCost: '',
+        installationAddress: '', tnebConsumerNumber: '', solarCapacity: '', solarBrand: '', solarCost: '',
         installationDate: '', warrantyDetails: '', loanAmount: '', downPayment: '',
         interestRate: '2', emiDuration: '12', loanStartDate: '', remarks: '',
         latitude: '', longitude: ''
@@ -283,6 +283,7 @@ export default function CustomerManager() {
       ifscCode: c.bankDetails?.ifscCode || '',
       nomineeDetails: c.nomineeDetails || '',
       installationAddress: c.installationAddress || '',
+      tnebConsumerNumber: c.tnebConsumerNumber || '',
       solarCapacity: c.solarCapacity ? String(c.solarCapacity) : '',
       solarBrand: c.solarBrand || '',
       solarCost: c.solarCost ? String(c.solarCost) : '',
@@ -1046,6 +1047,10 @@ export default function CustomerManager() {
                     <input type="text" name="installationAddress" required value={formData.installationAddress} onChange={handleInputChange} placeholder="Installation site rooftop address" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.tnebConsumerNumberLabel || 'TNEB Consumer Number'}</label>
+                    <input type="text" name="tnebConsumerNumber" value={formData.tnebConsumerNumber || ''} onChange={handleInputChange} placeholder={t.tnebPlaceholder || 'e.g. 09-234-005-1234'} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.solarCapacityKwLabel}</label>
                     <input type="number" step="0.1" required name="solarCapacity" value={formData.solarCapacity} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
@@ -1290,7 +1295,11 @@ export default function CustomerManager() {
                     <label className="block font-semibold text-slate-500 mb-1">{t.installationDateLabel}</label>
                     <input type="date" name="installationDate" value={editFormData.installationDate || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
-                  <div>
+                  <div className="md:col-span-2">
+                    <label className="block font-semibold text-slate-500 mb-1">{t.tnebConsumerNumberLabel || 'TNEB Consumer Number'}</label>
+                    <input type="text" name="tnebConsumerNumber" value={editFormData.tnebConsumerNumber || ''} onChange={handleEditInputChange} placeholder={t.tnebPlaceholder || 'e.g. 09-234-005-1234'} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div className="md:col-span-2">
                     <label className="block font-semibold text-slate-500 mb-1">{t.warrantyDetailsLabel}</label>
                     <input type="text" name="warrantyDetails" value={editFormData.warrantyDetails || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>

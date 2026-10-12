@@ -4,6 +4,7 @@ import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { recalculateCustomerEmiStatus } from '../utils/calculations.js';
 import { resolveCustomerDocumentUrls, maskAadhaar } from '../utils/storage.js';
 import { getActiveUpiAccount } from '../utils/upiConfig.js';
+import { calculateSolarStats, getFormattedDate } from '../utils/solarStats.js';
 
 const router = express.Router();
 
@@ -29,9 +30,11 @@ router.get('/dashboard', authenticateToken, authorizeRole(['customer']), async (
 
     // Attach active administrator-selected UPI account for payment routing
     const activeUpi = await getActiveUpiAccount();
+    const solarStats = calculateSolarStats(updatedCustomer);
 
     res.json({
       ...safeCustomer,
+      solarStats,
       activeUpi
     });
   } catch (error) {
@@ -199,6 +202,72 @@ router.post('/submit-utr', authenticateToken, authorizeRole(['customer']), async
   } catch (error) {
     console.error('Submit UTR error:', error);
     res.status(500).json({ message: 'Error submitting UTR number' });
+  }
+});
+
+// 6. Get Solar Stats for Customer
+router.get('/solar-stats', authenticateToken, authorizeRole(['customer']), async (req, res) => {
+  try {
+    const customerId = req.user.customerId;
+    if (!customerId) return res.status(400).json({ message: 'Customer ID required' });
+    const customer = await db.findOne('customers', { customerId });
+    if (!customer) return res.status(404).json({ message: 'Customer record not found' });
+
+    const stats = calculateSolarStats(customer);
+    res.json(stats);
+  } catch (error) {
+    console.error('Solar stats error:', error);
+    res.status(500).json({ message: 'Error retrieving solar stats' });
+  }
+});
+
+// 7. Log Daily Solar Generation & Runtime (Customer self-service)
+router.post('/solar-log', authenticateToken, authorizeRole(['customer']), async (req, res) => {
+  try {
+    const customerId = req.user.customerId;
+    if (!customerId) return res.status(400).json({ message: 'Customer ID required' });
+    const customer = await db.findOne('customers', { customerId });
+    if (!customer) return res.status(404).json({ message: 'Customer record not found' });
+
+    const { date, unitsGenerated, runtimeHours, unitsConsumed, gridExport, notes } = req.body;
+    const logDate = date || getFormattedDate();
+    const unitsGen = Number(unitsGenerated) || 0;
+    const runtime = Number(runtimeHours) || 0;
+    const consumed = unitsConsumed !== undefined ? Number(unitsConsumed) : Math.round(unitsGen * 0.75 * 10) / 10;
+    const exported = gridExport !== undefined ? Number(gridExport) : Math.max(0, Math.round((unitsGen - consumed) * 10) / 10);
+
+    const logs = Array.isArray(customer.solarLogs) ? [...customer.solarLogs] : [];
+    const existingIndex = logs.findIndex(l => l.date === logDate);
+
+    const logEntry = {
+      date: logDate,
+      unitsGenerated: unitsGen,
+      runtimeHours: runtime,
+      unitsConsumed: consumed,
+      gridExport: exported,
+      notes: notes || '',
+      loggedAt: new Date().toISOString(),
+      loggedBy: 'customer'
+    };
+
+    if (existingIndex >= 0) {
+      logs[existingIndex] = { ...logs[existingIndex], ...logEntry };
+    } else {
+      logs.push(logEntry);
+    }
+
+    // Sort newest first
+    logs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    await db.updateOne('customers', { _id: customer._id }, { solarLogs: logs });
+
+    const updatedCustomer = await db.findOne('customers', { _id: customer._id });
+    const stats = calculateSolarStats(updatedCustomer);
+
+    res.json({ success: true, message: 'Solar meter reading saved successfully.', stats });
+  } catch (error) {
+    console.error('Customer solar log error:', error);
+    res.status(500).json({ message: 'Error saving solar reading' });
   }
 });
 

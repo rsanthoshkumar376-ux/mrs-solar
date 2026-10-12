@@ -6,16 +6,18 @@ import {
   User, Compass, Zap, Landmark, Award, ShieldCheck, 
   ArrowLeft, Edit, FileText, CheckCircle, Clock, AlertTriangle, 
   Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2, Mail, Lock,
-  MessageCircle, Send, Globe, Eye, Download, FolderArchive
+  MessageCircle, Send, Globe, Eye, Download, FolderArchive, ExternalLink
 } from 'lucide-react';
 import { generateEmiReminderMessage, generatePaymentReceiptMessage, openWhatsApp } from '../../utils/whatsapp.js';
 import { translations, getLanguage } from '../../utils/translations.js';
 import { compressImageFile } from '../../utils/imageCompressor.js';
+import { launchTnebQuickPay } from '../../utils/tneb.js';
 
 // Lazy load heavy Leaflet map and PDF statement modal for performance
 const SolarSiteMap = React.lazy(() => import('../../components/SolarSiteMap.jsx'));
 const LoanStatementModal = React.lazy(() => import('../../components/LoanStatementModal.jsx'));
 import UpiPaymentModal from '../../components/UpiPaymentModal.jsx';
+import SolarTrackerCard from '../../components/SolarTrackerCard.jsx';
 
 const DOC_CONFIGS = [
   { key: 'aadhaarFile', label: 'Aadhaar Identity Proof', desc: 'Government photo identity card' },
@@ -71,17 +73,32 @@ export default function CustomerDetails() {
   }, []);
 
   const t = translations[lang] || translations.en;
+  const [solarStats, setSolarStats] = useState(null);
 
   const fetchCustomerDetails = async () => {
     try {
       const response = await api.get(`/admin/customers/${id}`);
       setCustomer(response.data);
 
-      // Payment data is embedded in customer.emiSchedule — no separate fetch needed
+      try {
+        const statsRes = await api.get(`/admin/customers/${id}/solar-stats`);
+        setSolarStats(statsRes.data);
+      } catch {}
     } catch (error) {
       console.error('Error loading customer details:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAdminLogReading = async (logData) => {
+    try {
+      const res = await api.post(`/admin/customers/${id}/solar-log`, logData);
+      setSolarStats(res.data.stats);
+      alert(lang === 'ta' ? 'சோலார் அளவீடு வெற்றிகரமாக சேமிக்கப்பட்டது!' : 'Solar meter reading recorded successfully.');
+      fetchCustomerDetails();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save solar reading.');
     }
   };
 
@@ -132,6 +149,7 @@ export default function CustomerDetails() {
       ifscCode: customer.bankDetails?.ifscCode || '',
       nomineeDetails: customer.nomineeDetails || '',
       installationAddress: customer.installationAddress || '',
+      tnebConsumerNumber: customer.tnebConsumerNumber || '',
       solarCapacity: customer.solarCapacity ? String(customer.solarCapacity) : '',
       solarBrand: customer.solarBrand || '',
       solarCost: customer.solarCost ? String(customer.solarCost) : '',
@@ -458,6 +476,22 @@ export default function CustomerDetails() {
             <h3 className="font-bold text-slate-800 dark:text-white">Solar Project Details</h3>
           </div>
           <div className="space-y-3 text-xs">
+            <div className="flex justify-between items-center py-1.5 px-2.5 bg-amber-500/10 dark:bg-amber-950/30 rounded-xl border border-amber-500/20">
+              <span className="text-amber-800 dark:text-amber-300 font-bold">TNEB Consumer No.</span>
+              <div className="flex items-center space-x-1.5">
+                <span className="font-mono font-bold text-amber-900 dark:text-amber-200">{customer.tnebConsumerNumber || '—'}</span>
+                {customer.tnebConsumerNumber && (
+                  <button
+                    type="button"
+                    onClick={() => launchTnebQuickPay(customer.tnebConsumerNumber)}
+                    className="p-1 text-amber-700 hover:text-amber-900 dark:text-amber-300 hover:scale-110 transition-transform"
+                    title="Copy & Open TNEB Quick Pay"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Solar Capacity</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.solarCapacity} kW</span>
@@ -547,6 +581,18 @@ export default function CustomerDetails() {
           </div>
         </div>
 
+      </div>
+
+      {/* SOLAR USAGE, DAILY RUNTIME, CONSUMPTION & TNEB INTEGRATION */}
+      <div className="no-print">
+        <SolarTrackerCard 
+          solarStats={solarStats}
+          customer={customer}
+          t={t}
+          lang={lang}
+          onLogReading={handleAdminLogReading}
+          isAdmin={true}
+        />
       </div>
 
       {/* 1. SOLAR ROOFTOP SITE MAP & GPS NAVIGATION */}
@@ -1541,7 +1587,11 @@ export default function CustomerDetails() {
                     <label className="block font-semibold text-slate-500 mb-1">{t.installationDateLabel || 'Installation Date'}</label>
                     <input type="date" name="installationDate" value={editFormData.installationDate || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
-                  <div>
+                  <div className="md:col-span-2">
+                    <label className="block font-semibold text-slate-500 mb-1">{t.tnebConsumerNumberLabel || 'TNEB Consumer / Service Number'}</label>
+                    <input type="text" name="tnebConsumerNumber" value={editFormData.tnebConsumerNumber || ''} onChange={handleEditInputChange} placeholder={t.tnebPlaceholder || 'e.g. 09-234-005-1234'} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                  </div>
+                  <div className="md:col-span-2">
                     <label className="block font-semibold text-slate-500 mb-1">{t.warrantyDetailsLabel || 'Warranty Details'}</label>
                     <input type="text" name="warrantyDetails" value={editFormData.warrantyDetails || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
