@@ -186,11 +186,6 @@ export default function CustomerManager() {
       return;
     }
 
-    if (!formData.panNumber || !formData.panNumber.trim()) {
-      alert('Please enter a compulsory PAN Number.');
-      return;
-    }
-
     if (!formData.bankName || !formData.accountNumber || !formData.ifscCode) {
       alert('Please fill in compulsory Bank Details: Bank Name, Account Number, and IFSC Code are required.');
       return;
@@ -927,10 +922,6 @@ export default function CustomerManager() {
                     <input type="text" name="fatherName" value={formData.fatherName} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.motherNameLabel}</label>
-                    <input type="text" name="motherName" value={formData.motherName} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
-                  </div>
-                  <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.mobileNumberLabel}</label>
                     <input type="text" name="mobileNumber" required value={formData.mobileNumber} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
@@ -972,7 +963,7 @@ export default function CustomerManager() {
                     <label className="block font-semibold text-slate-500 mb-1">{t.pinCodeLabel}</label>
                     <input type="text" name="pinCode" required value={formData.pinCode} onChange={handleInputChange} placeholder="e.g. 600001" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
-                  <div>
+                  <div className="md:col-span-3">
                     <label className="block font-semibold text-slate-500 mb-1">{t.aadhaarNumberLabel}</label>
                     <input 
                       type="text" 
@@ -988,24 +979,12 @@ export default function CustomerManager() {
                       🔒 {t.aadhaarPrivacyNotice}
                     </p>
                   </div>
-                  <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.panNumberLabel}</label>
-                    <input type="text" name="panNumber" required value={formData.panNumber} onChange={handleInputChange} placeholder="e.g. ABCDE1234F" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white uppercase" />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.occupationLabel}</label>
-                    <input type="text" name="occupation" value={formData.occupation} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.monthlyIncomeLabel}</label>
-                    <input type="number" name="monthlyIncome" value={formData.monthlyIncome} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
-                  </div>
                 </div>
               </div>
 
-              {/* BLOCK 2: BANK & NOMINEE DETAILS */}
+              {/* BLOCK 2: BANK DETAILS */}
               <div className="space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.bankNomineeSection}</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.bankingDetailsSection}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.bankNameLabel}</label>
@@ -1018,10 +997,6 @@ export default function CustomerManager() {
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.ifscCodeLabel}</label>
                     <input type="text" name="ifscCode" required value={formData.ifscCode} onChange={handleInputChange} placeholder="e.g. SBIN0001234" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white uppercase" />
-                  </div>
-                  <div className="md:col-span-3">
-                    <label className="block font-semibold text-slate-500 mb-1">{t.nomineeDetailsLabel}</label>
-                    <input type="text" name="nomineeDetails" value={formData.nomineeDetails} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                 </div>
               </div>
@@ -1125,21 +1100,10 @@ export default function CustomerManager() {
                     <input type="file" required name="aadhaarFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.panCardLabel}</label>
-                    <input type="file" name="panFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
-                  </div>
-                  <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.ebBillLabel}</label>
                     <input type="file" name="electricityBillFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
                   </div>
-                  <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.propertyProofLabel}</label>
-                    <input type="file" name="propertyProofFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.agreementPdfLabel}</label>
-                    <input type="file" name="agreementFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
-                  </div>
+
                 </div>
               </div>
 
@@ -1251,7 +1215,7 @@ export default function CustomerManager() {
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.panNumberLabel}</label>
-                    <input type="text" name="panNumber" required value={editFormData.panNumber || ''} onChange={handleEditInputChange} placeholder="e.g. ABCDE1234F" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white uppercase" />
+                    <input type="text" name="panNumber" value={editFormData.panNumber || ''} onChange={handleEditInputChange} placeholder="Optional e.g. ABCDE1234F" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white uppercase" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.nomineeDetailsLabel}</label>
