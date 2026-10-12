@@ -238,14 +238,19 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
   try {
     const rawData = req.body;
 
-    // Validate essential inputs (Email is optional)
+    // Validate essential inputs
     if (!rawData.fullName || !rawData.mobileNumber || !rawData.loanAmount || !rawData.interestRate || !rawData.emiDuration) {
       return res.status(400).json({ message: 'Missing mandatory fields: Customer Name, Mobile Number, and Loan Details are required' });
     }
 
     const cleanEmail = String(rawData.email || '').trim().toLowerCase();
-    if (cleanEmail && (!cleanEmail.includes('@') || !cleanEmail.includes('.'))) {
-      return res.status(400).json({ message: 'If provided, Email Address must be a valid email (e.g. customer@gmail.com)' });
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      return res.status(400).json({ message: 'Email Address is compulsory and must be a valid email (e.g. customer@gmail.com)' });
+    }
+
+    const cleanAadhaar = String(rawData.aadhaarNumber || '').trim();
+    if (!cleanAadhaar) {
+      return res.status(400).json({ message: 'Aadhaar Number is compulsory' });
     }
 
     // Auto-generate customer id

@@ -170,8 +170,44 @@ export default function CustomerManager() {
     }
 
     const cleanEmail = (formData.email || '').trim();
-    if (cleanEmail && (!cleanEmail.includes('@') || !cleanEmail.includes('.'))) {
-      alert('Please enter a valid Email Address format (e.g. customer@gmail.com) or leave it blank.');
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      alert('Please enter a valid compulsory Email Address (e.g. customer@gmail.com).');
+      return;
+    }
+
+    const cleanAadhaar = (formData.aadhaarNumber || '').trim();
+    if (!cleanAadhaar) {
+      alert('Please enter a compulsory Aadhaar Number.');
+      return;
+    }
+
+    if (!formData.address || !formData.city || !formData.district || !formData.state || !formData.pinCode) {
+      alert('Please fill in compulsory Address details: Permanent Address, City, District, State, and Pin Code are required.');
+      return;
+    }
+
+    if (!formData.panNumber || !formData.panNumber.trim()) {
+      alert('Please enter a compulsory PAN Number.');
+      return;
+    }
+
+    if (!formData.bankName || !formData.accountNumber || !formData.ifscCode) {
+      alert('Please fill in compulsory Bank Details: Bank Name, Account Number, and IFSC Code are required.');
+      return;
+    }
+
+    if (!formData.installationAddress || !formData.solarCapacity) {
+      alert('Please fill in compulsory Solar Installation Address and Solar Capacity.');
+      return;
+    }
+
+    if (!formData.loanStartDate) {
+      alert('Please select a compulsory Loan Start Date.');
+      return;
+    }
+
+    if (!files.aadhaarFile) {
+      alert('Please upload a compulsory Aadhaar Card proof document.');
       return;
     }
 
@@ -867,40 +903,42 @@ export default function CustomerManager() {
                     <input 
                       type="email" 
                       name="email" 
+                      required
                       value={formData.email} 
                       onChange={handleInputChange} 
-                      placeholder="e.g. customer@gmail.com (optional)"
+                      placeholder="e.g. customer@gmail.com"
                       className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" 
                     />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block font-semibold text-slate-500 mb-1">{t.permanentAddressLabel}</label>
-                    <input type="text" name="address" value={formData.address} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="address" required value={formData.address} onChange={handleInputChange} placeholder="House / Door No, Street, Area" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.cityLabel}</label>
-                    <input type="text" name="city" value={formData.city} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="city" required value={formData.city} onChange={handleInputChange} placeholder="City / Town" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.districtLabel}</label>
-                    <input type="text" name="district" value={formData.district} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="district" required value={formData.district} onChange={handleInputChange} placeholder="District" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.stateLabel}</label>
-                    <input type="text" name="state" value={formData.state} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="state" required value={formData.state} onChange={handleInputChange} placeholder="State (e.g. Tamil Nadu)" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.pinCodeLabel}</label>
-                    <input type="text" name="pinCode" value={formData.pinCode} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="pinCode" required value={formData.pinCode} onChange={handleInputChange} placeholder="e.g. 600001" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.aadhaarNumberLabel}</label>
                     <input 
                       type="text" 
                       name="aadhaarNumber" 
+                      required
                       value={formData.aadhaarNumber} 
                       onChange={handleInputChange} 
-                      placeholder="XXXX-XXXX-1234"
+                      placeholder="XXXX-XXXX-1234 or 12 digits"
                       maxLength={14}
                       className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" 
                     />
@@ -910,7 +948,7 @@ export default function CustomerManager() {
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.panNumberLabel}</label>
-                    <input type="text" name="panNumber" value={formData.panNumber} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="panNumber" required value={formData.panNumber} onChange={handleInputChange} placeholder="e.g. ABCDE1234F" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white uppercase" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.occupationLabel}</label>
@@ -929,15 +967,15 @@ export default function CustomerManager() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.bankNameLabel}</label>
-                    <input type="text" name="bankName" value={formData.bankName} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="bankName" required value={formData.bankName} onChange={handleInputChange} placeholder="e.g. State Bank of India" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.accountNumberLabel}</label>
-                    <input type="text" name="accountNumber" value={formData.accountNumber} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="accountNumber" required value={formData.accountNumber} onChange={handleInputChange} placeholder="e.g. 123456789012" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.ifscCodeLabel}</label>
-                    <input type="text" name="ifscCode" value={formData.ifscCode} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="ifscCode" required value={formData.ifscCode} onChange={handleInputChange} placeholder="e.g. SBIN0001234" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white uppercase" />
                   </div>
                   <div className="md:col-span-3">
                     <label className="block font-semibold text-slate-500 mb-1">{t.nomineeDetailsLabel}</label>
@@ -964,7 +1002,7 @@ export default function CustomerManager() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div className="md:col-span-2">
                     <label className="block font-semibold text-slate-500 mb-1">{t.solarInstallAddressLabel}</label>
-                    <input type="text" name="installationAddress" value={formData.installationAddress} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="installationAddress" required value={formData.installationAddress} onChange={handleInputChange} placeholder="Installation site rooftop address" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.solarCapacityKwLabel}</label>
@@ -1019,7 +1057,7 @@ export default function CustomerManager() {
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.loanStartDateLabel}</label>
-                    <input type="date" name="loanStartDate" value={formData.loanStartDate} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <input type="date" required name="loanStartDate" value={formData.loanStartDate} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.remarksLabel}</label>
@@ -1038,7 +1076,7 @@ export default function CustomerManager() {
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.aadhaarProofLabel}</label>
-                    <input type="file" name="aadhaarFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
+                    <input type="file" required name="aadhaarFile" onChange={handleFileChange} className="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.panCardLabel}</label>
@@ -1115,7 +1153,7 @@ export default function CustomerManager() {
                 <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.personalInfoSection}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.fullNameLabel} *</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.fullNameLabel}</label>
                     <input type="text" name="fullName" required value={editFormData.fullName || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
@@ -1127,7 +1165,7 @@ export default function CustomerManager() {
                     <input type="text" name="motherName" value={editFormData.motherName || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.mobileNumberLabel} *</label>
+                    <label className="block font-semibold text-slate-500 mb-1">{t.mobileNumberLabel}</label>
                     <input type="tel" name="mobileNumber" required value={editFormData.mobileNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
@@ -1135,8 +1173,8 @@ export default function CustomerManager() {
                     <input type="tel" name="alternateNumber" value={editFormData.alternateNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.emailAddressLabel}</label>
-                    <input type="email" name="email" value={editFormData.email || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                    <label className="block font-semibold text-slate-500 mb-1">{t.emailOptionalLabel}</label>
+                    <input type="email" name="email" required value={editFormData.email || ''} onChange={handleEditInputChange} placeholder="e.g. customer@gmail.com" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                 </div>
               </div>
@@ -1146,28 +1184,28 @@ export default function CustomerManager() {
                 <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.addressKycSection}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
                   <div className="md:col-span-2">
-                    <label className="block font-semibold text-slate-500 mb-1">{t.streetAddressLabel}</label>
-                    <input type="text" name="address" value={editFormData.address || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                    <label className="block font-semibold text-slate-500 mb-1">{t.permanentAddressLabel}</label>
+                    <input type="text" name="address" required value={editFormData.address || ''} onChange={handleEditInputChange} placeholder="House / Door No, Street, Area" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.cityVillageLabel}</label>
-                    <input type="text" name="city" value={editFormData.city || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                    <label className="block font-semibold text-slate-500 mb-1">{t.cityLabel}</label>
+                    <input type="text" name="city" required value={editFormData.city || ''} onChange={handleEditInputChange} placeholder="City / Town" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.districtLabel}</label>
-                    <input type="text" name="district" value={editFormData.district || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="district" required value={editFormData.district || ''} onChange={handleEditInputChange} placeholder="District" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.stateLabel}</label>
-                    <input type="text" name="state" value={editFormData.state || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="state" required value={editFormData.state || ''} onChange={handleEditInputChange} placeholder="State" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.pincodeLabel}</label>
-                    <input type="text" name="pinCode" value={editFormData.pinCode || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                    <label className="block font-semibold text-slate-500 mb-1">{t.pinCodeLabel}</label>
+                    <input type="text" name="pinCode" required value={editFormData.pinCode || ''} onChange={handleEditInputChange} placeholder="e.g. 600001" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.panNumberLabel}</label>
-                    <input type="text" name="panNumber" value={editFormData.panNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="panNumber" required value={editFormData.panNumber || ''} onChange={handleEditInputChange} placeholder="e.g. ABCDE1234F" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white uppercase" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.nomineeDetailsLabel}</label>
@@ -1182,15 +1220,15 @@ export default function CustomerManager() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.bankNameLabel}</label>
-                    <input type="text" name="bankName" value={editFormData.bankName || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="bankName" required value={editFormData.bankName || ''} onChange={handleEditInputChange} placeholder="e.g. State Bank of India" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.accountNumberLabel}</label>
-                    <input type="text" name="accountNumber" value={editFormData.accountNumber || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="accountNumber" required value={editFormData.accountNumber || ''} onChange={handleEditInputChange} placeholder="e.g. 123456789012" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.ifscCodeLabel}</label>
-                    <input type="text" name="ifscCode" value={editFormData.ifscCode || ''} onChange={handleEditInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white" />
+                    <input type="text" name="ifscCode" required value={editFormData.ifscCode || ''} onChange={handleEditInputChange} placeholder="e.g. SBIN0001234" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 outline-none focus:border-blue-500 text-slate-800 dark:text-white uppercase" />
                   </div>
                 </div>
               </div>
