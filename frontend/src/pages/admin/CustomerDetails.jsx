@@ -1659,7 +1659,7 @@ export default function CustomerDetails() {
           emi={selectedUpiEmi}
           customer={customer}
           mode="admin"
-          onPaymentSubmitted={() => fetchCustomer()}
+          onPaymentSubmitted={() => fetchCustomerDetails()}
         />
       )}
 
