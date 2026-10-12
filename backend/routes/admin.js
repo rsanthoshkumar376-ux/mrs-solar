@@ -504,7 +504,47 @@ router.put('/customers/:id', authenticateToken, authorizeRole(['admin']), upload
   }
 });
 
-// 6. Delete Customer
+// 6a. Delete All Customer Records (Clear all customer records from app, web, and DB)
+router.delete('/customers', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const allCustomers = await db.find('customers');
+    const customerCount = allCustomers.length;
+
+    // 1. Delete all customer records
+    await db.deleteMany('customers', {});
+
+    // 2. Delete all customer login user accounts (keep admin accounts intact)
+    await db.deleteMany('users', { role: 'customer' });
+
+    // 3. Delete all payment records linked to customers
+    await db.deleteMany('payments', {});
+
+    // 4. Delete all customer documents
+    await db.deleteMany('customer_documents', {});
+
+    // 5. Delete customer notifications
+    const allNotifs = await db.find('notifications');
+    for (const n of allNotifs) {
+      if (n.customerId || n.role === 'customer') {
+        await db.deleteOne('notifications', { _id: n._id });
+      }
+    }
+
+    invalidateDashboardCache();
+    await logAdminAction(req.user.username, 'CLEAR_ALL_CUSTOMERS', 'ALL', { count: customerCount });
+
+    res.json({ 
+      success: true, 
+      message: `Successfully cleared all ${customerCount} customer record(s) and related data from the app and website.`,
+      deletedCount: customerCount
+    });
+  } catch (error) {
+    console.error('Clear all customers error:', error);
+    res.status(500).json({ message: 'Error clearing customer records' });
+  }
+});
+
+// 6. Delete Single Customer
 router.delete('/customers/:id', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
     const customer = (await db.findOne('customers', { _id: req.params.id })) ||

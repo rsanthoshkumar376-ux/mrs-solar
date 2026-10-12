@@ -419,6 +419,34 @@ export default function CustomerManager() {
     }
   };
 
+  const [clearingCustomers, setClearingCustomers] = useState(false);
+
+  const handleClearAllCustomers = async () => {
+    const confirmMsg = t.confirmClearAllCustomers || 'WARNING: Are you sure you want to permanently delete ALL customer records? This will delete all customer data, financing details, and customer logins from the app and database. This action CANNOT be undone.';
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    const doubleConfirm = window.confirm(lang === 'ta' 
+      ? 'இறுதி உறுதிப்படுத்தல்: அனைத்து வாடிக்கையாளர்களையும் நீக்குவது உறுதிதானா?' 
+      : 'Final Confirmation: Are you absolutely certain? This will wipe ALL customer accounts and ledgers.');
+    if (!doubleConfirm) {
+      return;
+    }
+
+    setClearingCustomers(true);
+    try {
+      await api.delete('/admin/customers');
+      alert(t.allCustomersClearedSuccess || 'All customer records have been successfully cleared from the app and website.');
+      fetchCustomers(1);
+    } catch (error) {
+      console.error('Clear all customers error:', error);
+      alert(t.clearCustomersError || 'Failed to clear customer records. Please try again.');
+    } finally {
+      setClearingCustomers(false);
+    }
+  };
+
   // Export customer list to CSV format (Excel compatible)
   const handleExportToCsv = () => {
     if (customers.length === 0) return;
@@ -436,6 +464,19 @@ export default function CustomerManager() {
         </div>
 
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+          {customers.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearAllCustomers}
+              disabled={clearingCustomers}
+              className="flex-1 sm:flex-initial justify-center px-3 py-2 sm:px-4 sm:py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 rounded-xl flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm font-bold transition-all border border-rose-200/50 dark:border-rose-800/50 shadow-sm whitespace-nowrap"
+              title="Permanently remove all customer records from the app and database"
+            >
+              <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+              <span>{clearingCustomers ? (t.clearingCustomers || 'Clearing...') : (t.clearAllCustomers || 'Clear All Records')}</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handleExportToCsv}

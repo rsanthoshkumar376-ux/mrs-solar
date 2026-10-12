@@ -8,15 +8,6 @@
     "role": "admin"
   },
   {
-    "_id": "USE-809374-392",
-    "createdAt": "2026-08-10T02:43:29.374Z",
-    "updatedAt": "2026-10-11T12:44:45.957Z",
-    "username": "deepi",
-    "customerId": "SOL-1001",
-    "password": "$2a$10$C1NO/hfhVVo5Wnvfx79Xt.1pmLAfCTvbimHJBcc.bAlOKX3VJN8AG",
-    "role": "customer"
-  },
-  {
     "_id": "USE-104008-422",
     "createdAt": "2026-08-30T17:15:04.189Z",
     "updatedAt": "2026-09-21T07:23:14.255Z",
