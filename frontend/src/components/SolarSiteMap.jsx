@@ -83,13 +83,14 @@ export default function SolarSiteMap({ customer }) {
         <iframe
           title={`Solar Installation Site - ${customerName}`}
           src={osmEmbedUrl}
-          className="w-full h-full border-0"
+          className="w-full border-0 absolute top-0 left-0"
+          style={{ height: 'calc(100% + 50px)' }}
           loading="lazy"
           allowFullScreen
         ></iframe>
 
         {/* Floating Location Badge */}
-        <div className="absolute bottom-3 left-3 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-xl px-3 py-2 text-xs shadow-lg max-w-[80%]">
+        <div className="absolute bottom-3 left-3 z-10 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-xl px-3 py-2 text-xs shadow-lg max-w-[80%]">
           <div className="flex items-center space-x-1.5">
             <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 flex-shrink-0" />
             <span className="font-bold text-slate-800 dark:text-white truncate">
