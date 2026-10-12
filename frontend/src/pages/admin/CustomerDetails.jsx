@@ -483,7 +483,7 @@ export default function CustomerDetails() {
                 {customer.tnebConsumerNumber && (
                   <button
                     type="button"
-                    onClick={() => launchTnebQuickPay(customer.tnebConsumerNumber)}
+                    onClick={() => launchTnebQuickPay(customer.tnebConsumerNumber, { lang })}
                     className="p-1 text-amber-700 hover:text-amber-900 dark:text-amber-300 hover:scale-110 transition-transform"
                     title="Copy & Open TNEB Quick Pay"
                   >

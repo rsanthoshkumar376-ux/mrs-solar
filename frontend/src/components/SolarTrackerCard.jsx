@@ -51,10 +51,9 @@ export default function SolarTrackerCard({
   };
 
   const handleOpenTneb = () => {
-    const toast = lang === 'ta'
-      ? `TNEB மின் இணைப்பு எண் (${tnebNumber}) நகலெடுக்கப்பட்டது!\n\nTNEB Quick Pay தளம் திறக்கப்படுகிறது... அங்கே ஒட்டவும் (Paste) மற்றும் கேப்ட்சாவை உள்ளிடவும்.`
-      : `TNEB Consumer No. "${tnebNumber}" copied to clipboard!\n\nOpening official TNEB Quick Pay portal... Just Paste (Ctrl+V) and solve the 4-digit captcha to pay.`;
-    launchTnebQuickPay(tnebNumber, toast);
+    launchTnebQuickPay(tnebNumber, { lang });
+    setCopiedTneb(true);
+    setTimeout(() => setCopiedTneb(false), 2500);
   };
 
   const handleFormSubmit = async (e) => {
@@ -127,15 +126,15 @@ export default function SolarTrackerCard({
             <button
               type="button"
               onClick={handleOpenTneb}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm shadow-amber-500/20 transition-all"
+              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm shadow-amber-500/20 transition-all active:scale-95"
             >
-              <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-              <span>{t.openTnebPortal || '⚡ Open TNEB Quick Pay'}</span>
+              {copiedTneb ? <Check className="w-3.5 h-3.5 shrink-0 text-emerald-100" /> : <ExternalLink className="w-3.5 h-3.5 shrink-0" />}
+              <span>{copiedTneb ? (lang === 'ta' ? 'நகலெடுக்கப்பட்டு திறக்கப்பட்டது' : 'Copied & Opening...') : (t.openTnebPortal || '⚡ Open TNEB Quick Pay')}</span>
             </button>
 
             <button
               type="button"
-              onClick={() => launchTnebBbpsPay(tnebNumber)}
+              onClick={() => launchTnebBbpsPay(tnebNumber, { lang })}
               className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center space-x-1 transition-all"
               title="Open Bharat Bill Payment System (GPay / PhonePe / Paytm)"
             >
