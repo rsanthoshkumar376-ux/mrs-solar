@@ -525,19 +525,57 @@ export default function CustomerDashboard() {
             </div>
 
             <div>
-              <div className="flex justify-between mb-2">
+              <div className="flex justify-between items-center mb-2">
                 <span className="text-slate-500">{t.durationLabel}</span>
-                <span className="font-bold text-slate-800 dark:text-white">{calcMonths} {t.monthsSuffix}</span>
+                <span className="font-bold text-slate-800 dark:text-white">
+                  {calcMonths} {t.monthsSuffix}
+                  {calcMonths >= 12 && (
+                    <span className="ml-1.5 text-xs text-teal-600 dark:text-teal-400 font-semibold">
+                      ({calcMonths % 12 === 0 ? calcMonths / 12 : (calcMonths / 12).toFixed(1)} {calcMonths === 12 ? (t.yearSuffix || 'Year') : (t.yearsSuffix || 'Years')})
+                    </span>
+                  )}
+                </span>
               </div>
               <input
                 type="range"
                 min="3"
-                max="36"
+                max="84"
                 step="3"
                 value={calcMonths}
                 onChange={(e) => setCalcMonths(Number(e.target.value))}
                 className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-600 dark:accent-teal-400"
               />
+              <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-medium">
+                <span>3 M</span>
+                <span>1 Yr (12M)</span>
+                <span>3 Yrs (36M)</span>
+                <span>5 Yrs (60M)</span>
+                <span className="text-teal-600 dark:text-teal-400 font-bold">7 Yrs (84M)</span>
+              </div>
+
+              {/* Quick Tenure Preset Buttons */}
+              <div className="flex flex-wrap gap-1.5 mt-2.5">
+                {[
+                  { label: '1 Yr', months: 12 },
+                  { label: '2 Yrs', months: 24 },
+                  { label: '3 Yrs', months: 36 },
+                  { label: '5 Yrs', months: 60 },
+                  { label: '7 Yrs', months: 84 },
+                ].map((item) => (
+                  <button
+                    key={item.months}
+                    type="button"
+                    onClick={() => setCalcMonths(item.months)}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
+                      calcMonths === item.months
+                        ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                        : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/60 hover:text-teal-600 dark:hover:text-teal-400'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="bg-teal-500/5 dark:bg-teal-400/5 border border-teal-500/20 dark:border-teal-400/10 rounded-2xl p-4 flex justify-between items-center">
