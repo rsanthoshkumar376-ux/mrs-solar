@@ -5,7 +5,7 @@ import {
   ShieldCheck, Leaf
 } from 'lucide-react';
 import { formatCurrency } from '../utils/format.js';
-import { launchTnebQuickPay, launchTnebBbpsPay } from '../utils/tneb.js';
+import { launchTnebQuickPay, launchTnebBbpsPay, copyToClipboard } from '../utils/tneb.js';
 
 export default function SolarTrackerCard({ 
   solarStats, 
@@ -41,13 +41,11 @@ export default function SolarTrackerCard({
   const maxUnits = Math.max(...last7Days.map(d => d.unitsGenerated || 0), 10);
   const tnebNumber = customer?.tnebConsumerNumber || solarStats?.tnebConsumerNumber || '';
 
-  const handleCopyTneb = async () => {
+  const handleCopyTneb = () => {
     if (!tnebNumber) return;
-    try {
-      await navigator.clipboard.writeText(tnebNumber);
-      setCopiedTneb(true);
-      setTimeout(() => setCopiedTneb(false), 2000);
-    } catch {}
+    copyToClipboard(tnebNumber);
+    setCopiedTneb(true);
+    setTimeout(() => setCopiedTneb(false), 2000);
   };
 
   const handleOpenTneb = () => {

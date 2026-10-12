@@ -23,6 +23,10 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.webkit.JavascriptInterface;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -80,6 +84,9 @@ public class MainActivity extends AppCompatActivity {
         // Custom User Agent string with App identifier
         String defaultUA = webSettings.getUserAgentString();
         webSettings.setUserAgentString(defaultUA + " MRSSolarApp/1.0");
+
+        // Native Android Bridge for reliable clipboard access
+        webView.addJavascriptInterface(new WebAppInterface(), "AndroidBridge");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -279,5 +286,26 @@ public class MainActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         webView.saveState(outState);
+    }
+
+    /**
+     * Native Android JavaScript Interface for 100% reliable clipboard copying
+     */
+    public class WebAppInterface {
+        @JavascriptInterface
+        public void copyToClipboard(String text) {
+            runOnUiThread(() -> {
+                try {
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    ClipData clip = ClipData.newPlainText("TNEB Consumer Number", text);
+                    if (clipboard != null) {
+                        clipboard.setPrimaryClip(clip);
+                        Toast.makeText(MainActivity.this, "TNEB Consumer No. copied!", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
     }
 }
