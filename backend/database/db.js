@@ -608,6 +608,20 @@ class UnifiedDatabase {
       const raw = await fs.readFile(backupPath, 'utf-8');
       const records = JSON.parse(raw);
 
+      if (col === 'customers' && records.length === 0) {
+        // Safety guard: Never wipe live customer records when restoring an empty backup
+        continue;
+      }
+
+      if (col === 'users') {
+        // Preserve current admin user(s) with username MRSassociates so admin login never breaks
+        const currentUsers = await this.find('users');
+        const mrsAdmin = currentUsers.find(u => u.role === 'admin' && String(u.username).toLowerCase() === 'mrsassociates');
+        if (mrsAdmin && !records.some(r => String(r.username).toLowerCase() === 'mrsassociates')) {
+          records.push(mrsAdmin);
+        }
+      }
+
       if (isMySQLConnected()) {
         await mysqlPool.query(`DELETE FROM mrs_${col}`);
         for (const item of records) {

