@@ -374,8 +374,6 @@ export default function AdminDashboard() {
                       onClick={() => {
                         if (targetCustomerId) {
                           navigate(`/admin/customers/${targetCustomerId}`);
-                        } else if (n.type?.includes('Payment') || n.type?.includes('Overdue') || n.type?.includes('Due')) {
-                          navigate('/admin/emis');
                         } else {
                           navigate('/admin/customers');
                         }

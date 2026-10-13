@@ -11,7 +11,6 @@ import Login from './pages/Login.jsx';
 const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard.jsx'));
 const CustomerManager = React.lazy(() => import('./pages/admin/CustomerManager.jsx'));
 const CustomerDetails = React.lazy(() => import('./pages/admin/CustomerDetails.jsx'));
-const EmiManagement = React.lazy(() => import('./pages/admin/EmiManagement.jsx'));
 const AuditLogs = React.lazy(() => import('./pages/admin/AuditLogs.jsx'));
 const BackupRestore = React.lazy(() => import('./pages/admin/BackupRestore.jsx'));
 const EmailSettings = React.lazy(() => import('./pages/admin/EmailSettings.jsx'));
@@ -72,13 +71,7 @@ export default function App() {
           />
           <Route
             path="/admin/emis"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <Layout>
-                  <EmiManagement />
-                </Layout>
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/admin/customers" replace />}
           />
           <Route
             path="/admin/audits"

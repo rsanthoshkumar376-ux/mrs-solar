@@ -181,8 +181,6 @@ export default function Layout({ children }) {
     if (user?.role === 'admin') {
       if (targetCustomerId) {
         navigate(`/admin/customers/${targetCustomerId}`);
-      } else if (n.type?.includes('Payment') || n.type?.includes('Overdue') || n.type?.includes('Due')) {
-        navigate('/admin/emis');
       } else {
         navigate('/admin/customers');
       }
@@ -204,7 +202,6 @@ export default function Layout({ children }) {
   const adminLinks = [
     { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
     { label: t.customers, path: '/admin/customers', icon: Users },
-    { label: t.emiManagement, path: '/admin/emis', icon: DollarSign },
     { label: t.upiSettings || 'UPI Settings', path: '/admin/upi-settings', icon: CreditCard },
     { label: t.auditLogs, path: '/admin/audits', icon: FolderLock },
     { label: t.backup, path: '/admin/backup', icon: Database },
@@ -222,7 +219,7 @@ export default function Layout({ children }) {
     ? [
         { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
         { label: t.customers, path: '/admin/customers', icon: Users },
-        { label: t.emiManagement, path: '/admin/emis', icon: DollarSign },
+        { label: t.upiSettings || 'UPI Settings', path: '/admin/upi-settings', icon: CreditCard },
         { label: t.moreMenu || 'More', action: () => setSidebarOpen(true), icon: Menu }
       ]
     : customerLinks;
