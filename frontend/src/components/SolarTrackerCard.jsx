@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { 
   Sun, Zap, Clock, Home, ArrowUpRight, TrendingUp, Calendar, 
   PlusCircle, CheckCircle2, ExternalLink, Copy, Check, BatteryCharging,
-  ShieldCheck, Leaf, Wifi, Cpu, Calculator, Radio, Sparkles, RefreshCw
+  ShieldCheck, Leaf, Wifi, Cpu, Calculator, Radio, Sparkles, RefreshCw, X
 } from 'lucide-react';
 import { formatCurrency } from '../utils/format.js';
 import { launchTnebQuickPay, launchTnebBbpsPay, copyToClipboard, calculateTnebBill } from '../utils/tneb.js';
+import api from '../utils/api.js';
 
 export default function SolarTrackerCard({ 
   solarStats, 
@@ -23,6 +24,11 @@ export default function SolarTrackerCard({
   const [iotSyncing, setIotSyncing] = useState(false);
   const [iotSynced, setIotSynced] = useState(false);
   const [biMonthlyConsumption, setBiMonthlyConsumption] = useState(500);
+
+  // AI Solar Health Diagnostic State
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiDiagnostic, setAiDiagnostic] = useState(null);
 
   // Form state for logging reading
   const [logForm, setLogForm] = useState({
@@ -91,6 +97,27 @@ export default function SolarTrackerCard({
         }
       }
     }, 1200);
+  };
+
+  const handleRunAiDiagnostic = async () => {
+    setShowAiModal(true);
+    setAiLoading(true);
+    try {
+      const res = await api.post('/ai/solar-diagnostics', {
+        solarCapacity: capacity,
+        currentKw: iotDongle.powerWatts / 1000,
+        dailyKwh: iotDongle.todayYield,
+        gridVoltage: iotDongle.acVoltage,
+        inverterTemp: iotDongle.temp,
+        weather: 'Sunny',
+        language: lang
+      });
+      setAiDiagnostic(res.data?.diagnostic);
+    } catch (err) {
+      console.error('Failed to run AI diagnostics:', err);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleCopyTneb = () => {
@@ -234,6 +261,16 @@ export default function SolarTrackerCard({
             >
               <Wifi className="w-3.5 h-3.5" />
               <span>{lang === 'ta' ? 'இன்வெர்ட்டர் IoT ஒத்திசைவு' : 'Inverter IoT Sync'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleRunAiDiagnostic}
+              className="px-3 py-2 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 hover:from-emerald-500/20 hover:to-teal-500/20 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center space-x-1.5 border border-emerald-500/30 transition-all shadow-sm"
+              title="Run AI Solar Inverter & Health Diagnostics"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+              <span>{lang === 'ta' ? 'AI சோலார் பரிசோதனை' : 'AI Health Diagnostic'}</span>
             </button>
 
             <button
@@ -719,6 +756,131 @@ export default function SolarTrackerCard({
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. AI SOLAR INVERTER & HEALTH DIAGNOSTICS MODAL */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-teal-700 text-white flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
+                  <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold flex items-center space-x-1.5">
+                    <span>{lang === 'ta' ? 'AI சோலார் செயல்திறன் பரிசோதனை' : 'AI Solar Health Diagnostic'}</span>
+                    <span className="text-[9px] uppercase px-1.5 py-0.5 bg-yellow-400 text-slate-900 font-bold rounded-full">Live</span>
+                  </h3>
+                  <p className="text-[10px] text-teal-100">
+                    {lang === 'ta' ? 'இன்வெர்ட்டர் தொலைத்தொடர்பு மற்றும் சூரிய கதிர்வீச்சு பகுப்பாய்வு' : 'Inverter Telemetry & Solar Insolation Analysis'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAiModal(false)}
+                className="p-1 rounded-lg hover:bg-white/20 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 overflow-y-auto max-h-[75vh]">
+              {aiLoading ? (
+                <div className="py-12 flex flex-col items-center justify-center space-y-3">
+                  <div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-xs text-slate-500 font-semibold animate-pulse">
+                    {lang === 'ta' ? 'சூரிய கதிர்வீச்சு மற்றும் மின் உற்பத்தியை பகுப்பாய்வு செய்கிறது...' : 'Analyzing solar irradiation and inverter harmonics...'}
+                  </p>
+                </div>
+              ) : aiDiagnostic ? (
+                <>
+                  {/* EFFICIENCY SCORE STRIP */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-500/30 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                        {lang === 'ta' ? 'செயல்திறன் மதிப்பீடு (Efficiency Score)' : 'Performance Ratio (PR)'}
+                      </span>
+                      <h4 className="text-2xl font-black text-slate-800 dark:text-white mt-0.5">
+                        {aiDiagnostic.score}%
+                      </h4>
+                      <span className="inline-block mt-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                        ● {aiDiagnostic.title}
+                      </span>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                        {lang === 'ta' ? 'இன்றைய உற்பத்தி' : 'Today Actual'}
+                      </span>
+                      <span className="text-lg font-black text-slate-800 dark:text-white font-mono mt-0.5 block">
+                        {aiDiagnostic.actualDailyKwh} <span className="text-xs text-slate-400">kWh</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">
+                        Target: {aiDiagnostic.expectedDailyKwh} kWh
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* PROJECTED MONTHLY BENEFIT */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-center">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                        {lang === 'ta' ? 'மாதாந்திர உற்பத்தி (Projected)' : 'Monthly Output'}
+                      </span>
+                      <span className="text-base font-black text-slate-800 dark:text-white font-mono mt-1 block">
+                        ~{aiDiagnostic.monthlyProjectedUnits} Units
+                      </span>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-center">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                        {lang === 'ta' ? 'TNEB பில் மிச்சம்' : 'TNEB Savings'}
+                      </span>
+                      <span className="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1 block">
+                        ~{formatCurrency(aiDiagnostic.monthlyEstSavings, false)}/mo
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* RECOMMENDATIONS & DIAGNOSTIC TIPS */}
+                  <div className="space-y-2">
+                    <h5 className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-teal-600" />
+                      <span>{lang === 'ta' ? 'AI பரிந்துரைகள் & குறிப்புகள்' : 'AI Analysis & Recommendations'}</span>
+                    </h5>
+                    <div className="space-y-2">
+                      {aiDiagnostic.recommendations?.map((tip, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-700 dark:text-slate-300 leading-relaxed"
+                        >
+                          {tip}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : null}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAiModal(false)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white text-xs font-bold rounded-xl transition-colors"
+              >
+                {lang === 'ta' ? 'மூடு' : 'Close'}
+              </button>
+            </div>
+
           </div>
         </div>
       )}

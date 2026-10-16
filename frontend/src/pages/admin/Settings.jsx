@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Settings as SettingsIcon, CreditCard, Mail, Database, 
-  FolderLock, ShieldCheck
+  FolderLock, ShieldCheck, Sparkles
 } from 'lucide-react';
 import { translations, getLanguage } from '../../utils/translations.js';
 
@@ -11,6 +11,7 @@ import UpiSettings from './UpiSettings.jsx';
 import EmailSettings from './EmailSettings.jsx';
 import BackupRestore from './BackupRestore.jsx';
 import AuditLogs from './AuditLogs.jsx';
+import AiSettings from './AiSettings.jsx';
 
 export default function Settings() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -51,6 +52,12 @@ export default function Settings() {
       label: t.tabAudits || 'Audit Logs',
       description: t.tabAuditsDesc || 'System events & actions',
       icon: FolderLock
+    },
+    {
+      id: 'ai',
+      label: t.tabAi || 'AI Engine',
+      description: t.tabAiDesc || 'Gemini API & Vision',
+      icon: Sparkles
     }
   ];
 
@@ -84,7 +91,7 @@ export default function Settings() {
       </div>
 
       {/* UNIFIED TAB NAVIGATION BAR */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1.5 bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-slate-800/60">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-1.5 bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-slate-800/60">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentTab === tab.id;
@@ -93,7 +100,7 @@ export default function Settings() {
               key={tab.id}
               type="button"
               onClick={() => handleTabChange(tab.id)}
-              className={`flex items-center space-x-2.5 px-3.5 py-2.5 sm:py-3 rounded-xl text-left transition-all duration-200 outline-none ${
+              className={`flex items-center space-x-2.5 px-3 py-2.5 sm:py-3 rounded-xl text-left transition-all duration-200 outline-none ${
                 isActive
                   ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-sm shadow-slate-900/5 font-bold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800/50'
@@ -123,6 +130,7 @@ export default function Settings() {
         {currentTab === 'email' && <EmailSettings />}
         {currentTab === 'backup' && <BackupRestore />}
         {currentTab === 'audits' && <AuditLogs />}
+        {currentTab === 'ai' && <AiSettings />}
       </div>
 
     </div>

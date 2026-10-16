@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
+import AiChatbot from './AiChatbot.jsx';
 import { translations, getLanguage, setLanguage } from '../utils/translations.js';
 
 export default function Layout({ children }) {
@@ -536,6 +537,9 @@ export default function Layout({ children }) {
         <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 md:p-8 pb-28 sm:pb-24 lg:pb-8">
           {children}
         </main>
+
+        {/* 24/7 BILINGUAL AI SOLAR COPILOT */}
+        <AiChatbot />
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}

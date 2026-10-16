@@ -5,7 +5,8 @@ import { formatCurrency } from '../../utils/format.js';
 import { 
   Users, UserPlus, Search, SlidersHorizontal, DownloadCloud, Eye, Trash2, X, FileText, 
   MessageCircle, MapPin, Crosshair, Edit2, UploadCloud, CheckCircle2, AlertCircle, 
-  ChevronLeft, ChevronRight, FileSpreadsheet, Check, FilterX, RotateCcw
+  ChevronLeft, ChevronRight, FileSpreadsheet, Check, FilterX, RotateCcw,
+  Sparkles, Scan, FileSearch
 } from 'lucide-react';
 import { openWhatsApp, sendCustomerWelcomeWhatsApp } from '../../utils/whatsapp.js';
 import { exportCustomersToCsv } from '../../utils/exportCsv.js';
@@ -103,6 +104,69 @@ export default function CustomerManager() {
     aadhaarFile: null, panFile: null, photoFile: null,
     electricityBillFile: null, propertyProofFile: null, agreementFile: null
   });
+
+  // AI Document KYC Scanner State
+  const [aiScanning, setAiScanning] = useState(false);
+  const [aiScanStatus, setAiScanStatus] = useState(null);
+
+  const handleAiDocumentScan = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAiScanning(true);
+    setAiScanStatus(null);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('document', file);
+
+      const res = await api.post('/ai/extract-kyc', uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const data = res.data?.data || {};
+
+      setFormData(prev => ({
+        ...prev,
+        fullName: data.fullName || prev.fullName,
+        fatherName: data.fatherName || prev.fatherName,
+        aadhaarNumber: data.aadhaarNumber ? data.aadhaarNumber.replace(/\s+/g, '').slice(-4) : prev.aadhaarNumber,
+        panNumber: data.panNumber ? data.panNumber.toUpperCase() : prev.panNumber,
+        address: data.address || prev.address,
+        city: data.city || prev.city,
+        district: data.district || prev.district,
+        pinCode: data.pinCode || prev.pinCode,
+        tnebConsumerNumber: data.tnebConsumerNumber || prev.tnebConsumerNumber,
+        mobileNumber: data.mobileNumber || prev.mobileNumber
+      }));
+
+      // Attach file to corresponding document upload slot if currently empty
+      if (data.documentType?.includes('Aadhaar')) {
+        setFiles(prev => ({ ...prev, aadhaarFile: file }));
+      } else if (data.documentType?.includes('PAN')) {
+        setFiles(prev => ({ ...prev, panFile: file }));
+      } else if (data.documentType?.includes('Electricity') || data.documentType?.includes('TNEB')) {
+        setFiles(prev => ({ ...prev, electricityBillFile: file }));
+      }
+
+      setAiScanStatus({
+        type: 'success',
+        message: lang === 'ta'
+          ? `AI ஸ்கேன் வெற்றி! ${data.documentType || 'ஆவணத்திலிருந்து'} தகவல்கள் படிவத்தில் தானாக நிரப்பப்பட்டன.`
+          : `AI Scan Complete! Successfully extracted details from ${data.documentType || 'document'}.`
+      });
+    } catch (err) {
+      console.error('AI Document Scan failed:', err);
+      setAiScanStatus({
+        type: 'error',
+        message: lang === 'ta'
+          ? 'ஆவணத்தை ஸ்கேன் செய்வதில் பிழை. கைமுறையாக விவரங்களை உள்ளிடவும்.'
+          : 'Could not extract details from this document. Please fill in manually.'
+      });
+    } finally {
+      setAiScanning(false);
+      e.target.value = '';
+    }
+  };
 
   const fetchCustomers = async (targetPage = page) => {
     setLoading(true);
@@ -880,6 +944,56 @@ export default function CustomerManager() {
             {/* Scrollable form body */}
             <form onSubmit={handleAddCustomerSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
               
+              {/* AI SMART DOCUMENT SCANNER (AUTO-FILL) */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-500/10 via-emerald-500/10 to-indigo-500/10 border-2 border-dashed border-teal-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2.5 rounded-xl bg-teal-600 text-white shadow-md shadow-teal-600/20 shrink-0">
+                    <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-800 dark:text-white flex items-center space-x-1.5">
+                      <span>{lang === 'ta' ? '⚡ AI ஆவண ஸ்கேனர் (தானாக படிவம் நிரப்ப)' : '⚡ AI Smart KYC & Bill Scanner'}</span>
+                      <span className="text-[9px] uppercase px-1.5 py-0.5 bg-teal-600 text-white font-bold rounded-full">Auto-Fill</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      {lang === 'ta' 
+                        ? 'ஆதார் அட்டை, பான் கார்டு அல்லது TNEB EB பில் பதிவேற்றவும் — பெயர், முகவரி, எண்கள் உடனே நிரப்பப்படும்.'
+                        : 'Upload Aadhaar Card, PAN Card, or TNEB EB Bill — Name, Aadhaar, PAN, Address & TNEB No. auto-populates instantly.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0">
+                  <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md shadow-teal-600/20 transition-all active:scale-95">
+                    {aiScanning ? (
+                      <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Scan className="w-3.5 h-3.5" />
+                    )}
+                    <span>{aiScanning ? (lang === 'ta' ? 'ஸ்கேன் செய்கிறது...' : 'Scanning...') : (lang === 'ta' ? 'ஆவணம் ஸ்கேன் செய்' : 'Scan Document')}</span>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      disabled={aiScanning}
+                      onChange={handleAiDocumentScan}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* AI Scan Feedback Banner */}
+              {aiScanStatus && (
+                <div className={`p-3 rounded-xl text-xs font-semibold flex items-center space-x-2 ${
+                  aiScanStatus.type === 'success'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                    : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800'
+                }`}>
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{aiScanStatus.message}</span>
+                </div>
+              )}
+
               {/* BLOCK 1: PERSONAL INFORMATION */}
               <div className="space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 border-b border-slate-100 dark:border-slate-800 pb-2">{t.personalInfoSection}</h4>

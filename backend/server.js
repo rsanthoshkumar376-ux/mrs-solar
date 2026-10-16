@@ -20,6 +20,7 @@ import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import customerRoutes from './routes/customer.js';
 import cronRoutes from './routes/cron.js';
+import aiRoutes from './routes/ai.js';
 import { runDailyInterestAndPenaltyCheck } from './utils/scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -52,6 +53,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/cron', cronRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Serve Frontend Static Production Build
 const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
