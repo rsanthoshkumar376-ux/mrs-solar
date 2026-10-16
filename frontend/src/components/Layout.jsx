@@ -6,7 +6,7 @@ import {
   Sun, Moon, LogOut, Menu, X, Bell, LayoutDashboard, 
   Users, DollarSign, History, Calculator, ShieldAlert,
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
-  Search, Languages, Mic, CreditCard, Trash2
+  Search, Languages, Mic, CreditCard, Trash2, Settings
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -202,10 +202,7 @@ export default function Layout({ children }) {
   const adminLinks = [
     { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
     { label: t.customers, path: '/admin/customers', icon: Users },
-    { label: t.upiSettings || 'UPI Settings', path: '/admin/upi-settings', icon: CreditCard },
-    { label: t.auditLogs, path: '/admin/audits', icon: FolderLock },
-    { label: t.backup, path: '/admin/backup', icon: Database },
-    { label: t.emailSettings, path: '/admin/email-settings', icon: Mail }
+    { label: t.settings || 'Settings', path: '/admin/settings', icon: Settings }
   ];
 
   const customerLinks = [
@@ -219,7 +216,7 @@ export default function Layout({ children }) {
     ? [
         { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
         { label: t.customers, path: '/admin/customers', icon: Users },
-        { label: t.upiSettings || 'UPI Settings', path: '/admin/upi-settings', icon: CreditCard },
+        { label: t.settings || 'Settings', path: '/admin/settings', icon: Settings },
         { label: t.moreMenu || 'More', action: () => setSidebarOpen(true), icon: Menu }
       ]
     : customerLinks;
@@ -263,7 +260,7 @@ export default function Layout({ children }) {
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {links.map((link) => {
             const Icon = link.icon;
-            const isActive = location.pathname === link.path;
+            const isActive = location.pathname === link.path || (link.path === '/admin/settings' && location.pathname.startsWith('/admin/settings'));
             return (
               <Link
                 key={link.path}
@@ -558,7 +555,7 @@ export default function Layout({ children }) {
               </button>
             );
           }
-          const isActive = location.pathname === link.path;
+          const isActive = location.pathname === link.path || (link.path === '/admin/settings' && location.pathname.startsWith('/admin/settings'));
           return (
             <Link
               key={link.path}

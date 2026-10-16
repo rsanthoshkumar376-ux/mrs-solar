@@ -15,6 +15,7 @@ const AuditLogs = React.lazy(() => import('./pages/admin/AuditLogs.jsx'));
 const BackupRestore = React.lazy(() => import('./pages/admin/BackupRestore.jsx'));
 const EmailSettings = React.lazy(() => import('./pages/admin/EmailSettings.jsx'));
 const UpiSettings = React.lazy(() => import('./pages/admin/UpiSettings.jsx'));
+const Settings = React.lazy(() => import('./pages/admin/Settings.jsx'));
 
 // Customer Portal (Lazy loaded)
 const CustomerDashboard = React.lazy(() => import('./pages/customer/CustomerDashboard.jsx'));
@@ -74,44 +75,30 @@ export default function App() {
             element={<Navigate to="/admin/customers" replace />}
           />
           <Route
-            path="/admin/audits"
+            path="/admin/settings"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <Layout>
-                  <AuditLogs />
+                  <Settings />
                 </Layout>
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/admin/audits"
+            element={<Navigate to="/admin/settings?tab=audits" replace />}
           />
           <Route
             path="/admin/backup"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <Layout>
-                  <BackupRestore />
-                </Layout>
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/admin/settings?tab=backup" replace />}
           />
           <Route
             path="/admin/email-settings"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <Layout>
-                  <EmailSettings />
-                </Layout>
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/admin/settings?tab=email" replace />}
           />
           <Route
             path="/admin/upi-settings"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <Layout>
-                  <UpiSettings />
-                </Layout>
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/admin/settings?tab=upi" replace />}
           />
 
           {/* Customer Portal Routes */}
