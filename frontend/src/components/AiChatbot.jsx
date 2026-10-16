@@ -41,12 +41,12 @@ export default function AiChatbot() {
 
   const quickPrompts = [
     {
-      en: 'When is my next EMI due and amount?',
-      ta: 'எனக்கு அடுத்த தவணை (EMI) எப்போது?'
-    },
-    {
       en: 'How much solar electricity will my system generate?',
       ta: 'என் சோலார் அமைப்பு எவ்வளவு கரண்ட் உற்பத்தி செய்யும்?'
+    },
+    {
+      en: 'When is my next EMI due and amount?',
+      ta: 'எனக்கு அடுத்த தவணை (EMI) எப்போது?'
     },
     {
       en: 'PM Surya Ghar Central Subsidy details',
@@ -59,6 +59,18 @@ export default function AiChatbot() {
     {
       en: 'How to pay my EMI via Google Pay / UPI?',
       ta: 'Google Pay / UPI மூலம் தவணை செலுத்துவது எப்படி?'
+    },
+    {
+      en: 'How often should I clean my solar panels?',
+      ta: 'சோலார் பேனல்களை சுத்தம் செய்வது எப்படி?'
+    },
+    {
+      en: 'How much does a rooftop solar system cost?',
+      ta: 'சோலார் அமைக்க எவ்வளவு செலவாகும்?'
+    },
+    {
+      en: 'Customer care helpline number',
+      ta: 'வாடிக்கையாளர் உதவி மையம் தொடர்பு எண்'
     }
   ];
 

@@ -99,6 +99,7 @@ export function generateSolarDiagnostics({
 
 /**
  * Intelligent Conversational AI Knowledge Base
+ * Deep bilingual (Tamil & English) domain expertise on Solar EPC, Loans & TNEB
  */
 export function generateSmartChatResponse({
   message = '',
@@ -111,172 +112,324 @@ export function generateSmartChatResponse({
   const isTa = language === 'ta' || /[அ-ஹ]/.test(message);
 
   // 1. GREETINGS
-  if (/^(hi|hello|vanakkam|வணக்கம்|hey|good morning|namaste)/i.test(query)) {
+  if (/\b(hi|hello|hey|vanakkam|வணக்கம்|namaste|good morning|good afternoon|good evening|start)\b/i.test(query)) {
     if (isTa) {
       return role === 'customer' && customer
-        ? `வணக்கம் ${customer.fullName || ''}! MRS SOLAR AI உதவியாளர் உங்களுக்காக தயாராக உள்ளார். உங்கள் சோலார் கடன் தவணை, உற்பத்தி அல்லது TNEB பில் சேமிப்பு பற்றி என்ன அறிய விரும்புகிறீர்கள்?`
-        : `வணக்கம்! MRS SOLAR AI உதவியாளர். வாடிக்கையாளர் கடன்கள், சோலார் திட்டங்கள் அல்லது தணிக்கை விவரங்களை கேட்கலாம்.`;
+        ? `வணக்கம் ${customer.fullName || ''}! நான் MRS SOLAR AI உதவியாளர். உங்கள் ${customer.solarCapacity || 3} kW சோலார் கட்டமைப்பு, EMI தவணை தேதி அல்லது TNEB பில் சேமிப்பு பற்றி என்ன அறிய விரும்புகிறீர்கள்?`
+        : `வணக்கம்! நான் MRS SOLAR AI உதவியாளர். சோலார் மின் உற்பத்தி, மத்திய அரசு மானியம், கடன் தவணை அல்லது TNEB நெட்-மீட்டரிங் பற்றி என்னிடம் கேட்கலாம்.`;
     }
     return role === 'customer' && customer
-      ? `Hello ${customer.fullName || 'there'}! I am your MRS SOLAR AI Copilot. How can I assist you with your solar loan, EMI schedule, or power generation today?`
-      : `Hello! I am your MRS SOLAR Assistant. How can I help you inspect customer financing, solar installations, or portfolio metrics today?`;
+      ? `Hello ${customer.fullName || 'there'}! I am your MRS SOLAR AI Copilot. How can I assist you with your ${customer.solarCapacity || 3} kW solar system, upcoming EMI installment, or power generation today?`
+      : `Hello! I am your MRS SOLAR Assistant. Ask me anything about solar electricity generation, Central PM Surya Ghar subsidies, loan repayment, or TNEB net metering.`;
   }
 
-  // 2. EMI DUE DATE & AMOUNT
-  if (/(next emi|due date|how much emi|pending emi|அடுத்த தவணை|தவணை தேதி|எவ்வளவு பணம்)/i.test(query)) {
-    if (role === 'customer' && customer) {
+  // 2. SOLAR ELECTRICITY GENERATION & UNITS (Handles "How much solar electricity will my system generate?", "units", "kw", etc.)
+  if (
+    /(generat|electric|power|solar|units?|kwh|capacity|kilowatt|rooftop|output|produce|production|yield|how much.*(solar|electr|unit|power)|கரண்ட்|மின்சாரம்|உற்பத்தி|யூனிட்|தயாரிக்கும்|சோலார்.*கரண்ட்)/i.test(query) &&
+    !/(cost|price|quotation|subsidy|emi|due|clean|wash|dust|service|maintenance|warranty|contact|phone|help|number)/i.test(query)
+  ) {
+    if (customer && customer.solarCapacity) {
+      const cap = Number(customer.solarCapacity);
+      const dailyEst = (cap * 4.4).toFixed(1);
+      const monthlyEst = Math.round(cap * 4.4 * 30);
+      const annualEst = Math.round(cap * 4.4 * 365);
+      const monthlySavings = Math.round(monthlyEst * 6.5);
+
+      if (isTa) {
+        return `வணக்கம் ${customer.fullName || ''}! உங்கள் **${cap} kW** கூரை சோலார் அமைப்பின் மின் உற்பத்தி விவரங்கள்:
+
+⚡ **தினசரி உற்பத்தி**: ~${dailyEst} யூனிட்கள் (kWh)
+📅 **மாதாந்திர உற்பத்தி**: ~${monthlyEst} யூனிட்கள்
+☀️ **வருடாந்திர உற்பத்தி**: ~${annualEst.toLocaleString('en-IN')} யூனிட்கள்
+💰 **உத்தேச EB பில் சேமிப்பு**: ~₹${monthlySavings.toLocaleString('en-IN')} / மாதம்
+
+(தமிழ்நாட்டின் சராசரி 4.4 மணிநேர சூரிய வெளிச்சம் அடிப்படையில் கணக்கிடப்பட்டது. TANGEDCO நெட்-மீட்டர் மூலம் இந்த யூனிட்கள் உங்கள் இருமாத பில்லில் கழிக்கப்படும்).`;
+      }
+
+      return `Hello ${customer.fullName || ''}! Here is the generation estimate for your **${cap} kW** Rooftop Solar System:
+
+⚡ **Average Daily Output**: ~${dailyEst} Units (kWh)
+📅 **Monthly Output**: ~${monthlyEst} Units (kWh)
+☀️ **Annual Generation**: ~${annualEst.toLocaleString('en-IN')} Units
+💰 **Estimated TNEB Bill Savings**: ~₹${monthlySavings.toLocaleString('en-IN')} / month
+
+*(Calculated based on standard Tamil Nadu solar irradiance of 4.4 peak sun hours/day. Under TANGEDCO Net-Metering, these units directly offset your consumption).*`;
+    }
+
+    // Benchmark Table for Admin or General Visitors
+    if (isTa) {
+      return `தமிழ்நாட்டின் சராசரி 4.4 - 5.0 மணிநேர சூரிய வெளிச்சத்தில் சோலார் உற்பத்தி விவரங்கள்:
+
+• **1 kW அமைப்பு**: தினசரி ~4.4 யூனிட்கள் | மாதம் ~130 யூனிட்கள் | சேமிப்பு ~₹800/மாதம்
+• **2 kW அமைப்பு**: தினசரி ~8.8 யூனிட்கள் | மாதம் ~265 யூனிட்கள் | சேமிப்பு ~₹1,700/மாதம்
+• **3 kW அமைப்பு (வீடுகளுக்கு சிறந்தது)**: தினசரி ~13.2 யூனிட்கள் | மாதம் ~395 யூனிட்கள் | சேமிப்பு ~₹2,500 - ₹3,000/மாதம்
+• **5 kW அமைப்பு**: தினசரி ~22.0 யூனிட்கள் | மாதம் ~660 யூனிட்கள் | சேமிப்பு ~₹4,500 - ₹5,500/மாதம்
+• **10 kW அமைப்பு**: தினசரி ~44.0 யூனிட்கள் | மாதம் ~1,320 யூனிட்கள் | சேமிப்பு ~₹9,000 - ₹11,000/மாதம்
+
+⚡ **கணக்கீட்டு சூத்திரம்**: \`சோலார் திறன் (kW) × 4.4 = தினசரி யூனிட்கள்\`.`;
+    }
+
+    return `Standard Rooftop Solar generation benchmarks across Tamil Nadu (based on 4.4 Peak Sun Hours/day):
+
+• **1 kW System**: ~4.4 Units/day | ~130 Units/month | Saves ~₹800/month
+• **2 kW System**: ~8.8 Units/day | ~265 Units/month | Saves ~₹1,700/month
+• **3 kW System (Most Popular for Homes)**: ~13.2 Units/day | ~395 Units/month | Saves ~₹2,500 – ₹3,000/month
+• **5 kW System (Large Homes & Offices)**: ~22.0 Units/day | ~660 Units/month | Saves ~₹4,500 – ₹5,500/month
+• **10 kW Commercial System**: ~44.0 Units/day | ~1,320 Units/month | Saves ~₹9,000 – ₹11,000/month
+
+⚡ **Quick Formula**: \`System Capacity (kW) × 4.4 = Expected Daily Generation (Units)\`. Under TANGEDCO Net Metering, surplus units roll over to subsequent bi-monthly bills!`;
+  }
+
+  // 3. EMI DUE DATE, AMOUNT & LOAN REPAYMENT
+  if (/(next emi|due date|when is.*emi|how much emi|pending emi|emi amount|installment|loan status|loan amount|balance|outstanding|late fee|penalty|grace period|pay emi|அடுத்த தவணை|தவணை தேதி|நிலுவை|கடன்|அபராதம்|வட்டி|எப்போது தவணை|தவணை எவ்வளவு)/i.test(query)) {
+    if (customer) {
       const schedule = Array.isArray(customer.emiSchedule) ? customer.emiSchedule : [];
       const nextPending = schedule.find(e => e.status !== 'Paid');
 
       if (!nextPending) {
         return isTa
-          ? `வாழ்த்துகள்! உங்கள் சோலார் தவணைகள் அனைத்தும் முழுமையாக செலுத்தப்பட்டுவிட்டன. கடன் கணக்கு முடிவடைந்தது.`
-          : `Congratulations! All your solar financing installments are completely paid off. You have zero pending dues.`;
+          ? `வாழ்த்துகள்! உங்கள் சோலார் கடன் தவணைகள் அனைத்தும் முழுமையாக செலுத்தப்பட்டுவிட்டன. உங்களிடம் நிலுவைத் தொகை ஏதுமில்லை.`
+          : `Congratulations! All installments for your solar system loan are fully paid off. Your account balance is zero.`;
       }
 
       if (isTa) {
-        return `உங்கள் அடுத்த EMI தவணை #${nextPending.emiNumber}:
-• தொகை: ₹${Number(nextPending.emiAmount).toLocaleString('en-IN')}
-• செலுத்த வேண்டிய தேதி: ${nextPending.dueDate || 'மாதாந்திர தவணை'}
-• தாமத கட்டணம்: ₹${nextPending.lateFee || 0}
-• மொத்த நிலுவை: ₹${Number(customer.totalOutstandingAmount || nextPending.emiAmount).toLocaleString('en-IN')}
+        return `வணக்கம் ${customer.fullName || ''}! உங்கள் அடுத்த தவணை விவரங்கள்:
 
-UPI அல்லது Google Pay மூலம் உடனே செலுத்த டாஷ்போர்டில் உள்ள "தவணை செலுத்து" பொத்தானைப் பயன்படுத்தவும்.`;
+📋 **தவணை எண்**: #${nextPending.emiNumber}
+💵 **தவணை தொகை**: ₹${Number(nextPending.emiAmount).toLocaleString('en-IN')}
+📅 **செலுத்த வேண்டிய கடைசி தேதி**: ${nextPending.dueDate || 'மாதாந்திர தவணை'}
+⚠️ **தாமதக் கட்டணம்**: ₹${nextPending.lateFee || 0}
+🏦 **மொத்த கடன் நிலுவை**: ₹${Number(customer.totalOutstandingAmount || nextPending.emiAmount).toLocaleString('en-IN')}
+
+UPI அல்லது Google Pay மூலம் உடனே செலுத்த உங்கள் டாஷ்போர்டில் உள்ள **"தவணை செலுத்து (Pay Installment)"** பொத்தானைப் பயன்படுத்தவும்.`;
       }
 
-      return `Your upcoming EMI installment #${nextPending.emiNumber} details:
-• Installment Amount: ₹${Number(nextPending.emiAmount).toLocaleString('en-IN')}
-• Due Date: ${nextPending.dueDate || 'Monthly due'}
-• Late Penalty: ₹${nextPending.lateFee || 0}
-• Total Outstanding: ₹${Number(customer.totalOutstandingAmount || nextPending.emiAmount).toLocaleString('en-IN')}
+      return `Hello ${customer.fullName || ''}! Here are your upcoming EMI installment details:
 
-You can pay instantly via UPI / Google Pay using the "Pay Installment" button on your dashboard.`;
-    }
-  }
+📋 **Installment Number**: #${nextPending.emiNumber}
+💵 **EMI Amount**: ₹${Number(nextPending.emiAmount).toLocaleString('en-IN')}
+📅 **Due Date**: ${nextPending.dueDate || 'Upcoming Monthly Due'}
+⚠️ **Late Fee Penalty**: ₹${nextPending.lateFee || 0}
+🏦 **Total Remaining Balance**: ₹${Number(customer.totalOutstandingAmount || nextPending.emiAmount).toLocaleString('en-IN')}
 
-  // 3. SOLAR POWER GENERATION & UNITS
-  if (/(generation|units|solar production|solar power|சோலார் உற்பத்தி|எத்தனை யூனிட்|மின் உற்பத்தி)/i.test(query)) {
-    const cap = customer?.solarCapacity || 3;
-    const dailyEst = (cap * 4.4).toFixed(1);
-    const monthlyEst = Math.round(cap * 4.4 * 30);
-    const annualEst = Math.round(cap * 4.4 * 365);
-    const monthlySavings = Math.round(monthlyEst * 6.5);
-
-    if (isTa) {
-      return `உங்கள் ${cap} kW கூரை சோலார் அமைப்பின் உற்பத்தி விவரங்கள்:
-• தினசரி சராசரி உற்பத்தி: ~${dailyEst} யூனிட்கள் (kWh)
-• மாதாந்திர உற்பத்தி: ~${monthlyEst} யூனிட்கள்
-• ஆண்டு உற்பத்தி: ~${annualEst.toLocaleString('en-IN')} யூனிட்கள்
-• உத்தேச TNEB பில் சேமிப்பு: ~₹${monthlySavings.toLocaleString('en-IN')} / மாதம்
-
-(தமிழ்நாட்டின் தினசரி சராசரி 4.4 மணிநேர சூரிய வெளிச்சத்தை அடிப்படையாகக் கொண்டது).`;
+To pay securely, tap the **"Pay Installment"** button on your dashboard to scan the instant UPI QR code.`;
     }
 
-    return `Your ${cap} kW Rooftop Solar generation profile:
-• Average Daily Generation: ~${dailyEst} Units (kWh)
-• Monthly Output: ~${monthlyEst} Units
-• Annual Output: ~${annualEst.toLocaleString('en-IN')} Units
-• Estimated TNEB Bill Savings: ~₹${monthlySavings.toLocaleString('en-IN')} / month
-
-(Calculated based on standard Tamil Nadu solar irradiance of 4.4 peak sun hours/day).`;
-  }
-
-  // 4. PM SURYA GHAR SUBSIDY (CENTRAL GOVERNMENT)
-  if (/(subsidy|pm surya|surya ghar|surya|மானியம்|சூரிய கர்)/i.test(query)) {
+    // Admin or General Overview for Loans
     if (isTa) {
-      return `மத்திய அரசின் **PM சூர்யா கர்: முஃப்ட் பிஜ்லி யோஜனா** சோலார் மானிய விவரங்கள்:
-• 1 kW அமைப்புக்கு: ₹30,000 மத்திய மானியம்
-• 2 kW அமைப்புக்கு: ₹60,000 மத்திய மானியம்
-• 3 kW அல்லது அதற்கு மேல்: ₹78,000 அதிகபட்ச நேரடி மானியம்
+      return `MRS SOLAR கடன் மேலாண்மை வழிகாட்டி:
 
-மானியம் பெறுவதற்கான தகுதிகள்:
-1. சொந்த கூரை மற்றும் உள்நாட்டு TANGEDCO LT-1A மின் இணைப்பு.
-2. நிறுவல் முடிந்ததும் மின்வாரிய நெட்-மீட்டர் பொருத்தப்பட்ட பிறகு மானியத் தொகை வாடிக்கையாளர் வங்கிக் கணக்கில் நேரடியாக வரவு வைக்கப்படும்.`;
+• **கடன் காலம்**: 12 முதல் 60 மாதங்கள் வரை எளிதான தவணைகள்.
+• **வட்டி விகிதம்**: ஆண்டுக்கு 12% நிலையான அல்லது குறைந்துவரும் இருப்பு முறை.
+• **அபராத சலுகை**: தவணை தேதிக்கு பிறகு 3 நாட்கள் சலுகைக் காலம் (Grace Period). அதற்குப் பின் நாள் ஒன்றுக்கு 0.05% தாமதக் கட்டணம் கணக்கிடப்படும்.
+• நிர்வாகியாக நீங்கள் **வாடிக்கையாளர்கள் (Customers)** பக்கத்தில் எந்த வாடிக்கையாளரின் தவணை அட்டவணையையும் முழுமையாகப் பார்வையிடலாம்.`;
     }
 
-    return `**PM Surya Ghar: Muft Bijli Yojana** Central Government Solar Subsidy details:
-• For 1 kW capacity: ₹30,000 Direct Subsidy
-• For 2 kW capacity: ₹60,000 Direct Subsidy
-• For 3 kW and above: Up to ₹78,000 Maximum Subsidy
+    return `MRS SOLAR Financing & Loan Terms:
 
-Eligibility:
-1. Residential rooftop with active TANGEDCO LT-1A domestic connection.
-2. Following net-meter synchronization and inspection, the subsidy is credited directly to the customer's bank account via DBT.`;
+• **Flexible Tenures**: 12 to 60 monthly installments.
+• **Competitive Interest**: Standard 12% p.a. fixed or reducing balance models.
+• **Grace Period**: 3 days grace period from the due date before late fees apply (0.05%/day).
+• **Automated Midnight Audit**: Daily interest and overdue statuses are automatically verified every night at 00:00 IST.
+• As an Admin, you can review any customer's real-time schedule by selecting them in the **Customers** tab.`;
   }
 
-  // 5. TANGEDCO / TNEB NET-METERING SLABS
-  if (/(tangedco|tneb|net meter|tariff|slab|கரண்ட் பில்|நெட் மீட்டர்|மின்வாரியம்)/i.test(query)) {
+  // 4. CENTRAL GOVERNMENT PM SURYA GHAR SUBSIDY (₹78,000)
+  if (/(subsidy|pm surya|surya ghar|surya|muft bijli|central government|central subsidy|78000|30000|60000|dbt|national portal|government scheme|solar scheme|மானியம்|சூர்யா கர்|மத்திய அரசு|முஃப்ட் பிஜ்லி|78000|மத்திய மானியம்|திட்டம்)/i.test(query)) {
     if (isTa) {
-      return `தமிழ்நாடு மின்சார ஒழுங்குமுறை ஆணையத்தின் (TNERC LT-1A) சோலார் நெட்-மீட்டர் விதிகள்:
-• முதல் 100 யூனிட்கள் முற்றிலும் இலவசம் (தமிழக அரசின் இலவச மின்சாரம்).
-• உங்கள் சோலார் உபரி மின்சாரம் பகலில் மின்சார கட்டமைப்புக்கு (Grid) ஏற்றுமதி செய்யப்பட்டு இருமாத கணக்கீட்டில் கழிக்கப்படும்.
-• சோலார் மூலம் நீங்கள் உற்பத்தி செய்யும் மின்சாரத்திற்கு TNEB மின் கட்டணம் செலுத்த தேவையில்லை.`;
+      return `மத்திய அரசின் **PM சூர்யா கர்: முஃப்ட் பிஜ்லி யோஜனா** நேரடி சோலார் மானிய விவரங்கள்:
+
+• **1 kW அமைப்புக்கு**: ₹30,000 மத்திய மானியம்
+• **2 kW அமைப்புக்கு**: ₹60,000 மத்திய மானியம்
+• **3 kW அல்லது அதற்கு மேல்**: அதிகபட்சமாக **₹78,000** நேரடி மானியம்
+
+📌 **மானியம் பெறும் வழிமுறை**:
+1. சொந்த கூரை மற்றும் உள்நாட்டு TANGEDCO LT-1A மின் இணைப்பு இருக்க வேண்டும்.
+2. அங்கீகரிக்கப்பட்ட வெண்டரான MRS SOLAR மூலம் அமைப்பை நிறுவிய பின், மின்வாரியம் நெட்-மீட்டர் பொருத்தி ஆய்வு செய்யும்.
+3. ஆய்வு முடிந்த 30 நாட்களுக்குள் மானியத் தொகை வாடிக்கையாளரின் வங்கிக் கணக்கில் DBT முறையில் நேரடியாக வரவு வைக்கப்படும்.`;
+    }
+
+    return `Central Government **PM Surya Ghar: Muft Bijli Yojana** Rooftop Solar Subsidy Guidelines:
+
+• **1 kW Capacity**: **₹30,000** Direct Subsidy
+• **2 kW Capacity**: **₹60,000** Direct Subsidy
+• **3 kW & Above**: Maximum Direct Subsidy of **₹78,000**
+
+📌 **How to Avail**:
+1. **Eligibility**: Residential individual household with an active TANGEDCO LT-1A domestic connection.
+2. **Installation**: Completed with MNRE-approved DCR solar modules by MRS SOLAR.
+3. **Disbursement**: Following TNEB bidirectional net-meter inspection and grid synchronization, the subsidy is credited directly to your bank account via DBT.`;
+  }
+
+  // 5. TNEB / TANGEDCO NET-METERING & BILL SAVINGS
+  if (/(tangedco|tneb|net meter|metering|bi-monthly|tariff|slab|lt-1a|100 free|100 unit|eb bill|electricity bill|bill saving|surplus|grid export|மின்வாரியம்|டான்ஜெட்கோ|நெட் மீட்டர்|கரண்ட் பில்|ஈபி பில்|இலவச மின்சாரம்|100 யூனிட்|சேமிப்பு)/i.test(query)) {
+    if (isTa) {
+      return `தமிழ்நாடு மின்சார ஒழுங்குமுறை ஆணையத்தின் (TNERC LT-1A) சோலார் நெட்-மீட்டரிங் விதிகள்:
+
+1. **முதல் 100 யூனிட்கள் இலவசம்**: தமிழக அரசின் வழிகாட்டுதலின்படி முதல் 100 யூனிட் எப்போதும் இலவசம்.
+2. **இருவழி நெட்-மீட்டர் (Net Metering)**: பகலில் நீங்கள் பயன்படுத்தியது போக உபரி சோலார் மின்சாரம் தானாகவே TNEB கட்டமைப்புக்கு (Grid) செல்லும்.
+3. **யூனிட் கழிவு**: இருமாத கணக்கீட்டில் நீங்கள் பயன்படுத்திய யூனிட்களில் இருந்து சோலார் ஏற்றுமதி கழித்துக் கொள்ளப்படும்.
+4. **உபரி சேமிப்பு**: உற்பத்தி அதிகமாக இருந்தால், உபரி யூனிட்கள் அடுத்த இருமாத பில்லுக்கு எடுத்துச் செல்லப்படும் (Rollover). இதனால் கரண்ட் பில் கிட்டத்தட்ட ₹0 ஆக குறையும்!`;
     }
 
     return `TANGEDCO / TNERC Tariff LT-1A Domestic Net-Metering Rules:
-• The first 100 units bi-monthly are 100% free under Tamil Nadu government subsidy.
-• Solar units exported to the grid during daylight hours are credited 1:1 against your bi-monthly consumption.
-• Surplus solar export rolls over to future billing cycles, lowering your electricity bills to near zero.`;
+
+1. **First 100 Units Free**: The first 100 units bi-monthly remain 100% free under the Tamil Nadu Government scheme.
+2. **1:1 Bi-directional Credit**: Excess solar units exported to the grid during daylight are credited 1:1 against your evening consumption.
+3. **High Slab Elimination**: TNEB domestic tariffs charge up to ₹11.00/unit for higher consumption slabs. Solar completely wipes out these expensive slabs first!
+4. **Credit Rollover**: Unused solar credits roll over to future billing cycles, driving your bi-monthly electricity bill to near zero!`;
   }
 
-  // 6. UPI PAYMENT HELP
-  if (/(upi|pay|payment|gpay|phonepe|paytm|செலுத்து|பணம் கட்ட)/i.test(query)) {
+  // 6. UPI, GPAY & PHONEPE PAYMENT ASSISTANCE
+  if (/(upi|gpay|google pay|phonepe|paytm|qr code|qr|how to pay|payment method|pay installment|bank transfer|utr|receipt|செலுத்து|பணம் கட்ட|கூகிள் பே|போன்பே|ஸ்கேன்|க்யூஆர்|ரசீது|வங்கிக் குறிப்பு)/i.test(query)) {
     if (isTa) {
-      return `தவணை செலுத்துவது எப்படி:
-1. வாடிக்கையாளர் தளத்தில் உள்ள "தவணை செலுத்து" பொத்தானை கிளிக் செய்யவும்.
-2. தோன்றும் QR குறியீட்டை Google Pay, PhonePe அல்லது Paytm மூலம் ஸ்கேன் செய்து தொகையை செலுத்தவும்.
-3. பணம் செலுத்தியதும் வங்கிக் குறிப்பு எண்ணை (12-இலக்க UTR) சமர்ப்பிக்கவும். நிர்வாகி உடனே சரிபார்த்து ரசீது வழங்குவார்.`;
+      return `Google Pay, PhonePe அல்லது Paytm மூலம் தவணை செலுத்தும் முறை:
+
+1. உங்கள் வாடிக்கையாளர் தளத்தில் உள்ள **"தவணை செலுத்து (Pay Installment)"** பொத்தானை அழுத்தவும்.
+2. உங்கள் தவணை தொகைக்கு தானாக உருவாக்கப்பட்ட UPI QR குறியீட்டை ஏதேனும் UPI ஆப் மூலம் ஸ்கேன் செய்யவும்.
+3. பணம் செலுத்திய பின் வங்கி வழங்கிய **12-இலக்க UTR எண் (Reference No)** உள்ளிடவும்.
+4. நிர்வாகி சரிபார்த்தவுடன் அதிகாரப்பூர்வ ஜிஎஸ்டி ரசீது உங்கள் மின்னஞ்சலுக்கு உடனே அனுப்பி வைக்கப்படும்.`;
     }
 
-    return `How to pay your monthly EMI:
-1. Tap the "Pay Installment" button in your Customer Dashboard.
-2. Scan the instant UPI QR code using Google Pay, PhonePe, or Paytm.
-3. Enter the 12-digit bank UTR reference code upon completion. Your official GST receipt will be available immediately after verification.`;
+    return `How to pay your monthly EMI via UPI / Google Pay:
+
+1. Tap the **"Pay Installment"** button on your Customer Dashboard.
+2. Scan the dynamic UPI QR code generated specifically for your pending installment using Google Pay, PhonePe, or Paytm.
+3. Enter the **12-digit Bank UTR / Reference Number** after completing the payment.
+4. Once verified, your formal GST Tax Invoice & Receipt is generated and emailed to you automatically.`;
   }
 
-  // 7. ADMIN STATS INQUIRY
+  // 7. SOLAR SYSTEM COST, PRICING & ROI (PAYBACK)
+  if (/(cost|price|pricing|quotation|quote|rate|expense|investment|payback|roi|expensive|worth|how much.*(cost|price|setup|system)|விலை|செலவு|மதிப்பு|கொட்டேஷன்|எவ்வளவு ஆகும்|முதலீடு)/i.test(query)) {
+    if (isTa) {
+      return `தமிழ்நாட்டில் சோலார் திட்ட மதிப்பீடு & செலவு விவரங்கள்:
+
+• **1 kW கூரை சோலார்**: ~₹70,000 (மத்திய மானியம் ₹30,000 கழித்த பின் நிகர செலவு: ~₹40,000)
+• **2 kW கூரை சோலார்**: ~₹1,35,000 (மத்திய மானியம் ₹60,000 கழித்த பின் நிகர செலவு: ~₹75,000)
+• **3 kW கூரை சோலார்**: ~₹1,95,000 (மத்திய மானியம் ₹78,000 கழித்த பின் நிகர செலவு: ~₹1,17,000)
+
+💡 **முதலீட்டு மீட்புக் காலம் (Payback)**: 3 முதல் 4 ஆண்டுகளில் முதலீடு முழுமையாக திரும்பக் கிடைக்கும். அமைப்பின் ஆயுட்காலம் 25+ ஆண்டுகள் என்பதால் அடுத்த 20+ ஆண்டுகள் மின்சாரம் முற்றிலும் இலவசம்!`;
+    }
+
+    return `Standard Rooftop Solar System Pricing in Tamil Nadu (Turnkey EPC):
+
+• **1 kW System**: ~₹70,000 *(Net cost after ₹30,000 subsidy: ~₹40,000)*
+• **2 kW System**: ~₹1,35,000 *(Net cost after ₹60,000 subsidy: ~₹75,000)*
+• **3 kW System (Recommended)**: ~₹1,95,000 *(Net cost after ₹78,000 subsidy: ~₹1,17,000)*
+
+💡 **Return on Investment (ROI)**: Payback period is typically **3 to 4 years**. Since the Tier-1 solar panels are warrantied for **25 years**, you enjoy over 20 years of completely free electricity!`;
+  }
+
+  // 8. PANEL CLEANING, MAINTENANCE & INVERTER HEALTH
+  if (/(clean|dust|wash|water|dirty|maintenance|service|servicing|heat|temperature|inverter.*(temp|hot|error|fault)|low.*generation|not working|repair|சுத்தம்|தூசி|கழுவ|சர்வீஸ்|பராமரிப்பு|இன்வெர்ட்டர்|பழுது)/i.test(query)) {
+    if (isTa) {
+      return `சோலார் பராமரிப்பு மற்றும் சுத்தம் செய்யும் வழிகாட்டுதல்கள்:
+
+1. **சுத்தம் செய்யும் நேரம்**: காலை 7 மணிக்கு முன் அல்லது மாலை 5:30 மணிக்கு பின் மட்டுமே பேனல்களை சுத்தம் செய்ய வேண்டும் (நண்பகலில் குளிர்ந்த நீர் ஊற்றினால் கண்ணாடி விரிசல் ஏற்படலாம்).
+2. **சுத்தமான நீர்**: உப்பு நீர் அல்லது கடினமான சவர்க்காரங்களை பயன்படுத்த வேண்டாம்; மென்மையான துணி அல்லது வைப்பரைப் பயன்படுத்தவும்.
+3. **இன்வெர்ட்டர் காற்று வசதி**: இன்வெர்ட்டர் வெப்பம் 55°C-க்கு கீழ் இருக்க வேண்டும். காற்றோட்டமான இடத்தில் பொருத்தப்பட வேண்டும்.
+4. **AI சோதனை**: சோலார் டிராக்கரில் உள்ள **"AI Health Diagnostic"** பொத்தானை அழுத்தி செயல்திறன் அளவை நிகழ்நேரத்தில் அறியலாம்.`;
+    }
+
+    return `Rooftop Solar Maintenance & Cleaning Best Practices:
+
+1. **Optimal Cleaning Schedule**: Wash panel glass every 10–15 days using clean soft water.
+2. **Best Time**: Early in the morning (before 8:00 AM) or late evening to prevent thermal shock to hot glass. Avoid harsh detergents or abrasive brushes.
+3. **Inverter Airflow**: Keep the inverter heat-sink clear of debris. Optimal operating temperature is below 55°C.
+4. **Automated Diagnostics**: Use the **"AI Health Diagnostic"** button on the Solar Tracker card to detect dust losses or grid voltage dips instantly.`;
+  }
+
+  // 9. WARRANTY & EQUIPMENT QUALITY
+  if (/(warranty|guarantee|lifespan|life|durability|mono perc|topcon|dcr|bifacial|tier-1|quality|ஆயுட்காலம்|வாரண்டி|உத்தரவாதம்|தரம்)/i.test(query)) {
+    if (isTa) {
+      return `MRS SOLAR உபகரண உத்தரவாத விவரங்கள்:
+
+• **சோலார் பேனல்கள்**: 25 ஆண்டுகள் செயல்திறன் உத்தரவாதம் (Tier-1 Mono PERC / TOPCon DCR). 25 ஆண்டுகளுக்குப் பிறகும் 80%+ திறன் தரும்.
+• **ஆன்-கிரிட் இன்வெர்ட்டர்**: 5 முதல் 10 ஆண்டுகள் முழுமையான மாற்று உத்தரவாதம்.
+• **கட்டமைப்பு (Mounting Structure)**: துருப்பிடிக்காத ஹாட்-டிப் கால்வனைஸ்ட் இரும்பு (GI) - 30+ ஆண்டுகள் ஆயுள்.`;
+    }
+
+    return `MRS SOLAR Equipment & Warranty Standards:
+
+• **PV Modules**: **25-Year Linear Performance Warranty** (Tier-1 Mono PERC / TOPCon DCR modules certified for PM Surya Ghar). Guaranteed 80%+ output at Year 25.
+• **Grid-Tied Inverter**: 5 to 10 Year comprehensive replacement warranty with Wi-Fi telemetry.
+• **Mounting Structure**: Heavy-duty Hot-Dip Galvanized Iron (GI) rated to withstand 150 km/h wind speeds with 30+ years rust-proofing.`;
+  }
+
+  // 10. CONTACT, OFFICE & SUPPORT
+  if (/(contact|phone|mobile|call|number|support|help|customer care|office|address|location|trichy|where is|தொடர்பு|போன்|எண்|அலுவலகம்|முகவரி|உதவி)/i.test(query)) {
+    if (isTa) {
+      return `MRS SOLAR வாடிக்கையாளர் உதவி மையம்:
+
+📞 **தொலைபேசி**: +91 94892 88376
+📧 **மின்னஞ்சல்**: mrsassociates19@gmail.com
+📍 **அலுவலகம்**: MRS Solar Systems & Financing, Tamil Nadu, India.
+⏰ **பணி நேரம்**: திங்கள் முதல் சனி வரை, காலை 9:00 முதல் மாலை 7:00 மணி வரை.`;
+    }
+
+    return `MRS SOLAR Customer Support & Headquarters:
+
+📞 **Helpline**: +91 94892 88376
+📧 **Email**: mrsassociates19@gmail.com
+📍 **Head Office**: MRS Solar Systems & Financing, Tamil Nadu, India.
+⏰ **Operating Hours**: Monday to Saturday, 9:00 AM – 7:00 PM IST.`;
+  }
+
+  // 11. ADMIN PORTFOLIO & RECOVERY STATS
   if (role === 'admin' && adminStats) {
-    if (/(collection|overdue|portfolio|par|stats|profit|வசூல்|லாபம்)/i.test(query)) {
+    if (/(collection|overdue|portfolio|par|stats|profit|capital|வசூல்|லாபம்|நிலுவை|போர்ட்ஃபோலியோ)/i.test(query)) {
       if (isTa) {
-        return `நிகழ்நேர நிதி நிலவரம்:
-• மொத்த வாடிக்கையாளர்கள்: ${adminStats.totalCustomers || 0}
-• வசூலிக்கப்பட்ட மூலதனம்: ₹${Number(adminStats.totalAmountCollected || 0).toLocaleString('en-IN')}
-• நிலுவைத் தொகை: ₹${Number(adminStats.totalOutstandingAmount || 0).toLocaleString('en-IN')}
-• தவணை கடந்த வாடிக்கையாளர்கள்: ${adminStats.overdueCustomers || 0}
-• மொத்த லாபம் (வட்டி + அபராதம்): ₹${Number(adminStats.totalProfit || 0).toLocaleString('en-IN')}
-• வசூல் திறன்: ${adminStats.parMetrics?.collectionEfficiencyPct || '100'}%`;
+        return `நிகழ்நேர நிதி & கடன் நிலை அறிக்கை:
+
+• **மொத்த வாடிக்கையாளர்கள்**: ${adminStats.totalCustomers || 0}
+• **செயலில் உள்ள கடன்கள்**: ${adminStats.activeCustomers || 0}
+• **வசூலிக்கப்பட்ட மூலதனம்**: ₹${Number(adminStats.totalAmountCollected || 0).toLocaleString('en-IN')}
+• **நிலுவைத் தொகை**: ₹${Number(adminStats.totalOutstandingAmount || 0).toLocaleString('en-IN')}
+• **தவணை கடந்த வாடிக்கையாளர்கள்**: ${adminStats.overdueCustomers || 0}
+• **மொத்த லாபம் (வட்டி + அபராதம்)**: ₹${Number(adminStats.totalProfit || 0).toLocaleString('en-IN')}
+• **வசூல் திறன் (Recovery Rate)**: ${adminStats.parMetrics?.collectionEfficiencyPct || '100'}%`;
       }
 
       return `Live Financial & Portfolio Summary:
-• Total Customers: ${adminStats.totalCustomers || 0}
-• Total Capital Collected: ₹${Number(adminStats.totalAmountCollected || 0).toLocaleString('en-IN')}
-• Net Outstanding Dues: ₹${Number(adminStats.totalOutstandingAmount || 0).toLocaleString('en-IN')}
-• Overdue Customers: ${adminStats.overdueCustomers || 0}
-• Total Interest & Late Fee Profit: ₹${Number(adminStats.totalProfit || 0).toLocaleString('en-IN')}
-• Recovery Efficiency: ${adminStats.parMetrics?.collectionEfficiencyPct || '100'}%`;
+
+• **Total Registered Customers**: ${adminStats.totalCustomers || 0}
+• **Active Financing Accounts**: ${adminStats.activeCustomers || 0}
+• **Total Capital Collected**: ₹${Number(adminStats.totalAmountCollected || 0).toLocaleString('en-IN')}
+• **Net Outstanding Dues**: ₹${Number(adminStats.totalOutstandingAmount || 0).toLocaleString('en-IN')}
+• **Overdue Accounts**: ${adminStats.overdueCustomers || 0}
+• **Accumulated Profit (Interest + Fees)**: ₹${Number(adminStats.totalProfit || 0).toLocaleString('en-IN')}
+• **Portfolio Collection Rate**: ${adminStats.parMetrics?.collectionEfficiencyPct || '100'}%`;
     }
   }
 
-  // DEFAULT HELPFUL FALLBACK
-  if (isTa) {
-    return `நான் MRS SOLAR-ன் செயற்கை நுண்ணறிவு உதவியாளர். நான் உங்களுக்கு பின்வரும் தகவல்களில் உதவ முடியும்:
-1. அடுத்த தவணை (EMI) தேதி மற்றும் நிலுவைத் தொகை
-2. உங்கள் சோலார் மின் உற்பத்தி மற்றும் EB பில் சேமிப்பு கணக்கீடு
-3. மத்திய அரசு PM சூர்யா கர் ₹78,000 மானிய விவரங்கள்
-4. TANGEDCO நெட்-மீட்டர் விதிகள்
-5. UPI / Google Pay மூலம் கடன் தவணை செலுத்துதல்
+  // 12. DYNAMIC CONVERSATIONAL FALLBACK (Replaces static repeated block)
+  const previewTopic = query.length > 30 ? `${query.slice(0, 30)}...` : query;
 
-உங்கள் கேள்வியை தெளிவாக உள்ளிடவும் அல்லது கீழே உள்ள விரைவு தலைப்புகளில் ஒன்றை தேர்ந்தெடுக்கவும்.`;
+  if (isTa) {
+    return `நான் உங்கள் கேள்வியைப் புரிந்து கொள்ள முயற்சிக்கிறேன்: **"${previewTopic}"**
+
+சரியான தகவலை உடனடியாகப் பெற பின்வரும் தலைப்புகளில் ஒன்றை தேர்ந்தெடுக்கலாம்:
+• ☀️ **சோலார் உற்பத்தி**: "3 kW அமைப்பு எவ்வளவு கரண்ட் தயாரிக்கும்?"
+• 💰 **கடன் தவணை (EMI)**: "அடுத்த தவணை தேதி எப்போது?"
+• 🏛️ **மத்திய மானியம்**: "PM சூர்யா கர் ₹78,000 மானிய விவரங்கள்"
+• ⚡ **TNEB சேமிப்பு**: "நெட்-மீட்டர் விதிகள் மற்றும் 100 இலவச யூனிட்கள்"
+• 💳 **UPI தவணை**: "Google Pay மூலம் பணம் செலுத்துவது எப்படி?"
+• 🧼 **பராமரிப்பு**: "சோலார் பேனல்களை எவ்வாறு சுத்தம் செய்வது?"
+
+💡 *நிர்வாகிகள் Settings > AI Engine பக்கத்தில் Google Gemini API Key சேர்த்தால், AI எந்தவொரு தனிப்பயன் கேள்விக்கும் நேரடியாக பதிலளிக்கும்.*`;
   }
 
-  return `I am your MRS SOLAR AI Assistant. I can assist you with:
-1. Your next EMI installment due date, amount, and late fee waiver status
-2. Rooftop solar power generation & TNEB bi-monthly bill savings estimation
-3. Central PM Surya Ghar ₹78,000 rooftop solar subsidy guidelines
-4. TANGEDCO Net-metering LT-1A tariffs and bi-monthly credits
-5. Instant 1-tap UPI / Google Pay repayment guidance
+  return `I understand you are asking about: **"${previewTopic}"**
 
-Please ask your question or select one of the quick prompt chips below.`;
+Here are the most popular topics you can ask me about right away:
+• ☀️ **Solar Generation**: "How much solar electricity will my system generate?"
+• 💰 **Loan & EMI**: "When is my next EMI due and amount?"
+• 🏛️ **Govt Subsidy**: "PM Surya Ghar ₹78,000 subsidy details"
+• ⚡ **EB Bill Zero**: "TANGEDCO Net Metering rules & bill savings"
+• 💳 **UPI Payment**: "How to pay my EMI via Google Pay / UPI?"
+• 🧼 **Maintenance**: "How often should I clean my solar panels?"
+
+💡 *Admins can configure a free Google Gemini API key in Settings > AI Engine for open-ended conversational intelligence!*`;
 }
 
 /**

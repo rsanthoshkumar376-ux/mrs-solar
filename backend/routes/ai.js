@@ -203,14 +203,32 @@ router.post('/chat', authenticateToken, async (req, res) => {
     if (req.user.role === 'customer') {
       customerData = await db.findOne('customers', { customerId: req.user.customerId });
     } else if (req.user.role === 'admin') {
-      // Fetch light summary stats for admin context
+      // Fetch comprehensive summary stats for admin context
       const customers = await db.find('customers');
       const activeCustomers = customers.filter(c => c.loanStatus === 'Active').length;
+      const overdueCustomers = customers.filter(c => c.paymentStatus === 'Overdue').length;
+      const totalAmountCollected = customers.reduce((sum, c) => sum + (Number(c.totalPaidAmount) || 0), 0);
+      const totalOutstandingAmount = customers.reduce((sum, c) => sum + (Number(c.totalOutstandingAmount) || 0), 0);
+      const totalProfit = customers.reduce((sum, c) => sum + (Number(c.totalInterestPaid) || 0) + (Number(c.totalLateFeesPaid) || 0), 0);
+
       adminStatsData = {
         totalCustomers: customers.length,
         activeCustomers,
-        overdueCustomers: customers.filter(c => c.paymentStatus === 'Overdue').length
+        overdueCustomers,
+        totalAmountCollected,
+        totalOutstandingAmount,
+        totalProfit,
+        parMetrics: {
+          collectionEfficiencyPct: customers.length ? Math.round(((customers.length - overdueCustomers) / customers.length) * 100) : 100
+        }
       };
+
+      // If admin mentioned a customer ID in their query, resolve their profile
+      const custIdMatch = message.match(/CUST-\d+/i);
+      if (custIdMatch) {
+        const found = customers.find(c => (c.customerId || '').toUpperCase() === custIdMatch[0].toUpperCase());
+        if (found) customerData = found;
+      }
     }
 
     const config = await getAiConfig();
