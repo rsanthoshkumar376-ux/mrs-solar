@@ -205,3 +205,77 @@ export function launchTnebBbpsPay(consumerNumber, options = {}) {
 
   showFloatingToast(options?.toastMessage || msg, 'success');
 }
+
+/**
+ * Calculates official Tamil Nadu TANGEDCO / TNERC Bi-Monthly Domestic (Tariff 1A)
+ * electricity bill with Solar Net-Meter export credit and 100 free units.
+ *
+ * @param {object} params
+ * @param {number} params.biMonthlyUnits - Total units consumed from grid in 2 months
+ * @param {number} params.solarExportUnits - Total solar units generated/exported in 2 months
+ * @returns {object} Detailed bill breakdown and savings metrics
+ */
+export function calculateTnebBill({ biMonthlyUnits = 0, solarExportUnits = 0 }) {
+  const gross = Math.max(0, Number(biMonthlyUnits) || 0);
+  const solarCredit = Math.max(0, Number(solarExportUnits) || 0);
+  const netUnits = Math.max(0, gross - solarCredit);
+  const surplusUnits = Math.max(0, solarCredit - gross);
+
+  // Official TNERC LT-1A Domestic Bi-Monthly Slab Rates
+  function computeSlabBill(units) {
+    if (units <= 100) return 0; // 100 Free units for all domestic users in TN
+    let bill = 0;
+    if (units <= 500) {
+      // 0 - 100: FREE (0 INR)
+      // 101 - 200: 2.25 INR / unit
+      const slab2 = Math.min(100, Math.max(0, units - 100));
+      bill += slab2 * 2.25;
+      // 201 - 400: 4.50 INR / unit
+      const slab3 = Math.min(200, Math.max(0, units - 200));
+      bill += slab3 * 4.50;
+      // 401 - 500: 6.00 INR / unit
+      const slab4 = Math.min(100, Math.max(0, units - 400));
+      bill += slab4 * 6.00;
+    } else {
+      // units > 500 (Higher tier slabs)
+      // 0 - 100: FREE
+      // 101 - 400: 4.50 INR / unit
+      const slab2 = Math.min(300, Math.max(0, units - 100));
+      bill += slab2 * 4.50;
+      // 401 - 500: 6.00 INR / unit
+      const slab3 = Math.min(100, Math.max(0, units - 400));
+      bill += slab3 * 6.00;
+      // 501 - 600: 8.00 INR / unit
+      const slab4 = Math.min(100, Math.max(0, units - 500));
+      bill += slab4 * 8.00;
+      // 601 - 800: 9.00 INR / unit
+      const slab5 = Math.min(200, Math.max(0, units - 600));
+      bill += slab5 * 9.00;
+      // 801 - 1000: 10.00 INR / unit
+      const slab6 = Math.min(200, Math.max(0, units - 800));
+      bill += slab6 * 10.00;
+      // > 1000: 11.00 INR / unit
+      const slab7 = Math.max(0, units - 1000);
+      bill += slab7 * 11.00;
+    }
+    return Math.round(bill);
+  }
+
+  const grossBill = computeSlabBill(gross);
+  const netBill = computeSlabBill(netUnits);
+  const biMonthlySavings = Math.max(0, grossBill - netBill);
+  const annualSavings = biMonthlySavings * 6; // 6 bi-monthly cycles in a year
+
+  return {
+    grossUnits: gross,
+    solarCreditUnits: solarCredit,
+    netUnits,
+    surplusUnits,
+    grossBill,
+    netBill,
+    biMonthlySavings,
+    annualSavings,
+    isFreeTier: netUnits <= 100
+  };
+}
+
