@@ -5,7 +5,7 @@ import {
   Sun, DollarSign, Calendar, ShieldCheck, Zap, X,
   QrCode, Landmark, User, FileText, Info, Calculator, MessageCircle,
   Copy, Check, Leaf, Printer, Phone, Download, AlertCircle, Send,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Award
 } from 'lucide-react';
 import { 
   openCustomerSupportChat,
@@ -19,6 +19,8 @@ import { translations, getLanguage } from '../../utils/translations.js';
 // Lazy load heavy Leaflet map and PDF statement modal for performance
 const SolarSiteMap = React.lazy(() => import('../../components/SolarSiteMap.jsx'));
 const LoanStatementModal = React.lazy(() => import('../../components/LoanStatementModal.jsx'));
+const TaxInvoiceModal = React.lazy(() => import('../../components/TaxInvoiceModal.jsx'));
+const SanctionLetterModal = React.lazy(() => import('../../components/SanctionLetterModal.jsx'));
 import SolarTrackerCard from '../../components/SolarTrackerCard.jsx';
 
 export default function CustomerDashboard() {
@@ -29,6 +31,8 @@ export default function CustomerDashboard() {
   const [customerUtr, setCustomerUtr] = useState('');
   const [submittingUtr, setSubmittingUtr] = useState(false);
   const [showStatementModal, setShowStatementModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showSanctionModal, setShowSanctionModal] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedMobile, setCopiedMobile] = useState(false);
   const [copiedPaymentLink, setCopiedPaymentLink] = useState(false);
@@ -243,24 +247,42 @@ export default function CustomerDashboard() {
               <p className="text-[11px] sm:text-xs text-teal-200">{t.nextEmiDate}</p>
               <p className="text-xl sm:text-2xl font-black mt-0.5">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : t.completed}</p>
             </div>
-            <div className="w-full flex gap-2">
+            <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={() => setShowStatementModal(true)}
-                className="flex-1 justify-center bg-white/20 hover:bg-white/30 text-white rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3.5 border border-white/20 flex items-center space-x-1.5 sm:space-x-2 text-xs font-bold shadow-lg transition-all"
+                className="justify-center bg-white/20 hover:bg-white/30 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-white/20 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
                 title="View & Download official loan amortization statement with stamp"
               >
-                <Printer className="w-4 h-4 shrink-0" />
-                <span>{t.loanStatementBtn}</span>
+                <Printer className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t.loanStatementBtn}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowInvoiceModal(true)}
+                className="justify-center bg-amber-500/80 hover:bg-amber-500 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-amber-300/30 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
+                title="View & Download official GST Tax Invoice"
+              >
+                <FileText className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t.taxInvoiceBtn}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSanctionModal(true)}
+                className="justify-center bg-indigo-500/80 hover:bg-indigo-500 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-indigo-300/30 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
+                title="View & Download official Solar Loan Sanction & 25-Year Warranty Letter"
+              >
+                <Award className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t.sanctionLetterBtn}</span>
               </button>
               <button
                 type="button"
                 onClick={() => openCustomerSupportChat({ customer })}
-                className="flex-1 justify-center bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3.5 border border-white/20 flex items-center space-x-1.5 sm:space-x-2 text-xs font-bold shadow-lg transition-all"
+                className="justify-center bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-white/20 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
                 title="Chat with MRS SOLAR support on WhatsApp"
               >
-                <MessageCircle className="w-4 h-4 shrink-0" />
-                <span>{t.whatsappHelp}</span>
+                <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t.whatsappHelp}</span>
               </button>
             </div>
           </div>
@@ -781,13 +803,27 @@ export default function CustomerDashboard() {
         </div>
       )}
 
-      {/* OFFICIAL LOAN STATEMENT & CERTIFICATE MODAL */}
+      {/* OFFICIAL LOAN STATEMENT, TAX INVOICE & SANCTION LETTER MODALS */}
       <React.Suspense fallback={<div />}>
         {showStatementModal && (
           <LoanStatementModal
             customer={customer}
             isOpen={showStatementModal}
             onClose={() => setShowStatementModal(false)}
+          />
+        )}
+        {showInvoiceModal && (
+          <TaxInvoiceModal
+            customer={customer}
+            isOpen={showInvoiceModal}
+            onClose={() => setShowInvoiceModal(false)}
+          />
+        )}
+        {showSanctionModal && (
+          <SanctionLetterModal
+            customer={customer}
+            isOpen={showSanctionModal}
+            onClose={() => setShowSanctionModal(false)}
           />
         )}
       </React.Suspense>

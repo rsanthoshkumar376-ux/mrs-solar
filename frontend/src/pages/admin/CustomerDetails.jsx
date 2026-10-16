@@ -16,6 +16,8 @@ import { launchTnebQuickPay } from '../../utils/tneb.js';
 // Lazy load heavy Leaflet map and PDF statement modal for performance
 const SolarSiteMap = React.lazy(() => import('../../components/SolarSiteMap.jsx'));
 const LoanStatementModal = React.lazy(() => import('../../components/LoanStatementModal.jsx'));
+const TaxInvoiceModal = React.lazy(() => import('../../components/TaxInvoiceModal.jsx'));
+const SanctionLetterModal = React.lazy(() => import('../../components/SanctionLetterModal.jsx'));
 import UpiPaymentModal from '../../components/UpiPaymentModal.jsx';
 import SolarTrackerCard from '../../components/SolarTrackerCard.jsx';
 
@@ -64,6 +66,8 @@ export default function CustomerDetails() {
   const [whatsappModal, setWhatsappModal] = useState(null); // { type: 'reminder'|'receipt', emi, customer, language: 'ta' }
   const [previewDoc, setPreviewDoc] = useState(null); // { title, url, isPdf }
   const [showStatementModal, setShowStatementModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showSanctionModal, setShowSanctionModal] = useState(false);
   const [lang, setLang] = useState(getLanguage);
 
   useEffect(() => {
@@ -378,6 +382,24 @@ export default function CustomerDetails() {
           >
             <Printer className="w-3.5 h-3.5" />
             <span>{t.officialStatementPdf || 'Official Statement (PDF)'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowInvoiceModal(true)}
+            className="flex-1 sm:flex-initial justify-center inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-200/60 dark:border-amber-800/60 transition-colors shadow-sm whitespace-nowrap"
+            title="Generate and print official GST Tax Invoice with HSN code & breakdown"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>{t.taxInvoiceBtn || 'GST Tax Invoice'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSanctionModal(true)}
+            className="flex-1 sm:flex-initial justify-center inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold border border-indigo-200/60 dark:border-indigo-800/60 transition-colors shadow-sm whitespace-nowrap"
+            title="Generate and print official 1-page Solar Loan Sanction & 25-Year Warranty Letter"
+          >
+            <Award className="w-3.5 h-3.5" />
+            <span>{t.sanctionLetterBtn || 'Sanction Letter'}</span>
           </button>
           <span className={`w-full sm:w-auto text-center px-3 py-1 text-xs font-bold rounded-full uppercase border ${
             customer.paymentStatus === 'Paid'
@@ -1458,6 +1480,16 @@ export default function CustomerDetails() {
           customer={customer}
           isOpen={showStatementModal}
           onClose={() => setShowStatementModal(false)}
+        />
+        <TaxInvoiceModal
+          customer={customer}
+          isOpen={showInvoiceModal}
+          onClose={() => setShowInvoiceModal(false)}
+        />
+        <SanctionLetterModal
+          customer={customer}
+          isOpen={showSanctionModal}
+          onClose={() => setShowSanctionModal(false)}
         />
       </React.Suspense>
 
