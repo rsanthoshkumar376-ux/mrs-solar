@@ -4,7 +4,8 @@ import api from '../../utils/api.js';
 import { formatCurrency } from '../../utils/format.js';
 import { 
   Users, Zap, DollarSign, Wallet, ShieldAlert, Clock, 
-  TrendingUp, Activity, BellRing, PlayCircle, RefreshCw, CheckCircle, ChevronRight, Trash2
+  TrendingUp, Activity, BellRing, PlayCircle, RefreshCw, CheckCircle, ChevronRight, Trash2,
+  FileSpreadsheet, ShieldCheck, AlertTriangle, Landmark, ArrowDownToLine
 } from 'lucide-react';
 import { translations, getLanguage } from '../../utils/translations.js';
 
@@ -14,6 +15,7 @@ export default function AdminDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [schedulerRunning, setSchedulerRunning] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [lang, setLang] = useState(getLanguage);
 
   useEffect(() => {
@@ -98,6 +100,46 @@ export default function AdminDashboard() {
       setNotifications(prev => prev.filter(n => n._id !== id));
     } catch (err) {
       console.error('Error deleting notification:', err);
+    }
+  };
+
+  const handleExportCsv = async () => {
+    setExportLoading(true);
+    try {
+      const response = await api.get('/admin/backup/export-csv', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `MRS_SOLAR_Tally_Audit_Ledger_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download CSV failed:', error);
+      alert('Failed to export CA/Tally CSV ledger.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setExportLoading(true);
+    try {
+      const response = await api.get('/admin/backup/export-mdb', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `MRS_SOLAR_Financial_Ledger_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download Excel failed:', error);
+      alert('Failed to export Excel ledger.');
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -253,6 +295,178 @@ export default function AdminDashboard() {
                   : `Revenue collected in ${curMonthName}`;
               })()}
             </p>
+          </div>
+        </div>
+
+      </div>
+
+      {/* PHASE 4: PORTFOLIO-AT-RISK (PAR) & FINANCIAL P&L ANALYTICS */}
+      <div className="glass-premium rounded-3xl p-5 sm:p-7 shadow-sm border border-slate-200/60 dark:border-slate-800/80 space-y-6">
+        
+        {/* SECTION HEADER WITH EXPORT ACTIONS */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+          <div>
+            <div className="flex items-center space-x-2.5">
+              <span className="p-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                <Landmark className="w-5 h-5" />
+              </span>
+              <div>
+                <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center space-x-2">
+                  <span>{t.portfolioAtRiskTitle}</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-full">
+                    Banking / NBFC Grade
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t.portfolioAtRiskSubtitle}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={handleExportCsv}
+              disabled={exportLoading}
+              className="px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center space-x-1.5 transition-colors border border-slate-200 dark:border-slate-700 disabled:opacity-60"
+              title="Download CA / Tally compatible ledger with HSN 8541 and state codes"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>{exportLoading ? t.exportingAudit : t.exportTallyCsvBtn}</span>
+            </button>
+
+            <button
+              onClick={handleExportExcel}
+              disabled={exportLoading}
+              className="px-3.5 py-2 text-xs font-bold rounded-xl bg-teal-600 hover:bg-teal-700 text-white flex items-center space-x-1.5 transition-colors shadow-sm shadow-teal-500/20 disabled:opacity-60"
+              title="Download complete multi-sheet Excel financial ledger"
+            >
+              <ArrowDownToLine className="w-3.5 h-3.5" />
+              <span>{exportLoading ? t.exportingAudit : t.exportExcelLedgerBtn}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4-TIER PAR DELINQUENCY METRIC CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          {/* PAR 0: Standard / Performing */}
+          <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">{t.par0Title}</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="mt-2 text-xl font-black text-slate-800 dark:text-white">
+              {formatCurrency(stats?.parMetrics?.par0Amount || 0, false)}
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{t.par0Desc}</p>
+          </div>
+
+          {/* PAR 30: Watchlist */}
+          <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">{t.par30Title}</span>
+              <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="mt-2 text-xl font-black text-slate-800 dark:text-white">
+              {formatCurrency(stats?.parMetrics?.par30Amount || 0, false)}
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{t.par30Desc}</p>
+          </div>
+
+          {/* PAR 60: Substandard */}
+          <div className="p-4 rounded-2xl bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-800/40 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">{t.par60Title}</span>
+              <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div className="mt-2 text-xl font-black text-slate-800 dark:text-white">
+              {formatCurrency(stats?.parMetrics?.par60Amount || 0, false)}
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{t.par60Desc}</p>
+          </div>
+
+          {/* PAR 90+: NPA */}
+          <div className="p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-800/40 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider">{t.par90Title}</span>
+              <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400 animate-pulse" />
+            </div>
+            <div className="mt-2 text-xl font-black text-slate-800 dark:text-white">
+              {formatCurrency(stats?.parMetrics?.npaAmount || 0, false)}
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{t.par90Desc}</p>
+          </div>
+
+        </div>
+
+        {/* PAR RATIO & CAPITAL RECOVERY EFFICIENCY STRIP */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+          
+          {/* Collection Efficiency */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/60 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase">{t.collectionEfficiency}</p>
+              <p className="text-xs text-slate-400 mt-0.5">Total collected vs scheduled billing volume</p>
+            </div>
+            <div className="text-right">
+              <span className="text-2xl font-black text-teal-600 dark:text-teal-400 font-mono">
+                {stats?.parMetrics?.collectionEfficiencyPct || '100.0'}%
+              </span>
+            </div>
+          </div>
+
+          {/* Gross NPA Ratio */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/60 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase">{t.npaRatio}</p>
+              <p className="text-xs text-slate-400 mt-0.5">PAR 90+ non-performing loans vs total book</p>
+            </div>
+            <div className="text-right">
+              <span className={`text-2xl font-black font-mono ${
+                Number(stats?.parMetrics?.npaRatioPct || 0) > 5 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+              }`}>
+                {stats?.parMetrics?.npaRatioPct || '0.0'}%
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+        {/* FINANCIAL P&L REVENUE & EXPENSES BREAKDOWN */}
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              {t.financialPnLTitle}
+            </h4>
+            <span className="text-[11px] font-bold text-teal-600 dark:text-teal-400">
+              {t.netProfitMargin}: {stats?.parMetrics?.netProfitMarginPct || '0.0'}%
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">{t.disbursedPrincipal}</span>
+              <span className="text-sm sm:text-base font-black text-slate-800 dark:text-white font-mono mt-1 block">
+                {formatCurrency(stats?.parMetrics?.totalPrincipalDisbursed || stats?.totalLoanAmount || 0, false)}
+              </span>
+            </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">{t.recoveredPrincipal}</span>
+              <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1 block">
+                {formatCurrency(stats?.parMetrics?.totalPrincipalCollected || 0, false)}
+              </span>
+            </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">{t.realizedInterest}</span>
+              <span className="text-sm sm:text-base font-black text-indigo-600 dark:text-indigo-400 font-mono mt-1 block">
+                {formatCurrency(stats?.parMetrics?.totalInterestIncome || 0, false)}
+              </span>
+            </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-100 dark:border-slate-800">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">{t.recoveredLateFees}</span>
+              <span className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400 font-mono mt-1 block">
+                {formatCurrency(stats?.parMetrics?.totalLateFeeIncome || 0, false)}
+              </span>
+            </div>
           </div>
         </div>
 

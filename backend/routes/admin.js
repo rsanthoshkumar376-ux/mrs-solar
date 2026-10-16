@@ -119,6 +119,66 @@ router.get('/dashboard-stats', authenticateToken, authorizeRole(['admin']), asyn
         monthlyProfit[month] += (Number(p.interestPaid) || 0) + (Number(p.lateFeePaid) || 0);
       });
 
+    // Portfolio-at-Risk (PAR) & Financial P&L Analytics
+    const now = new Date();
+    let par0Amount = 0;   // Up-to-date / Paid / Due within 30 days
+    let par30Amount = 0;  // 1-30 days overdue
+    let par60Amount = 0;  // 31-60 days overdue
+    let par90Amount = 0;  // 61-90 days overdue
+    let npaAmount = 0;    // >90 days overdue (NPA)
+    let totalPrincipalCollected = 0;
+
+    payments
+      .filter(p => p.status === 'Paid')
+      .forEach(p => {
+        totalPrincipalCollected += Number(p.principalPaid) || Math.max(0, (Number(p.paidAmount) || 0) - (Number(p.interestPaid) || 0) - (Number(p.lateFeePaid) || 0));
+      });
+
+    customers.forEach(c => {
+      const schedule = Array.isArray(c.emiSchedule) ? c.emiSchedule : [];
+      let maxOverdueDays = 0;
+
+      schedule.forEach(emi => {
+        if (emi.status !== 'Paid' && emi.dueDate) {
+          const due = new Date(emi.dueDate);
+          if (due < now) {
+            const diffDays = Math.floor((now - due) / (1000 * 60 * 60 * 24));
+            if (diffDays > maxOverdueDays) maxOverdueDays = diffDays;
+          }
+        }
+      });
+
+      const customerPrincipal = Number(c.loanAmount) || 0;
+      if (maxOverdueDays === 0) {
+        par0Amount += customerPrincipal;
+      } else if (maxOverdueDays <= 30) {
+        par30Amount += customerPrincipal;
+      } else if (maxOverdueDays <= 60) {
+        par60Amount += customerPrincipal;
+      } else if (maxOverdueDays <= 90) {
+        par90Amount += customerPrincipal;
+      } else {
+        npaAmount += customerPrincipal;
+      }
+    });
+
+    const parMetrics = {
+      par0Amount: Math.round(par0Amount),
+      par30Amount: Math.round(par30Amount),
+      par60Amount: Math.round(par60Amount),
+      par90Amount: Math.round(par90Amount),
+      npaAmount: Math.round(npaAmount),
+      npaRatioPct: totalLoanAmount > 0 ? ((npaAmount / totalLoanAmount) * 100).toFixed(1) : '0.0',
+      collectionEfficiencyPct: (totalAmountCollected + totalOutstandingAmount) > 0 
+        ? ((totalAmountCollected / (totalAmountCollected + totalOutstandingAmount)) * 100).toFixed(1) 
+        : '100.0',
+      totalPrincipalDisbursed: totalLoanAmount,
+      totalPrincipalCollected: Math.round(totalPrincipalCollected),
+      totalInterestIncome: Math.round(totalInterestCollected),
+      totalLateFeeIncome: Math.round(totalLateFeeCollected),
+      netProfitMarginPct: totalLoanAmount > 0 ? ((totalProfit / totalLoanAmount) * 100).toFixed(1) : '0.0'
+    };
+
     const statsResult = {
       totalCustomers,
       activeCustomers,
@@ -130,6 +190,7 @@ router.get('/dashboard-stats', authenticateToken, authorizeRole(['admin']), asyn
       totalProfit,
       pendingPaymentsCount,
       totalOutstandingAmount,
+      parMetrics,
       chartData: {
         months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         collections: monthlyCollection.map(v => Math.round(v)),
@@ -1642,43 +1703,74 @@ router.get('/backup/export-json', authenticateToken, authorizeRole(['admin']), a
   }
 });
 
-// 10c. Export Customer Ledger as CSV (Excel Compatible)
+// 10c. Export Customer Ledger as CA / Tally Compliant CSV
 router.get('/backup/export-csv', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
     const customers = await db.find('customers');
     const headers = [
-      'Customer ID', 'Full Name', 'Mobile Number', 'Aadhaar Number', 'PAN Number',
-      'Solar Capacity (kW)', 'Solar Cost', 'Down Payment', 'Loan Amount',
-      'Monthly EMI', 'EMI Duration (Months)', 'Payment Status', 'Total Outstanding'
+      'Voucher Date', 'Voucher / Customer ID', 'Customer Ledger Name', 'Contact Mobile', 'State Code', 'Aadhaar (Masked)',
+      'HSN / SAC', 'Gross Solar EPC Value (INR)', 'Down Payment (INR)', 'Loan Principal (INR)',
+      'Interest Rate (%/mo)', 'Tenure (Months)', 'Monthly EMI (INR)', 'Total Amount Paid (INR)',
+      'Net Outstanding Balance (INR)', 'Overdue Days', 'PAR Classification', 'Repayment Status'
     ];
 
     let csvContent = headers.join(',') + '\n';
+    const now = new Date();
 
     customers.forEach(c => {
+      const schedule = Array.isArray(c.emiSchedule) ? c.emiSchedule : [];
+      let maxOverdueDays = 0;
+      let totalPaid = 0;
+
+      schedule.forEach(emi => {
+        if (emi.status === 'Paid') {
+          totalPaid += Number(emi.paidAmount) || (Number(emi.emiAmount) + (Number(emi.lateFee) || 0));
+        } else if (emi.dueDate) {
+          const due = new Date(emi.dueDate);
+          if (due < now) {
+            const diff = Math.floor((now - due) / (1000 * 60 * 60 * 24));
+            if (diff > maxOverdueDays) maxOverdueDays = diff;
+          }
+        }
+      });
+
+      let parCategory = 'PAR-0 (Standard / Performing)';
+      if (maxOverdueDays > 90) parCategory = 'PAR-90+ (Non-Performing Asset / NPA)';
+      else if (maxOverdueDays > 60) parCategory = 'PAR-60 (Doubtful 61-90 Days)';
+      else if (maxOverdueDays > 30) parCategory = 'PAR-30 (Substandard 31-60 Days)';
+      else if (maxOverdueDays > 0) parCategory = 'PAR-Watchlist (1-30 Days)';
+
+      const voucherDate = (c.loanStartDate || c.createdAt || '').slice(0, 10);
+
       const row = [
+        `"${voucherDate}"`,
         `"${c.customerId || ''}"`,
         `"${(c.fullName || '').replace(/"/g, '""')}"`,
         `"${c.mobileNumber || ''}"`,
+        `"33 (Tamil Nadu)"`,
         `"${maskAadhaar(c.aadhaarNumber)}"`,
-        `"${c.panNumber || ''}"`,
-        `"${c.solarCapacity || 0}"`,
+        `"8541 / 995461"`,
         `"${c.solarCost || 0}"`,
         `"${c.downPayment || 0}"`,
         `"${c.loanAmount || 0}"`,
-        `"${c.monthlyEmi || 0}"`,
+        `"${c.interestRate || 2}%"`,
         `"${c.emiDuration || 0}"`,
-        `"${c.paymentStatus || 'Pending'}"`,
-        `"${c.totalOutstandingAmount || 0}"`
+        `"${c.monthlyEmi || 0}"`,
+        `"${Math.round(totalPaid)}"`,
+        `"${c.totalOutstandingAmount || 0}"`,
+        `"${maxOverdueDays}"`,
+        `"${parCategory}"`,
+        `"${c.paymentStatus || 'Pending'}"`
       ];
       csvContent += row.join(',') + '\n';
     });
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=MRS_SOLAR_Customer_Ledger_${Date.now()}.csv`);
+    res.setHeader('Content-Disposition', `attachment; filename=MRS_SOLAR_Tally_Audit_Ledger_${Date.now()}.csv`);
     res.send(csvContent);
   } catch (error) {
     console.error('CSV export error:', error);
-    res.status(500).json({ message: 'Failed to export CSV database ledger' });
+    res.status(500).json({ message: 'Failed to export CA/Tally CSV ledger' });
   }
 });
 
