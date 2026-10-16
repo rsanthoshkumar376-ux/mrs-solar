@@ -449,7 +449,7 @@ export default function UpiSettings() {
                   required
                   value={formData.upiId}
                   onChange={(e) => setFormData({ ...formData, upiId: e.target.value.trim().toLowerCase() })}
-                  placeholder="e.g. rsanthoshkumar376@oksbi or 9566866288@paytm"
+                  placeholder="e.g. rsanthoshkumar376@oksbi or 8072454996@paytm"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono font-bold text-slate-800 dark:text-white outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
                 />
               </div>

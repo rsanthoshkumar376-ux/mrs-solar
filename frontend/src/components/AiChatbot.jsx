@@ -104,8 +104,8 @@ export default function AiChatbot() {
       setMessages(prev => [...prev, {
         role: 'assistant',
         text: chatLang === 'ta'
-          ? 'இணைப்பில் தாமதம் ஏற்பட்டுள்ளது. வாடிக்கையாளர் உதவிக்கு +91 94892 88376 என்ற எண்ணை அழைக்கவும்.'
-          : 'Connection timeout. For immediate support, please contact customer care at +91 94892 88376.',
+          ? 'இணைப்பில் தாமதம் ஏற்பட்டுள்ளது. வாடிக்கையாளர் உதவிக்கு +91 80724 54996 என்ற எண்ணை அழைக்கவும்.'
+          : 'Connection timeout. For immediate support, please contact customer care at +91 80724 54996.',
         time: new Date()
       }]);
     } finally {

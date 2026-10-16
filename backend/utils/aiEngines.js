@@ -361,7 +361,7 @@ To pay securely, tap the **"Pay Installment"** button on your dashboard to scan 
     if (isTa) {
       return `MRS SOLAR வாடிக்கையாளர் உதவி மையம்:
 
-📞 **தொலைபேசி**: +91 94892 88376
+📞 **தொலைபேசி**: +91 80724 54996
 📧 **மின்னஞ்சல்**: mrsassociates19@gmail.com
 📍 **அலுவலகம்**: MRS Solar Systems & Financing, Tamil Nadu, India.
 ⏰ **பணி நேரம்**: திங்கள் முதல் சனி வரை, காலை 9:00 முதல் மாலை 7:00 மணி வரை.`;
@@ -369,7 +369,7 @@ To pay securely, tap the **"Pay Installment"** button on your dashboard to scan 
 
     return `MRS SOLAR Customer Support & Headquarters:
 
-📞 **Helpline**: +91 94892 88376
+📞 **Helpline**: +91 80724 54996
 📧 **Email**: mrsassociates19@gmail.com
 📍 **Head Office**: MRS Solar Systems & Financing, Tamil Nadu, India.
 ⏰ **Operating Hours**: Monday to Saturday, 9:00 AM – 7:00 PM IST.`;

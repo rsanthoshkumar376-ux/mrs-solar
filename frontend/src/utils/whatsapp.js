@@ -4,7 +4,7 @@
 
 import { formatCurrency, formatDate } from './format.js';
 
-export const DEFAULT_SUPPORT_PHONE = '9566866288';
+export const DEFAULT_SUPPORT_PHONE = '8072454996';
 export const COMPANY_NAME = 'MRS SOLAR';
 
 /**
