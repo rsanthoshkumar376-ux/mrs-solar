@@ -8,7 +8,7 @@ import {
   Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2, Mail, Lock,
   MessageCircle, Send, Globe, Eye, Download, FolderArchive, ExternalLink
 } from 'lucide-react';
-import { generateEmiReminderMessage, generatePaymentReceiptMessage, openWhatsApp } from '../../utils/whatsapp.js';
+import { generateEmiReminderMessage, generatePaymentReceiptMessage, generateWelcomeKitMessage, openWhatsApp } from '../../utils/whatsapp.js';
 import { translations, getLanguage } from '../../utils/translations.js';
 import { compressImageFile } from '../../utils/imageCompressor.js';
 import { launchTnebQuickPay } from '../../utils/tneb.js';
@@ -245,10 +245,13 @@ export default function CustomerDetails() {
       });
       
       alert(response.data?.message || `EMI #${selectedEmi.emiNumber} marked as Paid!`);
+      const recordedEmi = { ...selectedEmi, paidDate: payDate, paidAmount: selectedEmi.emiAmount, utrNumber: payUtr.trim() };
       setShowMarkModal(false);
       setRemarks('');
       setPayUtr('');
       fetchCustomerDetails();
+      // Auto-open WhatsApp payment receipt dispatch modal
+      setWhatsappModal({ type: 'receipt', customer, emi: recordedEmi, utrNumber: recordedEmi.utrNumber, language: lang });
     } catch (error) {
       console.error(error);
       alert(error.response?.data?.message || 'Failed to update payment.');
@@ -400,6 +403,15 @@ export default function CustomerDetails() {
           >
             <Award className="w-3.5 h-3.5" />
             <span>{t.sanctionLetterBtn || 'Sanction Letter'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setWhatsappModal({ type: 'welcome', customer, emi: null, language: lang })}
+            className="flex-1 sm:flex-initial justify-center inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200/60 dark:border-emerald-800/60 transition-colors shadow-sm whitespace-nowrap"
+            title="Send formal Welcome Kit and login credentials directly to customer on WhatsApp"
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+            <span>{t.welcomeKitWhatsapp || 'Welcome Kit (WhatsApp)'}</span>
           </button>
           <span className={`w-full sm:w-auto text-center px-3 py-1 text-xs font-bold rounded-full uppercase border ${
             customer.paymentStatus === 'Paid'
@@ -1321,7 +1333,11 @@ export default function CustomerDetails() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-800 dark:text-white text-sm">
-                    {whatsappModal.type === 'receipt' ? 'Send WhatsApp Payment Receipt' : 'Send WhatsApp EMI Reminder'}
+                    {whatsappModal.type === 'welcome' 
+                      ? 'Send WhatsApp Welcome Kit & Credentials' 
+                      : whatsappModal.type === 'receipt' 
+                      ? 'Send WhatsApp Payment Receipt' 
+                      : 'Send WhatsApp EMI Reminder'}
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     To: {whatsappModal.customer?.fullName} ({whatsappModal.customer?.mobileNumber || 'No Mobile'})
@@ -1374,10 +1390,16 @@ export default function CustomerDetails() {
                   Message Preview
                 </label>
                 <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 font-mono text-xs whitespace-pre-wrap text-slate-800 dark:text-slate-200 max-h-56 overflow-y-auto leading-relaxed">
-                  {whatsappModal.type === 'receipt'
+                  {whatsappModal.type === 'welcome'
+                    ? generateWelcomeKitMessage({
+                        customer: whatsappModal.customer,
+                        language: whatsappModal.language
+                      })
+                    : whatsappModal.type === 'receipt'
                     ? generatePaymentReceiptMessage({
                         customer: whatsappModal.customer,
                         emi: whatsappModal.emi,
+                        utrNumber: whatsappModal.utrNumber,
                         language: whatsappModal.language
                       })
                     : generateEmiReminderMessage({
@@ -1400,10 +1422,16 @@ export default function CustomerDetails() {
                 <button
                   type="button"
                   onClick={() => {
-                    const message = whatsappModal.type === 'receipt'
+                    const message = whatsappModal.type === 'welcome'
+                      ? generateWelcomeKitMessage({
+                          customer: whatsappModal.customer,
+                          language: whatsappModal.language
+                        })
+                      : whatsappModal.type === 'receipt'
                       ? generatePaymentReceiptMessage({
                           customer: whatsappModal.customer,
                           emi: whatsappModal.emi,
+                          utrNumber: whatsappModal.utrNumber,
                           language: whatsappModal.language
                         })
                       : generateEmiReminderMessage({

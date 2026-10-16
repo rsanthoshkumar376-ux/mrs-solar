@@ -100,51 +100,55 @@ Thank you,
 /**
  * Generates a Payment Confirmation Receipt message in Tamil or English.
  */
-export function generatePaymentReceiptMessage({ customer, emi, language = 'ta', supportPhone = DEFAULT_SUPPORT_PHONE }) {
+export function generatePaymentReceiptMessage({ customer, emi, utrNumber = '', language = 'ta', supportPhone = DEFAULT_SUPPORT_PHONE }) {
   const customerName = customer?.fullName || 'வாடிக்கையாளர்';
   const customerId = customer?.customerId || customer?._id || 'N/A';
   const emiNum = emi?.emiNumber || 1;
   const paidDateStr = formatDate(emi?.paidDate || new Date());
   const paidAmount = formatCurrency(emi?.paidAmount || emi?.emiAmount || 0);
   const remainingBal = formatCurrency(emi?.remainingBalance || 0);
+  const utr = utrNumber || emi?.utrNumber || emi?.transactionId || '';
+  const portalUrl = window.location.origin ? `${window.location.origin}/login` : 'https://mrs-solar1.onrender.com/login';
 
   if (language === 'ta') {
     return `வணக்கம் *${customerName}* அவர்களுக்கு,
 
 உங்கள் *${COMPANY_NAME}* தவணை தொகை வெற்றிகரமாக பெறப்பட்டது! ✅
 
-🧾 *அதிகாரப்பூர்வ தவணை ரசீது*
+🧾 *அதிகாரப்பூர்வ தவணை ரசீது (Verified)*
 ━━━━━━━━━━━━━━━━━
 📌 *வாடிக்கையாளர் எண்:* ${customerId}
 🔢 *தவணை:* EMI #${emiNum} (செலுத்தப்பட்டது)
 📅 *செலுத்திய தேதி:* ${paidDateStr}
 💵 *பெறப்பட்ட தொகை:* *${paidAmount}*
-📉 *மீதமுள்ள கடன் இருப்பு:* ${remainingBal}
+${utr ? `🔗 *வங்கி UTR / பரிவர்த்தனை எண்:* ${utr}\n` : ''}📉 *மீதமுள்ள கடன் இருப்பு:* ${remainingBal}
 ━━━━━━━━━━━━━━━━━
 
 உங்களின் சீரான தவணை செலுத்துதலுக்கு நன்றி!
-வலைத்தளத்தில் முழு ரசீதை பதிவிறக்கம் செய்துகொள்ளலாம்.
+டிஜிட்டல் முத்திரையிடப்பட்ட முழு ரசீதை உங்கள் போர்ட்டலில் பதிவிறக்கம் செய்யலாம்:
+🌐 ${portalUrl}
 
-தொடர்புக்கு: 📞 ${supportPhone}
+தொழில்நுட்ப உதவிக்கு: 📞 ${supportPhone}
 *${COMPANY_NAME}* ☀️`;
   }
 
   // English
   return `Dear *${customerName}*,
 
-We have successfully received your solar loan payment! ✅
+We have successfully received and verified your solar loan payment! ✅
 
-🧾 *OFFICIAL PAYMENT RECEIPT*
+🧾 *OFFICIAL PAYMENT RECEIPT (Verified)*
 ━━━━━━━━━━━━━━━━━
 📌 *Customer ID:* ${customerId}
 🔢 *Installment:* EMI #${emiNum} (PAID)
 📅 *Payment Date:* ${paidDateStr}
 💵 *Amount Received:* *${paidAmount}*
-📉 *Remaining Balance:* ${remainingBal}
+${utr ? `🔗 *Bank UTR / Ref No:* ${utr}\n` : ''}📉 *Remaining Balance:* ${remainingBal}
 ━━━━━━━━━━━━━━━━━
 
-Thank you for your prompt payment!
-You can view or download the detailed PDF receipt on your customer portal.
+Thank you for your prompt repayment!
+You can view or download the digitally stamped GST Invoice and Receipt directly on your customer portal:
+🌐 ${portalUrl}
 
 Support Helpline: 📞 ${supportPhone}
 *${COMPANY_NAME}* ☀️`;
@@ -259,4 +263,80 @@ export function sendPaymentLinkToCustomerWhatsApp({ customer, emi, language = 't
   const message = generateWhatsAppPaymentRequest({ customer, emi, language });
   openWhatsApp({ phone: customer?.mobileNumber, message });
 }
+
+/**
+ * Generates official Customer Welcome & Portal Credentials Onboarding WhatsApp message
+ */
+export function generateWelcomeKitMessage({ customer, language = 'ta', supportPhone = DEFAULT_SUPPORT_PHONE }) {
+  const customerName = customer?.fullName || 'வாடிக்கையாளர்';
+  const customerId = customer?.customerId || 'N/A';
+  const mobile = customer?.mobileNumber || '';
+  const capacity = customer?.solarCapacity || 1;
+  const brand = customer?.solarBrand || 'Tier-1 Mono-PERC';
+  const loanAmount = formatCurrency(customer?.loanAmount || 0, false);
+  const emiAmount = formatCurrency(customer?.monthlyEmi || 0, false);
+  const tenure = customer?.emiDuration || 36;
+  const portalUrl = window.location.origin ? `${window.location.origin}/login` : 'https://mrs-solar1.onrender.com/login';
+
+  if (language === 'ta') {
+    return `🎉 *${COMPANY_NAME} குடும்பத்திற்கு தங்களை அன்புடன் வரவேற்கிறோம்!* ☀️
+━━━━━━━━━━━━━━━━━
+வணக்கம் *${customerName}* அவர்களே,
+
+தங்களின் *${capacity} kWp* சூரிய மின் திட்டத்திற்கான கடன் மற்றும் நிறுவல் பணிகள் வெற்றிகரமாக அங்கீகரிக்கப்பட்டுள்ளது.
+
+📌 *வாடிக்கையாளர் கணக்கு விபரங்கள்:*
+• வாடிக்கையாளர் எண் (ID): *${customerId}*
+• சோலார் திறன்: ${capacity} kWp (${brand})
+• அங்கீகரிக்கப்பட்ட கடன்: ${loanAmount}
+• மாதாந்திர தவணை (EMI): *${emiAmount}* (${tenure} மாதங்கள்)
+
+🌐 *வாடிக்கையாளர் போர்ட்டல் (Customer Portal Login):*
+${portalUrl}
+
+🔑 *உள்நுழைவு விவரங்கள்:*
+• பயனர்பெயர் (User ID): *${customerId}* அல்லது *${mobile}*
+• கடவுச்சொல் (Password): *${mobile}* (உங்கள் பதிவுசெய்த அலைபேசி எண்)
+
+📄 உங்கள் ஜி.எஸ்.டி வரி விலைப்பட்டியல், கடன் அனுமதி ஆவணம் மற்றும் 25 வருட உத்தரவாத சான்றிதழை போர்ட்டலில் பதிவிறக்கம் செய்துகொள்ளலாம்.
+
+தொழில்நுட்ப உதவிக்கு: 📞 ${supportPhone}
+வாழ்த்துக்கள் & நன்றி,
+*${COMPANY_NAME}* ☀️`;
+  }
+
+  return `🎉 *Welcome to the ${COMPANY_NAME} Family!* ☀️
+━━━━━━━━━━━━━━━━━
+Dear *${customerName}*,
+
+Congratulations! Your financing and turnkey installation for a *${capacity} kWp* On-Grid Rooftop Solar System has been officially approved and activated.
+
+📌 *Your Account & Project Summary:*
+• Customer ID: *${customerId}*
+• Solar Capacity: ${capacity} kWp (${brand})
+• Sanctioned Loan Amount: ${loanAmount}
+• Monthly EMI: *${emiAmount}* (${tenure} Months)
+
+🌐 *Customer Self-Service Portal:*
+${portalUrl}
+
+🔑 *Portal Login Credentials:*
+• Login ID: *${customerId}* or *${mobile}*
+• Password: *${mobile}* (Your registered mobile number)
+
+📄 You can view and download your official GST Tax Invoice, Loan Sanction Letter, and 25-Year Performance Warranty Agreement on your dashboard.
+
+Support Helpline: 📞 ${supportPhone}
+Best regards,
+*${COMPANY_NAME} Team* ☀️`;
+}
+
+/**
+ * Sends official Welcome Kit & Portal Credentials to Customer on WhatsApp
+ */
+export function sendCustomerWelcomeWhatsApp({ customer, language = 'ta' }) {
+  const message = generateWelcomeKitMessage({ customer, language });
+  openWhatsApp({ phone: customer?.mobileNumber, message });
+}
+
 

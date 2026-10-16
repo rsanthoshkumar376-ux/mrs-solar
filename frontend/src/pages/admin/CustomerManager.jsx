@@ -7,7 +7,7 @@ import {
   MessageCircle, MapPin, Crosshair, Edit2, UploadCloud, CheckCircle2, AlertCircle, 
   ChevronLeft, ChevronRight, FileSpreadsheet, Check, FilterX, RotateCcw
 } from 'lucide-react';
-import { openWhatsApp } from '../../utils/whatsapp.js';
+import { openWhatsApp, sendCustomerWelcomeWhatsApp } from '../../utils/whatsapp.js';
 import { exportCustomersToCsv } from '../../utils/exportCsv.js';
 import { translations, getLanguage } from '../../utils/translations.js';
 import { compressImageFile } from '../../utils/imageCompressor.js';
@@ -222,12 +222,27 @@ export default function CustomerManager() {
         }
       }
 
-      await api.post('/admin/customers', data, {
+      const res = await api.post('/admin/customers', data, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       alert('Customer successfully registered!');
       setShowAddModal(false);
+
+      const createdCustomer = res.data?.customer || { 
+        fullName: formData.fullName, 
+        mobileNumber: formData.mobileNumber, 
+        customerId: res.data?.customerId || 'SOL',
+        solarCapacity: formData.solarCapacity,
+        solarBrand: formData.solarBrand,
+        loanAmount: formData.loanAmount,
+        monthlyEmi: formData.loanAmount && formData.emiDuration ? Math.round(Number(formData.loanAmount) / Number(formData.emiDuration)) : 0,
+        emiDuration: formData.emiDuration
+      };
+
+      if (window.confirm('Would you like to send the official Welcome Kit & Portal Credentials to this customer on WhatsApp now?')) {
+        sendCustomerWelcomeWhatsApp({ customer: createdCustomer, language: lang });
+      }
       
       // Reset Form
       setFormData({
@@ -641,11 +656,8 @@ export default function CustomerManager() {
                         {c.mobileNumber && (
                           <button
                             type="button"
-                            onClick={() => openWhatsApp({
-                              phone: c.mobileNumber,
-                              message: `வணக்கம் ${c.fullName}, MRS SOLAR-ல் இருந்து தொடர்பு கொள்கிறோம்.`
-                            })}
-                            title={t.whatsappHelp}
+                            onClick={() => sendCustomerWelcomeWhatsApp({ customer: c, language: lang })}
+                            title="Send Welcome Kit & Credentials on WhatsApp"
                             className="p-1 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-colors shrink-0"
                           >
                             <MessageCircle className="w-3 h-3" />
@@ -731,11 +743,8 @@ export default function CustomerManager() {
                         {c.mobileNumber && (
                           <button
                             type="button"
-                            onClick={() => openWhatsApp({
-                              phone: c.mobileNumber,
-                              message: `வணக்கம் ${c.fullName}, MRS SOLAR-ல் இருந்து தொடர்பு கொள்கிறோம்.`
-                            })}
-                            title={t.whatsappHelp}
+                            onClick={() => sendCustomerWelcomeWhatsApp({ customer: c, language: lang })}
+                            title="Send Welcome Kit & Credentials on WhatsApp"
                             className="p-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-colors"
                           >
                             <MessageCircle className="w-3 h-3" />
