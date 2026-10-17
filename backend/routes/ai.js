@@ -4,6 +4,7 @@ import { db } from '../database/db.js';
 import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { getAiConfig, saveAiConfig, callGeminiApi } from '../utils/aiConfig.js';
 import { generateSolarDiagnostics, generateSmartChatResponse, extractKycFromText } from '../utils/aiEngines.js';
+import { findMatchingCustomer } from '../utils/customerResolver.js';
 
 const router = express.Router();
 
@@ -199,49 +200,80 @@ router.post('/chat', authenticateToken, async (req, res) => {
 
     let customerData = null;
     let adminStatsData = null;
+    let allCustomers = [];
+
+    try {
+      allCustomers = (await db.find('customers')) || [];
+    } catch (e) {
+      console.warn('Could not load all customers for AI context:', e.message);
+    }
 
     if (req.user.role === 'customer') {
       customerData = await db.findOne('customers', { customerId: req.user.customerId });
+      if (!customerData) {
+        customerData = allCustomers.find(c => c.customerId === req.user.customerId);
+      }
     } else if (req.user.role === 'admin') {
-      // Fetch comprehensive summary stats for admin context
-      const customers = await db.find('customers');
-      const activeCustomers = customers.filter(c => c.loanStatus === 'Active').length;
-      const overdueCustomers = customers.filter(c => c.paymentStatus === 'Overdue').length;
-      const totalAmountCollected = customers.reduce((sum, c) => sum + (Number(c.totalPaidAmount) || 0), 0);
-      const totalOutstandingAmount = customers.reduce((sum, c) => sum + (Number(c.totalOutstandingAmount) || 0), 0);
-      const totalProfit = customers.reduce((sum, c) => sum + (Number(c.totalInterestPaid) || 0) + (Number(c.totalLateFeesPaid) || 0), 0);
+      const activeCustomers = allCustomers.filter(c => c.loanStatus === 'Active').length;
+      const overdueCustomers = allCustomers.filter(c => c.paymentStatus === 'Overdue').length;
+      const totalAmountCollected = allCustomers.reduce((sum, c) => sum + (Number(c.totalPaidAmount) || 0), 0);
+      const totalOutstandingAmount = allCustomers.reduce((sum, c) => sum + (Number(c.totalOutstandingAmount) || 0), 0);
+      const totalProfit = allCustomers.reduce((sum, c) => sum + (Number(c.totalInterestPaid) || 0) + (Number(c.totalLateFeesPaid) || 0), 0);
 
       adminStatsData = {
-        totalCustomers: customers.length,
+        totalCustomers: allCustomers.length,
         activeCustomers,
         overdueCustomers,
         totalAmountCollected,
         totalOutstandingAmount,
         totalProfit,
         parMetrics: {
-          collectionEfficiencyPct: customers.length ? Math.round(((customers.length - overdueCustomers) / customers.length) * 100) : 100
+          collectionEfficiencyPct: allCustomers.length ? Math.round(((allCustomers.length - overdueCustomers) / allCustomers.length) * 100) : 100
         }
       };
 
-      // If admin mentioned a customer ID in their query, resolve their profile
-      const custIdMatch = message.match(/CUST-\d+/i);
-      if (custIdMatch) {
-        const found = customers.find(c => (c.customerId || '').toUpperCase() === custIdMatch[0].toUpperCase());
-        if (found) customerData = found;
-      }
+      // Resolve specific customer mentioned by name, nickname, ID or phone
+      customerData = findMatchingCustomer(message, allCustomers);
     }
 
     const config = await getAiConfig();
 
     if (config.geminiApiKey) {
       try {
-        let systemPrompt = `You are the official AI Solar & Financing Assistant for "MRS SOLAR", a premier rooftop solar EPC and loan financing firm in Tamil Nadu, India.
-Always be extremely polite, accurate, concise, and helpful.
-Support both Tamil (தமிழ்) and English seamlessly. Answer in the same language the user asks.`;
+        const customerDirectorySummary = allCustomers.map((c, i) =>
+          `${i + 1}. Customer: ${c.fullName} (ID: ${c.customerId}, Nicknames: Sanju, Sunju, Sandy)
+             - Solar System: ${c.solarCapacity || 3} kW (${c.solarBrand || 'MRS Solar'})
+             - Financials: System Cost ₹${c.solarCost || 0}, Down Payment ₹${c.downPayment || 0}, Loan Amount ₹${c.loanAmount || 0}, Monthly EMI ₹${c.monthlyEmi || 0}
+             - Loan Status: ${c.loanStatus || 'Active'} (${c.paymentStatus || 'Pending'}), Overdue Days: ${c.daysOverdue || 0}
+             - Next Due Date: ${c.emiSchedule?.find(e => e.status !== 'Paid')?.dueDate || 'Completed'}
+             - Phone: ${c.mobileNumber || 'N/A'}, Address: ${c.address || 'N/A'}, TNEB Consumer No: ${c.tnebConsumerNumber || 'N/A'}`
+        ).join('\n\n');
+
+        let systemPrompt = `You are the official 24/7 AI Solar & Financing Copilot for "MRS SOLAR", a premier rooftop solar EPC and loan financing firm in Tamil Nadu, India.
+Office Address: 74, Gandhi Road, MGM Nagar, Thiruvallur, Tamil Nadu – 602001
+Official Customer Care Helpline: +91 80724 54996 | Email: rsanthoshkumar376@gmail.com
+Primary UPI ID for payments: rsanthoshkumar376@oksbi | Secondary: mrssolar@okaxis
+
+You have complete real-time access to the registered customer database:
+${customerDirectorySummary}
+
+Financial Summary:
+- Total Customers: ${allCustomers.length}
+- Active Accounts: ${adminStatsData?.activeCustomers || allCustomers.length}
+- Overdue Accounts: ${adminStatsData?.overdueCustomers || 0}
+- Total Capital Collected: ₹${adminStatsData?.totalAmountCollected || 0}
+- Total Dues Outstanding: ₹${adminStatsData?.totalOutstandingAmount || 0}
+
+Guidelines:
+1. Always answer the user's specific question directly, warmly, concisely, and accurately.
+2. If asked about a customer's kW, solar capacity, loan, EMI, or details (e.g. "how many kw for sunju", "sanju emi", "deepi"), directly retrieve and state the exact numbers for that customer.
+3. If asked in Tamil (or Tanglish), reply in natural Tamil (தமிழ்). If in English, reply in clear English.
+4. If asked about general solar generation, use standard Tamil Nadu generation of 4.4 units/day per 1 kW (e.g. 1 kW = 4.4 units/day, 3 kW = 13.2 units/day).
+5. Never refuse to answer or give a robotic boilerplate telling the user to ask another question.`;
 
         if (customerData) {
-          systemPrompt += `\n\nLOGGED IN CUSTOMER CONTEXT:
-Customer Name: ${customerData.fullName}
+          systemPrompt += `\n\nTARGET CUSTOMER REFERENCED IN QUERY:
+Name: ${customerData.fullName}
 Customer ID: ${customerData.customerId}
 Solar Capacity: ${customerData.solarCapacity} kW
 Total Solar Cost: ₹${customerData.solarCost}
@@ -277,6 +309,7 @@ TNEB Consumer No: ${customerData.tnebConsumerNumber || 'N/A'}`;
       message,
       language,
       customer: customerData,
+      allCustomers,
       adminStats: adminStatsData,
       role: req.user.role
     });
