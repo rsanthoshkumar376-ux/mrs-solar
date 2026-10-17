@@ -100,7 +100,8 @@ export default function UpiPaymentModal({
 
   const handleOpenExternalBrowser = () => {
     // Opens payment in external Chrome/browser which has 100% permissions to dispatch UPI intents
-    const payPageUrl = `https://mrs-solar1.onrender.com/?pay=true&emi=${emi.emiNumber}&cust=${cleanCustId}&amt=${formattedAmount}`;
+    const basePortalUrl = (typeof window !== 'undefined' && window.location.origin) ? window.location.origin : 'https://mrs-solar-yj6e.vercel.app';
+    const payPageUrl = `${basePortalUrl}/?pay=true&emi=${emi.emiNumber}&cust=${cleanCustId}&amt=${formattedAmount}`;
     window.open(payPageUrl, '_blank');
   };
 

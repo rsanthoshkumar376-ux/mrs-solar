@@ -46,7 +46,7 @@ async function startServer() {
     setInterval(() => {
       try {
         import('https').then(({ default: https }) => {
-          ['https://mrs-solar1.onrender.com/api/health', 'https://mrs-solar.onrender.com/api/health'].forEach(url => {
+          ['https://mrs-solar-yj6e.vercel.app/api/health'].forEach(url => {
             https.get(url, () => {}).on('error', () => {});
           });
         });

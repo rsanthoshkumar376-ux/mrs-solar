@@ -30,7 +30,7 @@ import android.webkit.JavascriptInterface;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String APP_URL = "https://mrs-solar1.onrender.com";
+    private static final String APP_URL = "https://mrs-solar-yj6e.vercel.app";
     private static final int FILE_CHOOSER_RESULT_CODE = 1001;
 
     private WebView webView;
@@ -213,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Keep internal portal navigation, blob exports, and data URLs inside WebView
-        if (url.contains("mrs-solar1.onrender.com") || url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("about:")) {
+        if (url.contains("mrs-solar-yj6e.vercel.app") || url.contains("vercel.app") || url.contains("mrs-solar1.onrender.com") || url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("about:")) {
             return false;
         }
 

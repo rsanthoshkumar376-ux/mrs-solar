@@ -108,7 +108,7 @@ export function generatePaymentReceiptMessage({ customer, emi, utrNumber = '', l
   const paidAmount = formatCurrency(emi?.paidAmount || emi?.emiAmount || 0);
   const remainingBal = formatCurrency(emi?.remainingBalance || 0);
   const utr = utrNumber || emi?.utrNumber || emi?.transactionId || '';
-  const portalUrl = window.location.origin ? `${window.location.origin}/login` : 'https://mrs-solar1.onrender.com/login';
+  const portalUrl = (typeof window !== 'undefined' && window.location.origin) ? `${window.location.origin}/login` : 'https://mrs-solar-yj6e.vercel.app/login';
 
   if (language === 'ta') {
     return `வணக்கம் *${customerName}* அவர்களுக்கு,
@@ -276,7 +276,7 @@ export function generateWelcomeKitMessage({ customer, language = 'ta', supportPh
   const loanAmount = formatCurrency(customer?.loanAmount || 0, false);
   const emiAmount = formatCurrency(customer?.monthlyEmi || 0, false);
   const tenure = customer?.emiDuration || 36;
-  const portalUrl = window.location.origin ? `${window.location.origin}/login` : 'https://mrs-solar1.onrender.com/login';
+  const portalUrl = (typeof window !== 'undefined' && window.location.origin) ? `${window.location.origin}/login` : 'https://mrs-solar-yj6e.vercel.app/login';
 
   if (language === 'ta') {
     return `🎉 *${COMPANY_NAME} குடும்பத்திற்கு தங்களை அன்புடன் வரவேற்கிறோம்!* ☀️
