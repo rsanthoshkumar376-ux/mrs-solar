@@ -118,4 +118,16 @@ describe('Intelligent Conversational AI Copilot (aiEngines.js)', () => {
 
     expect(reply).not.toContain('Here are the most popular topics you can ask me about right away');
   });
+
+  test('provides owner engineering diagnostics when admin asks about inverter error', () => {
+    const reply = generateSmartChatResponse({
+      message: 'how to troubleshoot inverter fault error E03',
+      role: 'admin',
+      allCustomers: mockCustomers
+    });
+
+    expect(reply).toContain('Owner Portal Engineering Diagnostic Copilot');
+    expect(reply).toContain('Error E03 (Isolation / Earth Fault)');
+    expect(reply).toContain('Zero Solar Generation Troubleshooting');
+  });
 });

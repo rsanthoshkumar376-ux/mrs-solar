@@ -449,8 +449,44 @@ Please check the spelling or ask about one of the registered customers above!`;
 💡 **Return on Investment (ROI)**: Payback period is typically **3 to 4 years**. Since the Tier-1 solar panels are warrantied for **25 years**, you enjoy over 20 years of completely free electricity!`;
   }
 
+  // 14b. ADMIN SOLAR ENGINEERING & TROUBLESHOOTING COPILOT (In Owner Portal)
+  if (role === 'admin' && /(inverter.*(error|fault|troubleshoot|diagnos|red|trip|code|issue|fix)|zero.*(power|generation|output)|tneb.*(issue|bill|problem)|meter.*(not running|reverse)|பழுது|எர்ரர்|இன்வெர்ட்டர்)/i.test(query)) {
+    if (isTa) {
+      return `🛠️ **நிர்வாகி சோலார் பொறியியல் வழிகாட்டுதல் (Owner Diagnostic Copilot)**:
+
+1. **இன்வெர்ட்டர் பழுது & எர்ரர் குறியீடுகள் (Fault Codes)**:
+   • **E01 / E02 (கிரிட் மின்னழுத்தம்)**: TNEB லைன் வோல்டேஜ் 190V - 250V வரம்பிற்குள் உள்ளதா என சரிபார்க்கவும்.
+   • **E03 (இன்சுலேஷன் / எர்த் ஃபால்ட்)**: DC கம்பிகளில் மின்கசிவு அல்லது எர்த்திங் எதிர்ப்பு < 5 Ohms உள்ளதா என மல்டிமீட்டர் கொண்டு சோதிக்கவும்.
+   • **E04 / E05 (அதிக வெப்பம்)**: இன்வெர்ட்டர் ஹீட்-சிங்க் பகுதியில் காற்றோட்டம் இருப்பதை உறுதிசெய்யவும்.
+   • **ரெட் லைட் (Red Light / Alarm)**: AC & DC ஐசோலேட்டர்களை 5 நிமிடங்கள் ஆஃப் செய்து மீண்டும் ஆன் செய்து ரீசெட் செய்யவும்.
+
+2. **மின் உற்பத்தி பூஜ்ஜியம் (0 Units / Zero Generation)**:
+   • DC சந்திப்பு பெட்டியில் (AJB) உள்ள DC பியூஸ் (Fuse) மற்றும் DC SPD நல்ல நிலையில் உள்ளதா என பார்க்கவும்.
+   • PV ஸ்ட்ரிங் DC வோல்டேஜ் MPPT தொடக்க வரம்பில் (120V - 450V) உள்ளதா என அளவிடவும்.
+   • TANGEDCO நெட்-மீட்டரில் Export (Code 02) பதிவு சரியாக ஓடுகிறதா என சரிபார்க்கவும்.
+
+3. **வாடிக்கையாளர் ஆதரவு**: களப் பொறியாளரை தளத்திற்கு அனுப்பவும் அல்லது தொலைபேசி மூலம் வழிகாட்டவும்.`;
+    }
+
+    return `🛠️ **Owner Portal Engineering Diagnostic Copilot**:
+
+1. **Inverter Breakdown & Fault Code Resolution**:
+   • **Error E01 / E02 (Grid Voltage Error)**: Measure AC grid voltage at the inverter terminal; ensure it is between 195V – 253V AC.
+   • **Error E03 (Isolation / Earth Fault)**: High humidity or cable damage. Check insulation resistance of DC strings to ground (> 1 MΩ required).
+   • **Error E04 / E05 (Inverter Overtemperature)**: Check ambient ventilation and clear debris from the aluminum heat-sink.
+   • **Solid Red Alarm Light**: Turn OFF AC breaker first, then DC isolator. Wait 5 minutes for capacitor discharge, then power ON DC first, followed by AC.
+
+2. **Zero Solar Generation Troubleshooting**:
+   • Check the DC Array Junction Box (AJB) for blown DC fuses or tripped DC surge protection devices (SPDs).
+   • Measure string open-circuit voltage (Voc) to verify PV module health and string connectivity.
+   • Check TANGEDCO bidirectional meter active registers (Register 01: Import kWh, Register 02: Export kWh).
+   • Verify inverter Wi-Fi / GPRS telemetry status to confirm if generation is logging online.
+
+3. **Customer Resolution**: All customer incidents are tracked in the Owner Portal Notifications with contact numbers for rapid dispatch.`;
+  }
+
   // 15. PANEL CLEANING & MAINTENANCE
-  if (/(clean|dust|wash|water|dirty|maintenance|service|servicing|heat|temperature|inverter.*(temp|hot|error|fault)|low.*generation|not working|repair|சுத்தம்|தூசி|கழுவ|சர்வீஸ்|பராமரிப்பு|இன்வெர்ட்டர்|பழுது)/i.test(query)) {
+  if (/(clean|dust|wash|water|dirty|maintenance|service|servicing|heat|temperature|inverter.*(temp|hot)|low.*generation|repair|சுத்தம்|தூசி|கழுவ|சர்வீஸ்|பராமரிப்பு)/i.test(query)) {
     if (isTa) {
       return `சோலார் பராமரிப்பு மற்றும் சுத்தம் செய்யும் வழிகாட்டுதல்கள்:
 

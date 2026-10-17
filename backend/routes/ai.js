@@ -5,6 +5,7 @@ import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { getAiConfig, saveAiConfig, callGeminiApi } from '../utils/aiConfig.js';
 import { generateSolarDiagnostics, generateSmartChatResponse, extractKycFromText } from '../utils/aiEngines.js';
 import { findMatchingCustomer } from '../utils/customerResolver.js';
+import { detectProblem, buildEscalationChatReply } from '../utils/problemDetector.js';
 
 const router = express.Router();
 
@@ -234,6 +235,75 @@ router.post('/chat', authenticateToken, async (req, res) => {
 
       // Resolve specific customer mentioned by name, nickname, ID or phone
       customerData = findMatchingCustomer(message, allCustomers);
+    }
+
+    // Automatic Escalation to Owner Portal when customer reports a big problem:
+    // If the requester is a customer (role === 'customer' or non-admin session) and reports a high-severity problem
+    // (inverter failure, zero power, smoke hazard, physical damage, payment discrepancy):
+    // 1. Dispatch short note to Owner Portal (notifications collection with role: 'admin')
+    // 2. Record in audit_logs
+    // 3. Return reassuring response with emergency hotline & safety steps
+    const isCustomerSession = req.user.role === 'customer' || (customerData && req.user.role !== 'admin');
+    if (isCustomerSession) {
+      const problem = detectProblem(message);
+      if (problem.isBigProblem) {
+        const cust = customerData || (req.user.customerId ? allCustomers.find(c => c.customerId === req.user.customerId) : null);
+        const custName = cust?.fullName || req.user.username || 'Customer';
+        const custId = cust?.customerId || req.user.customerId || 'Registered Account';
+        const phone = cust?.mobileNumber || req.user.mobileNumber || '+91 80724 54996';
+        const shortNote = `${custName} (${custId}) - ${problem.summaryEn}: "${message.slice(0, 100)}"`;
+
+        // Check if an unread alert for this customer & issue already exists to prevent duplicate spam
+        const existingUnread = await db.findOne('notifications', {
+          role: 'admin',
+          customerId: custId,
+          issueCategory: problem.category,
+          read: false
+        });
+
+        if (!existingUnread) {
+          await db.create('notifications', {
+            role: 'admin',
+            type: 'CUSTOMER_PROBLEM_ALERT',
+            priority: 'urgent',
+            title: `🚨 ${problem.summaryEn}`,
+            message: `Short Note: ${shortNote}. Contact: ${phone}. Immediate owner attention requested.`,
+            customerId: custId,
+            customerName: custName,
+            customerPhone: phone,
+            issueCategory: problem.category,
+            severity: problem.severity,
+            read: false,
+            createdAt: new Date().toISOString()
+          });
+        }
+
+        await db.create('audit_logs', {
+          action: 'CUSTOMER_PROBLEM_ESCALATION',
+          category: 'SUPPORT',
+          details: shortNote,
+          customerId: custId,
+          performedBy: custName,
+          severity: problem.severity,
+          timestamp: new Date().toISOString()
+        });
+
+        const reply = buildEscalationChatReply({
+          customer: cust,
+          problem,
+          message,
+          language
+        });
+
+        return res.json({
+          reply,
+          source: 'MRS Solar Safety Escalation Engine',
+          language,
+          escalated: true,
+          category: problem.category,
+          shortNote
+        });
+      }
     }
 
     const config = await getAiConfig();
