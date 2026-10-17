@@ -148,6 +148,18 @@ export function generateSmartChatResponse({
     const annualEst = Math.round(cap * 4.4 * 365);
     const monthlySavings = Math.round(monthlyEst * 6.5);
 
+    const relatedNoteTa = (targetCustomer.customerId === 'SOL-1003' && allCustomers.some(c => c.customerId === 'SOL-1002'))
+      ? '\n\n*(குறிப்பு: நீங்கள் **Santhosh Kumar r** (ID: SOL-1002) பற்றி கேட்கிறீர்கள் என்றால், அவர்களின் சோலார் திறன் **3 kW** ஆகும்).*'
+      : (targetCustomer.customerId === 'SOL-1002' && allCustomers.some(c => c.customerId === 'SOL-1003'))
+      ? '\n\n*(குறிப்பு: நீங்கள் **Sanju** (ID: SOL-1003) பற்றி கேட்கிறீர்கள் என்றால், அவர்களின் சோலார் திறன் **1 kW** ஆகும்).*'
+      : '';
+
+    const relatedNoteEn = (targetCustomer.customerId === 'SOL-1003' && allCustomers.some(c => c.customerId === 'SOL-1002'))
+      ? '\n\n*(Note: If you were referring to **Santhosh Kumar r** (ID: SOL-1002), their system capacity is **3 kW**).*'
+      : (targetCustomer.customerId === 'SOL-1002' && allCustomers.some(c => c.customerId === 'SOL-1003'))
+      ? '\n\n*(Note: If you were referring to **Sanju** (ID: SOL-1003), their system capacity is **1 kW**).*'
+      : '';
+
     if (isTa) {
       return `**${targetCustomer.fullName}** (வாடிக்கையாளர் எண்: **${targetCustomer.customerId}**) அவர்களின் சோலார் கட்டமைப்பு **${cap} kW** திறன் கொண்டது.
 
@@ -162,7 +174,7 @@ export function generateSmartChatResponse({
 • **சோலார் மொத்த செலவு**: ₹${Number(targetCustomer.solarCost || 0).toLocaleString('en-IN')}
 • **முன்பணம்**: ₹${Number(targetCustomer.downPayment || 0).toLocaleString('en-IN')} | **கடன் தொகை**: ₹${Number(targetCustomer.loanAmount || 0).toLocaleString('en-IN')}
 • **மாதாந்திர தவணை (EMI)**: ₹${Number(targetCustomer.monthlyEmi || 0).toLocaleString('en-IN')} / மாதம்
-• **கடன் நிலை**: ${targetCustomer.loanStatus === 'Active' ? 'செயலில் உள்ளது (Active)' : targetCustomer.loanStatus}`;
+• **கடன் நிலை**: ${targetCustomer.loanStatus === 'Active' ? 'செயலில் உள்ளது (Active)' : targetCustomer.loanStatus}${relatedNoteTa}`;
     }
 
     return `**${targetCustomer.fullName}** (Customer ID: **${targetCustomer.customerId}**) has a **${cap} kW** Rooftop Solar System.
@@ -178,7 +190,7 @@ export function generateSmartChatResponse({
 • **Total Solar System Cost**: ₹${Number(targetCustomer.solarCost || 0).toLocaleString('en-IN')}
 • **Down Payment**: ₹${Number(targetCustomer.downPayment || 0).toLocaleString('en-IN')} | **Loan Principal**: ₹${Number(targetCustomer.loanAmount || 0).toLocaleString('en-IN')}
 • **Monthly EMI**: ₹${Number(targetCustomer.monthlyEmi || 0).toLocaleString('en-IN')} / month
-• **Loan Status**: ${targetCustomer.loanStatus || 'Active'} (${targetCustomer.paymentStatus || 'Pending'})`;
+• **Loan Status**: ${targetCustomer.loanStatus || 'Active'} (${targetCustomer.paymentStatus || 'Pending'})${relatedNoteEn}`;
   }
 
   // 5. SPECIFIC CUSTOMER EMI, LOAN & DUE DATE QUERY

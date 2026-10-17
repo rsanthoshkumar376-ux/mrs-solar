@@ -28,16 +28,18 @@ export function levenshtein(a = '', b = '') {
 }
 
 export const NICKNAME_MAP = {
-  sunju: ['santhosh', 'santosh', 'santhosh kumar r', 'santhosh kumar'],
-  sanju: ['santhosh', 'santosh', 'santhosh kumar r', 'santhosh kumar'],
+  sunju: ['sanju', 'santhosh', 'santosh', 'santhosh kumar r', 'santhosh kumar'],
+  sanju: ['sanju', 'santhosh', 'santosh', 'santhosh kumar r', 'santhosh kumar'],
   santhu: ['santhosh', 'santosh', 'santhosh kumar r'],
   sandy: ['santhosh', 'santosh', 'santhosh kumar r'],
   santo: ['santhosh', 'santosh'],
-  santosh: ['santhosh', 'santhosh kumar r'],
-  santhosh: ['santhosh', 'santhosh kumar r'],
+  santosh: ['santhosh', 'santhosh kumar r', 'sanju'],
+  santhosh: ['santhosh', 'santhosh kumar r', 'sanju'],
   deepi: ['deepi', 'deepa', 'deepika'],
   deepa: ['deepi', 'deepika'],
-  deepika: ['deepi']
+  deepika: ['deepi'],
+  harish: ['sri harish', 'harish'],
+  vishal: ['vishal']
 };
 
 export function findMatchingCustomer(query = '', customers = []) {
