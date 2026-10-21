@@ -12,6 +12,7 @@ import { openWhatsApp, sendCustomerWelcomeWhatsApp } from '../../utils/whatsapp.
 import { exportCustomersToCsv } from '../../utils/exportCsv.js';
 import { translations, getLanguage } from '../../utils/translations.js';
 import { compressImageFile } from '../../utils/imageCompressor.js';
+import BulkReminderModal from '../../components/BulkReminderModal.jsx';
 
 export default function CustomerManager() {
   const [customers, setCustomers] = useState([]);
@@ -63,6 +64,7 @@ export default function CustomerManager() {
   const [autoApplyReconcile, setAutoApplyReconcile] = useState(false);
   const [reconcileLoading, setReconcileLoading] = useState(false);
   const [reconcileResult, setReconcileResult] = useState(null);
+  const [showBulkReminderModal, setShowBulkReminderModal] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '', fatherName: '', motherName: '', mobileNumber: '', alternateNumber: '',
@@ -537,6 +539,16 @@ export default function CustomerManager() {
           >
             <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
             <span>{t.bankCsvReconciler || 'Bank CSV Match'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowBulkReminderModal(true)}
+            className="flex-1 sm:flex-initial justify-center px-3 py-2 sm:px-4 sm:py-2.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded-xl flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm font-bold transition-all border border-emerald-200/50 dark:border-emerald-700/50 shadow-sm whitespace-nowrap"
+            title="Dispatch 1-click WhatsApp payment reminders with direct UPI payment links"
+          >
+            <MessageCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>{lang === 'ta' ? 'வாட்ஸ்அப் நினைவூட்டல்' : 'WhatsApp Reminders'}</span>
           </button>
           
           <button
@@ -1604,6 +1616,13 @@ export default function CustomerManager() {
           </div>
         </div>
       )}
+
+      {/* BULK WHATSAPP PAYMENT REMINDERS MODAL */}
+      <BulkReminderModal 
+        customers={customers}
+        isOpen={showBulkReminderModal}
+        onClose={() => setShowBulkReminderModal(false)}
+      />
 
     </div>
   );

@@ -35,6 +35,7 @@ import {
   deleteUpiAccount 
 } from '../utils/upiConfig.js';
 import { calculateSolarStats, getFormattedDate } from '../utils/solarStats.js';
+import { enrichCustomerWithSubsidy } from '../utils/subsidyHelper.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -288,7 +289,8 @@ router.get('/customers/:id', authenticateToken, authorizeRole(['admin']), async 
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const safeCustomer = await resolveCustomerDocumentUrls(updatedCustomer, baseUrl);
 
-    res.json(safeCustomer);
+    const enrichedCustomer = enrichCustomerWithSubsidy(safeCustomer);
+    res.json(enrichedCustomer);
   } catch (error) {
     console.error('Customer fetch error:', error);
     res.status(500).json({ message: 'Error retrieving customer details' });
@@ -439,6 +441,61 @@ router.put('/customers/:id/email', authenticateToken, authorizeRole(['admin']), 
   } catch (error) {
     console.error('Update email error:', error);
     res.status(500).json({ message: 'Error updating customer email' });
+  }
+});
+
+// 4b.2 Update PM Surya Ghar Subsidy Lifecycle Stage
+router.put('/customers/:id/subsidy', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { stage, applicationNumber, notes } = req.body;
+    const stageNum = Number(stage);
+    if (!stageNum || stageNum < 1 || stageNum > 5) {
+      return res.status(400).json({ message: 'Invalid stage number (must be between 1 and 5)' });
+    }
+
+    const customer = (await db.findOne('customers', { _id: req.params.id })) ||
+                     (await db.findOne('customers', { customerId: req.params.id }));
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    const currentDetails = customer.subsidyDetails || {};
+    const stageDates = { ...(currentDetails.stageDates || {}) };
+    const todayStr = new Date().toISOString().split('T')[0];
+    stageDates[stageNum] = todayStr;
+
+    const updatedSubsidy = {
+      ...currentDetails,
+      currentStage: stageNum,
+      applicationNumber: applicationNumber || currentDetails.applicationNumber || `PMSGY-TN-2026-${(customer.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`,
+      stageDates,
+      lastUpdated: todayStr,
+      notes: notes !== undefined ? notes : (currentDetails.notes || '')
+    };
+
+    if (stageNum === 5) {
+      updatedSubsidy.disbursedDate = todayStr;
+    }
+
+    await db.updateOne('customers', { _id: customer._id }, { subsidyDetails: updatedSubsidy });
+
+    await db.create('audit_logs', {
+      action: 'SUBSIDY_STAGE_UPDATE',
+      category: 'SUBSIDY',
+      details: `Updated PM Surya Ghar subsidy stage to ${stageNum} for ${customer.fullName} (${customer.customerId})`,
+      customerId: customer.customerId,
+      performedBy: req.user.username || 'admin',
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'PM Surya Ghar subsidy stage updated successfully',
+      subsidyDetails: updatedSubsidy
+    });
+  } catch (error) {
+    console.error('Update subsidy error:', error);
+    res.status(500).json({ message: 'Error updating subsidy details' });
   }
 });
 

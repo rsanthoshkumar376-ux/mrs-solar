@@ -5,6 +5,7 @@ import { recalculateCustomerEmiStatus } from '../utils/calculations.js';
 import { resolveCustomerDocumentUrls, maskAadhaar } from '../utils/storage.js';
 import { getActiveUpiAccount } from '../utils/upiConfig.js';
 import { calculateSolarStats, getFormattedDate } from '../utils/solarStats.js';
+import { enrichCustomerWithSubsidy } from '../utils/subsidyHelper.js';
 
 const router = express.Router();
 
@@ -27,13 +28,14 @@ router.get('/dashboard', authenticateToken, authorizeRole(['customer']), async (
     // Resolve documents to signed, expiring URLs and mask Aadhaar
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const safeCustomer = await resolveCustomerDocumentUrls(updatedCustomer, baseUrl);
+    const enrichedCustomer = enrichCustomerWithSubsidy(safeCustomer);
 
     // Attach active administrator-selected UPI account for payment routing
     const activeUpi = await getActiveUpiAccount();
     const solarStats = calculateSolarStats(updatedCustomer);
 
     res.json({
-      ...safeCustomer,
+      ...enrichedCustomer,
       solarStats,
       activeUpi
     });

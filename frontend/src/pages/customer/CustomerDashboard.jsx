@@ -22,6 +22,7 @@ const LoanStatementModal = React.lazy(() => import('../../components/LoanStateme
 const TaxInvoiceModal = React.lazy(() => import('../../components/TaxInvoiceModal.jsx'));
 const SanctionLetterModal = React.lazy(() => import('../../components/SanctionLetterModal.jsx'));
 import SolarTrackerCard from '../../components/SolarTrackerCard.jsx';
+import SubsidyTrackerCard from '../../components/SubsidyTrackerCard.jsx';
 
 export default function CustomerDashboard() {
   const [customer, setCustomer] = useState(null);
@@ -288,6 +289,9 @@ export default function CustomerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* PM SURYA GHAR MUFT BIJLI YOJANA CENTRAL SUBSIDY TRACKER */}
+      <SubsidyTrackerCard customer={customer} />
 
       {/* SOLAR USAGE, RUNTIME, CONSUMPTION & TNEB QUICK PAY INTEGRATION */}
       <SolarTrackerCard 

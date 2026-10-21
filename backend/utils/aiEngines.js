@@ -5,6 +5,7 @@
  */
 
 import { findMatchingCustomer } from './customerResolver.js';
+import { getDefaultSubsidyDetails } from './subsidyHelper.js';
 
 /**
  * Intelligent Solar Inverter & Health Diagnostics
@@ -357,7 +358,38 @@ Please check the spelling or ask about one of the registered customers above!`;
   }
 
   // 11. CENTRAL GOVERNMENT PM SURYA GHAR SUBSIDY (₹78,000)
-  if (/(subsidy|pm surya|surya ghar|surya|muft bijli|central government|central subsidy|78000|30000|60000|dbt|national portal|government scheme|solar scheme|மானியம்|சூர்யா கர்|மத்திய அரசு|முஃப்ட் பிஜ்லி|78000|மத்திய மானியம்|திட்டம்)/i.test(query)) {
+  if (/(subsidy|pm surya|surya ghar|surya|muft bijli|central government|central subsidy|78000|30000|60000|dbt|national portal|government scheme|solar scheme|மானியம்|சூர்யா கர்|மத்திய அரசு|முஃப்ட் பிஜ்லி|மத்திய மானியம்|திட்டம்)/i.test(query)) {
+    if (targetCustomer) {
+      const sub = targetCustomer.subsidyDetails || getDefaultSubsidyDetails(targetCustomer);
+      const stageObj = sub.stages?.find(s => s.id === sub.currentStage) || sub.stages?.[sub.currentStage - 1] || {};
+      const stageName = isTa ? (stageObj.titleTa || `நிலை #${sub.currentStage}`) : (stageObj.titleEn || `Stage #${sub.currentStage}`);
+      const bankInfo = targetCustomer.bankDetails?.bankName ? ` (${targetCustomer.bankDetails.bankName})` : '';
+
+      if (isTa) {
+        return `**${targetCustomer.fullName}** (வாடிக்கையாளர் எண்: **${targetCustomer.customerId}**) அவர்களின் **PM சூர்யா கர் முஃப்ட் பிஜ்லி யோஜனா** மானிய நிலை:
+
+🏷️ **விண்ணப்ப எண்**: \`${sub.applicationNumber || 'PMSGY-TN-2026'}\`
+💰 **உரித்தான மத்திய மானியத் தொகை**: **₹${Number(sub.eligibleAmount || 30000).toLocaleString('en-IN')}**
+📍 **தற்போதைய நிலை (Stage ${sub.currentStage}/5)**: **${stageName}**
+${stageObj.descTa ? `ℹ️ *${stageObj.descTa}*\n` : ''}
+🏦 **வரவு பெறும் வங்கி**: ${targetCustomer.bankDetails?.accountNumber ? `A/c ...${targetCustomer.bankDetails.accountNumber.slice(-4)}${bankInfo}` : 'ஆதார் இணைக்கப்பட்ட வங்கிக் கணக்கு (DBT)'}
+🌐 **தேசிய போர்ட்டல்**: pmsuryaghar.gov.in மூலம் நேரடி நிலையை கண்காணிக்கலாம்.
+
+ஏதேனும் உதவி தேவைப்பட்டால் MRS SOLAR உதவி மையத்தை அழைக்கவும்: 📞 +91 80724 54996`;
+      }
+
+      return `**${targetCustomer.fullName}** (Customer ID: **${targetCustomer.customerId}**) **PM Surya Ghar: Muft Bijli Yojana** Subsidy Status:
+
+🏷️ **Application Ref**: \`${sub.applicationNumber || 'PMSGY-TN-2026'}\`
+💰 **Eligible Central Subsidy**: **₹${Number(sub.eligibleAmount || 30000).toLocaleString('en-IN')}**
+📍 **Current Milestone (Stage ${sub.currentStage}/5)**: **${stageName}**
+${stageObj.descEn ? `ℹ️ *${stageObj.descEn}*\n` : ''}
+🏦 **Disbursement Channel**: Direct Benefit Transfer (DBT) to ${targetCustomer.bankDetails?.accountNumber ? `bank account ending in ...${targetCustomer.bankDetails.accountNumber.slice(-4)}${bankInfo}` : 'your Aadhaar-linked bank account'}.
+🌐 **National Portal**: Track directly on pmsuryaghar.gov.in.
+
+For any expedited liaisoning, contact MRS SOLAR support: 📞 +91 80724 54996`;
+    }
+
     if (isTa) {
       return `மத்திய அரசின் **PM சூர்யா கர்: முஃப்ட் பிஜ்லி யோஜனா** நேரடி சோலார் மானிய விவரங்கள்:
 

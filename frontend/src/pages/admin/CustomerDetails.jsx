@@ -20,6 +20,7 @@ const TaxInvoiceModal = React.lazy(() => import('../../components/TaxInvoiceModa
 const SanctionLetterModal = React.lazy(() => import('../../components/SanctionLetterModal.jsx'));
 import UpiPaymentModal from '../../components/UpiPaymentModal.jsx';
 import SolarTrackerCard from '../../components/SolarTrackerCard.jsx';
+import SubsidyAdminCard from '../../components/SubsidyAdminCard.jsx';
 
 const DOC_CONFIGS = [
   { key: 'aadhaarFile', label: 'Aadhaar Identity Proof', desc: 'Government photo identity card' },
@@ -626,6 +627,15 @@ export default function CustomerDetails() {
           lang={lang}
           onLogReading={handleAdminLogReading}
           isAdmin={true}
+        />
+      </div>
+
+      {/* PM SURYA GHAR SUBSIDY ADMINISTRATION */}
+      <div className="no-print">
+        <SubsidyAdminCard 
+          customer={customer}
+          onUpdate={fetchCustomerDetails}
+          lang={lang}
         />
       </div>
 
