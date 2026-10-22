@@ -30,7 +30,7 @@ api.interceptors.response.use(
   async (error) => {
     const { config, response } = error;
 
-    if (response && (response.status === 401 || response.status === 403)) {
+    if (response && response.status === 401) {
       // Do not trigger 'auth-expired' on login attempts — show the real credential error instead
       const isLoginRequest = config?.url && config.url.includes('/auth/login');
       if (!isLoginRequest) {

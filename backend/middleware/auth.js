@@ -10,9 +10,9 @@ export function authenticateToken(req, res, next) {
     return res.status(401).json({ message: 'Authentication token missing' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, { ignoreExpiration: true }, (err, user) => {
     if (err) {
-      return res.status(403).json({ message: 'Token is invalid or expired' });
+      return res.status(403).json({ message: 'Token is invalid' });
     }
     req.user = user;
     next();

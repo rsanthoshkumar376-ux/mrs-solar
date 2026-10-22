@@ -121,11 +121,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Incorrect password. (For customers, your default password is your 10-digit mobile number)' });
     }
 
-    // Generate JWT token
+    // Generate persistent long-lived JWT token (never expires unexpectedly)
     const token = jwt.sign(
       { userId: user._id, role: user.role, customerId: user.customerId || null, username: user.username },
       JWT_SECRET,
-      { expiresIn: '2h' } // Token expires in 2 hours
+      { expiresIn: '365d' }
     );
 
     // If customer, fetch their details to send along
