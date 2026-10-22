@@ -12,12 +12,14 @@ export default function SubsidyAdminCard({ customer, onUpdate, lang = 'en' }) {
   const subsidy = customer?.subsidyDetails || {};
   const currentStage = Number(subsidy.currentStage) || 3;
   const capacity = Number(customer?.solarCapacity) || 1;
-  const eligibleAmount = capacity >= 3 ? 78000 : capacity >= 2 ? 60000 : 30000;
+  const defaultAmount = capacity >= 3 ? 78000 : capacity >= 2 ? 60000 : 30000;
+  const eligibleAmount = Number(subsidy.eligibleAmount) || defaultAmount;
 
   const [selectedStage, setSelectedStage] = useState(currentStage);
   const [appNumber, setAppNumber] = useState(
     subsidy.applicationNumber || `PMSGY-TN-2026-${(customer?.customerId || 'SOL').replace(/[^a-zA-Z0-9]/g, '')}`
   );
+  const [subsidyAmount, setSubsidyAmount] = useState(eligibleAmount);
   const [notes, setNotes] = useState(subsidy.notes || '');
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -72,6 +74,7 @@ export default function SubsidyAdminCard({ customer, onUpdate, lang = 'en' }) {
       await api.put(`/admin/customers/${customer._id}/subsidy`, {
         stage: stageToSave,
         applicationNumber: appNumber.trim(),
+        eligibleAmount: Number(subsidyAmount) || eligibleAmount,
         notes: notes.trim()
       });
       setSelectedStage(stageToSave);
@@ -187,8 +190,8 @@ Best regards,
         </div>
       </div>
 
-      {/* INPUT CONTROLS: APPLICATION NUMBER & QUICK SAVE */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
+      {/* INPUT CONTROLS: APPLICATION NUMBER, SUBSIDY AMOUNT & QUICK ACTIONS */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 my-4">
         <div className="sm:col-span-2">
           <label className="block text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 mb-1">
             National Portal Application Number
@@ -198,6 +201,28 @@ Best regards,
             value={appNumber}
             onChange={(e) => setAppNumber(e.target.value)}
             placeholder="PMSGY-TN-2026-XXXX"
+            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-2 rounded-xl text-xs font-mono font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
+              Eligible Subsidy (₹)
+            </label>
+            <div className="flex items-center space-x-1 text-[9px] font-bold text-amber-700 dark:text-amber-400">
+              <button type="button" onClick={() => setSubsidyAmount(30000)} className="hover:underline">1kW</button>
+              <span>|</span>
+              <button type="button" onClick={() => setSubsidyAmount(60000)} className="hover:underline">2kW</button>
+              <span>|</span>
+              <button type="button" onClick={() => setSubsidyAmount(78000)} className="hover:underline">3kW</button>
+            </div>
+          </div>
+          <input
+            type="number"
+            value={subsidyAmount}
+            onChange={(e) => setSubsidyAmount(e.target.value)}
+            placeholder="30000"
             className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-2 rounded-xl text-xs font-mono font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
@@ -223,6 +248,19 @@ Best regards,
             <span className="hidden sm:inline">WhatsApp</span>
           </button>
         </div>
+      </div>
+
+      {/* DIRECT DBT BANK DESTINATION INFO */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 p-2.5 rounded-xl bg-amber-50/60 dark:bg-slate-800/40 border border-amber-200/60 dark:border-slate-700/60 text-xs mb-3">
+        <div className="flex items-center space-x-2">
+          <Landmark className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" />
+          <span className="text-slate-700 dark:text-slate-300 font-medium text-[11px]">
+            Direct DBT Bank: <strong className="text-slate-900 dark:text-white">{customer.bankDetails?.bankName || 'Aadhaar-Linked Bank'}</strong> (A/c: **** {customer.bankDetails?.accountNumber ? String(customer.bankDetails.accountNumber).slice(-4) : 'NPCI'})
+          </span>
+        </div>
+        <span className="text-[10px] text-slate-500 italic">
+          (To change bank, update Bank Details in customer profile above)
+        </span>
       </div>
 
       {/* STAGE SELECTION BUTTONS (1 to 5) */}

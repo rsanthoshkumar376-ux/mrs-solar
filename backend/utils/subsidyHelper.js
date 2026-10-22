@@ -64,7 +64,8 @@ export function calculateSubsidyAmount(capacity = 1) {
  */
 export function getDefaultSubsidyDetails(customer = {}) {
   const cap = Number(customer.solarCapacity) || 1;
-  const eligibleAmount = calculateSubsidyAmount(cap);
+  const formulaAmount = calculateSubsidyAmount(cap);
+  const eligibleAmount = Number(customer.subsidyDetails?.eligibleAmount) || formulaAmount;
   const custId = customer.customerId || 'CUST';
   const cleanId = custId.replace(/[^a-zA-Z0-9]/g, '');
   const appNo = customer.subsidyDetails?.applicationNumber || `PMSGY-TN-2026-${cleanId}`;

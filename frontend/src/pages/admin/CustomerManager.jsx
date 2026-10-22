@@ -6,7 +6,7 @@ import {
   Users, UserPlus, Search, SlidersHorizontal, DownloadCloud, Eye, Trash2, X, FileText, 
   MessageCircle, MapPin, Crosshair, Edit2, UploadCloud, CheckCircle2, AlertCircle, 
   ChevronLeft, ChevronRight, FileSpreadsheet, Check, FilterX, RotateCcw,
-  Sparkles, Scan, FileSearch
+  Sparkles, Scan, FileSearch, Award
 } from 'lucide-react';
 import { openWhatsApp, sendCustomerWelcomeWhatsApp } from '../../utils/whatsapp.js';
 import { exportCustomersToCsv } from '../../utils/exportCsv.js';
@@ -828,7 +828,19 @@ export default function CustomerManager() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">{c.solarBrand} ({c.solarCapacity} kW)</td>
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-slate-800 dark:text-slate-200">
+                        {c.solarBrand} ({c.solarCapacity} kW)
+                      </div>
+                      <Link
+                        to={`/admin/customers/${c._id}#subsidy`}
+                        className="inline-flex items-center space-x-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 dark:border-amber-800 transition-colors shadow-xs"
+                        title="Click to view & change PM Surya Ghar Subsidy Stage"
+                      >
+                        <Award className="w-3 h-3 text-amber-600 shrink-0" />
+                        <span>Subsidy: Stage {c.subsidyDetails?.currentStage || 3}/5</span>
+                      </Link>
+                    </td>
                     <td className="px-6 py-4 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(c.loanAmount, false)}</td>
                     <td className="px-6 py-4 text-right font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(c.monthlyEmi, false)}</td>
                     <td className="px-6 py-4 text-center">

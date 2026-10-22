@@ -14,8 +14,8 @@ export default function SubsidyTrackerCard({ customer }) {
   if (!customer) return null;
 
   const capacity = Number(customer.solarCapacity) || 1;
-  const eligibleAmount = capacity >= 3 ? 78000 : capacity >= 2 ? 60000 : 30000;
   const subsidy = customer.subsidyDetails || {};
+  const eligibleAmount = Number(subsidy.eligibleAmount) || (capacity >= 3 ? 78000 : capacity >= 2 ? 60000 : 30000);
   const currentStage = Number(subsidy.currentStage) || 3;
   const appNo = subsidy.applicationNumber || `PMSGY-TN-2026-${(customer.customerId || 'SOL').replace(/[^a-zA-Z0-9]/g, '')}`;
 

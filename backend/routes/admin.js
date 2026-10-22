@@ -447,7 +447,7 @@ router.put('/customers/:id/email', authenticateToken, authorizeRole(['admin']), 
 // 4b.2 Update PM Surya Ghar Subsidy Lifecycle Stage
 router.put('/customers/:id/subsidy', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
-    const { stage, applicationNumber, notes } = req.body;
+    const { stage, applicationNumber, notes, eligibleAmount, stageDates: inputDates } = req.body;
     const stageNum = Number(stage);
     if (!stageNum || stageNum < 1 || stageNum > 5) {
       return res.status(400).json({ message: 'Invalid stage number (must be between 1 and 5)' });
@@ -460,21 +460,26 @@ router.put('/customers/:id/subsidy', authenticateToken, authorizeRole(['admin'])
     }
 
     const currentDetails = customer.subsidyDetails || {};
-    const stageDates = { ...(currentDetails.stageDates || {}) };
+    const stageDates = { ...(currentDetails.stageDates || {}), ...(inputDates || {}) };
     const todayStr = new Date().toISOString().split('T')[0];
-    stageDates[stageNum] = todayStr;
+    if (!stageDates[stageNum]) {
+      stageDates[stageNum] = todayStr;
+    }
+
+    const parsedEligible = Number(eligibleAmount);
 
     const updatedSubsidy = {
       ...currentDetails,
       currentStage: stageNum,
-      applicationNumber: applicationNumber || currentDetails.applicationNumber || `PMSGY-TN-2026-${(customer.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`,
+      applicationNumber: applicationNumber !== undefined ? String(applicationNumber).trim() : (currentDetails.applicationNumber || `PMSGY-TN-2026-${(customer.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`),
+      eligibleAmount: !isNaN(parsedEligible) && parsedEligible > 0 ? parsedEligible : currentDetails.eligibleAmount,
       stageDates,
       lastUpdated: todayStr,
       notes: notes !== undefined ? notes : (currentDetails.notes || '')
     };
 
     if (stageNum === 5) {
-      updatedSubsidy.disbursedDate = todayStr;
+      updatedSubsidy.disbursedDate = stageDates[5] || todayStr;
     }
 
     await db.updateOne('customers', { _id: customer._id }, { subsidyDetails: updatedSubsidy });

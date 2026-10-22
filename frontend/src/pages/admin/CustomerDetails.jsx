@@ -631,7 +631,7 @@ export default function CustomerDetails() {
       </div>
 
       {/* PM SURYA GHAR SUBSIDY ADMINISTRATION */}
-      <div className="no-print">
+      <div id="subsidy" className="no-print scroll-mt-24">
         <SubsidyAdminCard 
           customer={customer}
           onUpdate={fetchCustomerDetails}
