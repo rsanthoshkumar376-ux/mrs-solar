@@ -5,7 +5,7 @@ import {
   Sun, DollarSign, Calendar, ShieldCheck, Zap, X,
   QrCode, Landmark, User, FileText, Info, Calculator, MessageCircle,
   Copy, Check, Leaf, Printer, Phone, Download, AlertCircle, Send,
-  ChevronDown, ChevronUp, Award
+  ChevronDown, ChevronUp, Award, Wrench
 } from 'lucide-react';
 import { 
   openCustomerSupportChat,
@@ -23,6 +23,9 @@ const TaxInvoiceModal = React.lazy(() => import('../../components/TaxInvoiceModa
 const SanctionLetterModal = React.lazy(() => import('../../components/SanctionLetterModal.jsx'));
 import SolarTrackerCard from '../../components/SolarTrackerCard.jsx';
 import SubsidyTrackerCard from '../../components/SubsidyTrackerCard.jsx';
+import ReferralProgramCard from '../../components/ReferralProgramCard.jsx';
+import ServiceTicketModal from '../../components/ServiceTicketModal.jsx';
+import SolarCalculatorModal from '../../components/SolarCalculatorModal.jsx';
 
 export default function CustomerDashboard() {
   const [customer, setCustomer] = useState(null);
@@ -34,6 +37,8 @@ export default function CustomerDashboard() {
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showSanctionModal, setShowSanctionModal] = useState(false);
+  const [showServiceTicketModal, setShowServiceTicketModal] = useState(false);
+  const [showCalculatorModal, setShowCalculatorModal] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedMobile, setCopiedMobile] = useState(false);
   const [copiedPaymentLink, setCopiedPaymentLink] = useState(false);
@@ -248,7 +253,7 @@ export default function CustomerDashboard() {
               <p className="text-[11px] sm:text-xs text-teal-200">{t.nextEmiDate}</p>
               <p className="text-xl sm:text-2xl font-black mt-0.5">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : t.completed}</p>
             </div>
-            <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="w-full grid grid-cols-2 sm:grid-cols-6 gap-2">
               <button
                 type="button"
                 onClick={() => setShowStatementModal(true)}
@@ -278,6 +283,24 @@ export default function CustomerDashboard() {
               </button>
               <button
                 type="button"
+                onClick={() => setShowServiceTicketModal(true)}
+                className="justify-center bg-teal-500/80 hover:bg-teal-500 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-teal-300/30 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
+                title="Request Panel Cleaning, Inverter Check or Maintenance"
+              >
+                <Wrench className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{lang === 'ta' ? 'பழுது நீக்கம்' : 'Service'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCalculatorModal(true)}
+                className="justify-center bg-orange-500/80 hover:bg-orange-500 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-orange-300/30 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
+                title="Calculate Solar Savings and Subsidy"
+              >
+                <Calculator className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{lang === 'ta' ? 'சேமிப்பு' : 'Calculator'}</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => openCustomerSupportChat({ customer })}
                 className="justify-center bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-white/20 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
                 title="Chat with MRS SOLAR support on WhatsApp"
@@ -292,6 +315,9 @@ export default function CustomerDashboard() {
 
       {/* PM SURYA GHAR MUFT BIJLI YOJANA CENTRAL SUBSIDY TRACKER */}
       <SubsidyTrackerCard customer={customer} />
+
+      {/* REFER A NEIGHBOR / CASHBACK REWARDS HUB */}
+      <ReferralProgramCard customer={customer} />
 
       {/* SOLAR USAGE, RUNTIME, CONSUMPTION & TNEB QUICK PAY INTEGRATION */}
       <SolarTrackerCard 
@@ -481,6 +507,8 @@ export default function CustomerDashboard() {
       <React.Suspense fallback={<div className="h-64 rounded-3xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs text-slate-400">Loading Solar Site Map...</div>}>
         <SolarSiteMap customer={customer} />
       </React.Suspense>
+
+
 
       {/* LIVE EMI CALCULATOR SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -831,6 +859,21 @@ export default function CustomerDashboard() {
           />
         )}
       </React.Suspense>
+
+
+
+      {/* CUSTOMER SERVICE & MAINTENANCE TICKET MODAL */}
+      <ServiceTicketModal 
+        isOpen={showServiceTicketModal} 
+        onClose={() => setShowServiceTicketModal(false)} 
+        customer={customer} 
+      />
+
+      {/* SOLAR ROI & PM SURYA GHAR CALCULATOR MODAL */}
+      <SolarCalculatorModal 
+        isOpen={showCalculatorModal} 
+        onClose={() => setShowCalculatorModal(false)} 
+      />
 
       {/* FLOATING WHATSAPP SUPPORT BUTTON */}
       <button

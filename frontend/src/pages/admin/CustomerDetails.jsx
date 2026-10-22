@@ -6,7 +6,7 @@ import {
   User, Compass, Zap, Landmark, Award, ShieldCheck, 
   ArrowLeft, Edit, FileText, CheckCircle, Clock, AlertTriangle, 
   Calendar, QrCode, Printer, CheckSquare, PlusCircle, CreditCard, X, Trash2, Mail, Lock,
-  MessageCircle, Send, Globe, Eye, Download, FolderArchive, ExternalLink
+  MessageCircle, Send, Globe, Eye, Download, FolderArchive, ExternalLink, HardHat
 } from 'lucide-react';
 import { generateEmiReminderMessage, generatePaymentReceiptMessage, generateWelcomeKitMessage, openWhatsApp } from '../../utils/whatsapp.js';
 import { translations, getLanguage } from '../../utils/translations.js';
@@ -21,6 +21,7 @@ const SanctionLetterModal = React.lazy(() => import('../../components/SanctionLe
 import UpiPaymentModal from '../../components/UpiPaymentModal.jsx';
 import SolarTrackerCard from '../../components/SolarTrackerCard.jsx';
 import SubsidyAdminCard from '../../components/SubsidyAdminCard.jsx';
+import InstallationChecklistModal from '../../components/InstallationChecklistModal.jsx';
 
 const DOC_CONFIGS = [
   { key: 'aadhaarFile', label: 'Aadhaar Identity Proof', desc: 'Government photo identity card' },
@@ -55,6 +56,7 @@ export default function CustomerDetails() {
 
   // Edit customer record modal state
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showChecklistModal, setShowChecklistModal] = useState(false);
   const [editFormData, setEditFormData] = useState({});
   const [editFiles, setEditFiles] = useState({});
   const [editSubmitLoading, setEditSubmitLoading] = useState(false);
@@ -413,6 +415,16 @@ export default function CustomerDetails() {
           >
             <MessageCircle className="w-3.5 h-3.5" />
             <span>{t.welcomeKitWhatsapp || 'Welcome Kit (WhatsApp)'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowChecklistModal(true)}
+            className="flex-1 sm:flex-initial justify-center inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold border border-teal-200/60 dark:border-teal-800/60 transition-colors shadow-sm whitespace-nowrap"
+            title="Inspect EPC Roof Installation & Quality Commissioning Checklist"
+          >
+            <HardHat className="w-3.5 h-3.5" />
+            <span>Roof Checklist & Sign-off</span>
           </button>
           <span className={`w-full sm:w-auto text-center px-3 py-1 text-xs font-bold rounded-full uppercase border ${
             customer.paymentStatus === 'Paid'
@@ -1732,6 +1744,14 @@ export default function CustomerDetails() {
           onPaymentSubmitted={() => fetchCustomerDetails()}
         />
       )}
+
+      {/* EPC ROOF INSTALLATION & COMMISSIONING QUALITY CHECKLIST MODAL */}
+      <InstallationChecklistModal
+        isOpen={showChecklistModal}
+        onClose={() => setShowChecklistModal(false)}
+        customer={customer}
+        onVerified={() => fetchCustomerDetails()}
+      />
 
     </div>
   );

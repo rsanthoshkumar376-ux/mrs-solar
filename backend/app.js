@@ -101,6 +101,33 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'MRS SOLAR Solar Panel Loan API is running' });
 });
 
+// Public Solar ROI Leads submission endpoint (Free Lead Capture)
+app.post('/api/leads', async (req, res) => {
+  try {
+    const { fullName, mobileNumber, email, district, monthlyEbBill, systemCapacity, estimatedSubsidy, roofType, notes } = req.body;
+    if (!fullName || !mobileNumber) {
+      return res.status(400).json({ message: 'Name and mobile number are required.' });
+    }
+    const lead = await db.create('leads', {
+      fullName: String(fullName).trim(),
+      mobileNumber: String(mobileNumber).trim(),
+      email: email ? String(email).trim() : '',
+      district: district || 'Thiruvallur',
+      monthlyEbBill: Number(monthlyEbBill) || 0,
+      systemCapacity: Number(systemCapacity) || 1,
+      estimatedSubsidy: Number(estimatedSubsidy) || 30000,
+      roofType: roofType || 'RCC Concrete',
+      notes: notes || '',
+      status: 'New',
+      createdAt: new Date().toISOString()
+    });
+    res.json({ success: true, message: 'Inquiry submitted successfully! Our solar engineer will contact you shortly.', leadId: lead._id });
+  } catch (err) {
+    console.error('Lead submission error:', err);
+    res.status(500).json({ message: 'Failed to submit inquiry' });
+  }
+});
+
 // App Version & Update Info Endpoint
 app.get('/api/version', (req, res) => {
   res.json({

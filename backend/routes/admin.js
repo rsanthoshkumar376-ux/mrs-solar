@@ -2104,4 +2104,112 @@ router.post('/backup/import-json', authenticateToken, authorizeRole(['admin']), 
   }
 });
 
+// ─── Free Feature Extensions: Leads, Service Tickets & Commissioning ───────
+
+// Get all Solar Calculator Leads
+router.get('/leads', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const leads = await db.find('leads');
+    leads.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    res.json(leads);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch leads' });
+  }
+});
+
+// Update Solar Lead Status
+router.put('/leads/:id', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { status, notes } = req.body;
+    const lead = await db.updateOne('leads', { _id: req.params.id }, {
+      status,
+      notes: notes || '',
+      updatedAt: new Date().toISOString()
+    });
+    res.json({ success: true, message: 'Lead updated successfully', lead });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update lead' });
+  }
+});
+
+// Get all Customer Service / Maintenance Tickets
+router.get('/tickets', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const tickets = await db.find('tickets');
+    tickets.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    res.json(tickets);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch service tickets' });
+  }
+});
+
+// Update Service Ticket Status & Resolution
+router.put('/tickets/:id', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { status, resolutionNotes, assignedTechnician } = req.body;
+    const ticket = await db.updateOne('tickets', { _id: req.params.id }, {
+      status,
+      resolutionNotes: resolutionNotes || '',
+      assignedTechnician: assignedTechnician || '',
+      resolvedAt: status === 'Resolved' ? new Date().toISOString() : null,
+      updatedAt: new Date().toISOString()
+    });
+    res.json({ success: true, message: 'Ticket updated successfully', ticket });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update ticket' });
+  }
+});
+
+// Technician / Owner Roof Commissioning Checklist Sign-off
+router.post('/customers/:id/commissioning-checklist', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { checklist, signatureName, notes } = req.body;
+    const customer = (await db.findOne('customers', { _id: req.params.id })) ||
+                     (await db.findOne('customers', { customerId: req.params.id }));
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const subsidyDetails = customer.subsidyDetails || {};
+    const stageDates = { ...(subsidyDetails.stageDates || {}) };
+    stageDates[3] = todayStr; // Stage 3: Plant Commissioned
+
+    // Advance subsidy to at least stage 3
+    const currentStage = Math.max(Number(subsidyDetails.currentStage) || 1, 3);
+
+    const updatedSubsidy = {
+      ...subsidyDetails,
+      currentStage,
+      stageDates,
+      lastUpdated: todayStr
+    };
+
+    const commissioningRecord = {
+      checklist: checklist || {},
+      signatureName: signatureName || req.user.username || 'Technician',
+      signedAt: new Date().toISOString(),
+      notes: notes || '',
+      verified: true
+    };
+
+    await db.updateOne('customers', { _id: customer._id }, {
+      commissioningRecord,
+      subsidyDetails: updatedSubsidy
+    });
+
+    await logAdminAction(req.user.username, 'COMMISSIONING_CHECKLIST_SIGNED', customer.customerId, commissioningRecord);
+
+    res.json({
+      success: true,
+      message: 'Commissioning checklist signed off successfully! Subsidy advanced to Stage 3.',
+      commissioningRecord,
+      subsidyDetails: updatedSubsidy
+    });
+  } catch (err) {
+    console.error('Commissioning error:', err);
+    res.status(500).json({ message: 'Failed to record commissioning checklist' });
+  }
+});
+
 export default router;

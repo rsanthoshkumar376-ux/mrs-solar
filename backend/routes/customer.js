@@ -300,4 +300,41 @@ router.post('/solar-log', authenticateToken, authorizeRole(['customer']), async 
   }
 });
 
+// 4. Customer Submit Maintenance & Service Request Ticket
+router.post('/tickets', authenticateToken, authorizeRole(['customer']), async (req, res) => {
+  try {
+    const customerId = req.user.customerId;
+    const customer = await db.findOne('customers', { customerId });
+    const { category, description, priority } = req.body;
+    if (!category || !description) {
+      return res.status(400).json({ message: 'Category and description are required.' });
+    }
+    const ticket = await db.create('tickets', {
+      customerId,
+      customerName: customer?.fullName || req.user.username,
+      customerMobile: customer?.mobileNumber || '',
+      category,
+      description: String(description).trim(),
+      priority: priority || 'Normal',
+      status: 'Open',
+      createdAt: new Date().toISOString()
+    });
+    res.json({ success: true, message: 'Service ticket submitted successfully.', ticket });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to submit service ticket.' });
+  }
+});
+
+// 4.1 Customer View Their Own Tickets
+router.get('/tickets', authenticateToken, authorizeRole(['customer']), async (req, res) => {
+  try {
+    const customerId = req.user.customerId;
+    const tickets = await db.find('tickets', { customerId });
+    tickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json(tickets);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load tickets.' });
+  }
+});
+
 export default router;
