@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Sun, Moon, Lock, User, ShieldAlert, Eye, EyeOff, Languages } from 'lucide-react';
+import { Sun, Moon, Lock, User, ShieldAlert, Eye, EyeOff, Languages, Sparkles, ShieldCheck, ArrowRight, Zap } from 'lucide-react';
 import InstallAppBanner from '../components/InstallAppBanner.jsx';
 import { AppUpdateModalButton } from '../components/AppUpdateModal.jsx';
 import SolarSunriseBackground from '../components/SolarSunriseBackground.jsx';
@@ -14,6 +14,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoLoadingRole, setDemoLoadingRole] = useState(null); // 'admin' | 'customer' | null
   const [lang, setLang] = useState(getLanguage);
 
   useEffect(() => {
@@ -53,6 +54,45 @@ export default function Login() {
       localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
+
+  const handleDemoLogin = async (role) => {
+    setError('');
+    setDemoLoadingRole(role);
+    setLoading(true);
+
+    const demoUser = role === 'admin' ? 'MRSassociates' : 'deepi';
+    const demoPass = role === 'admin' ? '2332' : '08072454996';
+
+    setRoleTab(role);
+    setUsername(demoUser);
+    setPassword(demoPass);
+
+    try {
+      const loggedUser = await login(demoUser, demoPass);
+      if (loggedUser.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/customer');
+      }
+    } catch (err) {
+      console.warn('Initial demo login attempt, retrying with backup credentials...', err);
+      try {
+        const altPass = role === 'admin' ? 'admin123' : 'customer123';
+        const loggedUser = await login(demoUser, altPass);
+        if (loggedUser.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/customer');
+        }
+      } catch (retryErr) {
+        console.error('Demo login failed:', retryErr);
+        setError(retryErr.response?.data?.message || 'Demo login failed. Please check connection.');
+      }
+    } finally {
+      setLoading(false);
+      setDemoLoadingRole(null);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -145,6 +185,93 @@ export default function Login() {
           {/* Card background decorative shapes */}
           <div className="absolute -top-12 -right-12 w-28 h-28 bg-amber-500/15 rounded-full blur-2xl pointer-events-none"></div>
           <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-teal-500/15 rounded-full blur-2xl pointer-events-none"></div>
+
+          {/* ⚡ 1-CLICK DEMO LOGIN BUTTONS */}
+          <div className="mb-6 bg-slate-950/70 border border-teal-500/30 rounded-2xl p-3.5 relative overflow-hidden shadow-inner">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-1.5">
+                <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+                <span className="text-xs font-black uppercase tracking-wider text-teal-300">
+                  {t.demoSectionTitle || '⚡ Quick 1-Click Demo Login'}
+                </span>
+              </div>
+              <span className="text-[10px] bg-teal-500/20 text-teal-300 font-bold px-2 py-0.5 rounded-full border border-teal-400/30">
+                Instant Tour
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 mb-3 leading-relaxed">
+              {t.demoSectionSubtitle || 'Explore the live portal instantly — no password required:'}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Demo Owner Button */}
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('admin')}
+                disabled={loading}
+                className="group relative flex flex-col items-start p-3 rounded-xl bg-gradient-to-br from-indigo-950/80 to-purple-950/70 hover:from-indigo-900/90 hover:to-purple-900/80 border border-purple-500/40 hover:border-purple-400 transition-all duration-200 text-left shadow-md hover:shadow-purple-500/20 active:scale-[0.98] disabled:opacity-50"
+              >
+                <div className="flex items-center justify-between w-full mb-1">
+                  <div className="flex items-center space-x-1.5">
+                    <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-400/30">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-xs font-extrabold text-white group-hover:text-purple-200">
+                      {t.demoAdminBtn || 'Owner / Admin'}
+                    </span>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-purple-400 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+                <span className="text-[10px] text-slate-300 leading-tight">
+                  {t.demoAdminSubtitle || 'Loans, approvals & reports'}
+                </span>
+                {demoLoadingRole === 'admin' && (
+                  <div className="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center space-x-1.5 text-purple-300 text-xs font-bold backdrop-blur-sm">
+                    <div className="w-3.5 h-3.5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span>{t.demoLoggingIn || 'Accessing Demo...'}</span>
+                  </div>
+                )}
+              </button>
+
+              {/* Demo Customer Button */}
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('customer')}
+                disabled={loading}
+                className="group relative flex flex-col items-start p-3 rounded-xl bg-gradient-to-br from-teal-950/80 to-emerald-950/70 hover:from-teal-900/90 hover:to-emerald-900/80 border border-teal-500/40 hover:border-teal-400 transition-all duration-200 text-left shadow-md hover:shadow-teal-500/20 active:scale-[0.98] disabled:opacity-50"
+              >
+                <div className="flex items-center justify-between w-full mb-1">
+                  <div className="flex items-center space-x-1.5">
+                    <div className="p-1.5 rounded-lg bg-teal-500/20 text-teal-300 border border-teal-400/30">
+                      <Sun className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-xs font-extrabold text-white group-hover:text-teal-200">
+                      {t.demoCustomerBtn || 'Customer Portal'}
+                    </span>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-teal-400 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+                <span className="text-[10px] text-slate-300 leading-tight">
+                  {t.demoCustomerSubtitle || 'Solar kW, EMIs & subsidy'}
+                </span>
+                {demoLoadingRole === 'customer' && (
+                  <div className="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center space-x-1.5 text-teal-300 text-xs font-bold backdrop-blur-sm">
+                    <div className="w-3.5 h-3.5 border-2 border-teal-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span>{t.demoLoggingIn || 'Accessing Demo...'}</span>
+                  </div>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* DIVIDER */}
+          <div className="relative flex items-center justify-center mb-6">
+            <div className="border-t border-slate-700/80 w-full"></div>
+            <span className="bg-slate-900 px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">
+              {t.orDivider || 'OR SIGN IN MANUALLY'}
+            </span>
+            <div className="border-t border-slate-700/80 w-full"></div>
+          </div>
 
           {/* TAB HEADERS */}
           <div className="flex space-x-1 p-1 bg-slate-950/70 rounded-2xl mb-6 border border-slate-800/80">

@@ -320,6 +320,14 @@ export const translations = {
     loggingInBtn: 'Logging in...',
     fillAllFieldsError: 'Please fill in all fields.',
     serverInitError: 'Server is initializing. Retrying automatically, please wait a moment...',
+    demoSectionTitle: '⚡ Quick 1-Click Demo Login',
+    demoSectionSubtitle: 'Explore the live portal instantly — no password required',
+    demoAdminBtn: 'Owner / Admin Portal',
+    demoAdminSubtitle: 'Solar loans, approvals & business reports',
+    demoCustomerBtn: 'Customer Portal',
+    demoCustomerSubtitle: 'Solar kW, EMI schedule & subsidy tracker',
+    orDivider: 'OR SIGN IN MANUALLY',
+    demoLoggingIn: 'Accessing Demo...',
 
     // Admin Dashboard (Owner Dashboard)
     ownerDashboard: 'Owner Dashboard',
@@ -885,6 +893,14 @@ export const translations = {
     loggingInBtn: 'உள்நுழைகிறது...',
     fillAllFieldsError: 'தயவுசெய்து அனைத்து விவரங்களையும் நிரப்பவும்.',
     serverInitError: 'சேவையகம் தயாராகிறது. சிறிது நேரத்தில் தானாக முயற்சிக்கும், தயவுசெய்து காத்திருக்கவும்...',
+    demoSectionTitle: '⚡ விரைவு 1-கிளிக் டெமோ உள்நுழைவு',
+    demoSectionSubtitle: 'கடவுச்சொல் இன்றி நேரடி தளத்தை உடனே பார்வையிடுங்கள்',
+    demoAdminBtn: 'உரிமையாளர் / நிர்வாகி டெமோ',
+    demoAdminSubtitle: 'கடன் மேலாண்மை, வாடிக்கையாளர் ஒப்புதல்கள் & அறிக்கைகள்',
+    demoCustomerBtn: 'வாடிக்கையாளர் டெமோ',
+    demoCustomerSubtitle: 'சோலார் kW, EMI தவணைகள் & மானிய கண்காணிப்பு',
+    orDivider: 'அல்லது விவரங்களை உள்ளிட்டு உள்நுழையவும்',
+    demoLoggingIn: 'டெமோவில் நுழைகிறது...',
 
     // Admin Dashboard (Owner Dashboard)
     ownerDashboard: 'உரிமையாளர் முகப்பு',
