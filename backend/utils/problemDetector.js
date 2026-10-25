@@ -119,11 +119,12 @@ export function detectProblem(message = '') {
 /**
  * Generates the reassuring customer response when an incident has been forwarded to the owner portal.
  */
-export function buildEscalationChatReply({ customer, problem, message, language = 'en' }) {
+export function buildEscalationChatReply({ customer, problem, message, language = 'en', ticketNumber = null, ticket = null }) {
   const isTa = language === 'ta' || /[அ-ஹ]/.test(message);
   const custName = customer?.fullName || 'Valued Customer';
   const custId = customer?.customerId || 'Registered Account';
   const phone = customer?.mobileNumber || '+91 80724 54996';
+  const tNum = ticketNumber || ticket?.ticketNumber || `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
   const shortNote = `${custName} (${custId}) - ${problem.summaryEn}: "${message.slice(0, 100)}"`;
 
   if (isTa) {
@@ -134,19 +135,19 @@ export function buildEscalationChatReply({ customer, problem, message, language 
       safetyAdvice = '\n💡 **முதலுதவி குறிப்பு**: இன்வெர்ட்டர் திரையில் தோன்றும் எர்ரர் குறியீட்டை (Error Code) குறித்துக் கொள்ளவும். மெயின் பிரேக்கரை ரீசெட் செய்ய முயற்சிக்க வேண்டாம்.';
     }
 
-    return `🚨 **அவசர தொழில்நுட்ப குறிப்பு நிர்வாகி தளத்திற்கு (Owner Portal) வெற்றிகரமாக அனுப்பப்பட்டது**
+    return `🚨 **அவசர சேவை டிக்கெட் #${tNum} வெற்றிகரமாக உருவாக்கப்பட்டது!**
 
-உங்கள் பிரச்சனை தீவிரமானதாக கண்டறியப்பட்டு, **MRS SOLAR நிர்வாகி கட்டுப்பாட்டு மையத்திற்கு (Owner Portal)** உடனடி தீர்வுக்காக அனுப்பப்பட்டுள்ளது:
+உங்கள் பிரச்சனை மிக முக்கியமானதாகக் கண்டறியப்பட்டு, **MRS SOLAR நிர்வாகி கட்டுப்பாட்டு மையம் (Owner Portal)** மற்றும் களப் பொறியாளர் குழுவுக்கு உடனடியாக அனுப்பப்பட்டுள்ளது:
 
-📝 **அனுப்பப்பட்ட சுருக்கக் குறிப்பு (Short Note)**:
-*"${shortNote}"*
-
+📋 **டிக்கெட் எண்**: **#${tNum}**
 👤 **வாடிக்கையாளர்**: ${custName} (${custId})
 📱 **தொடர்பு எண்**: ${phone}
-⚡ **பிரச்சனை வகை**: ${problem.summaryTa}${safetyAdvice}
+⚡ **பிரச்சனை வகை**: ${problem.summaryTa}
+📌 **தற்போதைய நிலை**: திறக்கப்பட்டுள்ளது (Open - Assigned to Field Engineer)
+📝 **சுருக்கக் குறிப்பு**: *"${shortNote}"*${safetyAdvice}
 
-எங்கள் தொழில்நுட்ப பொறியாளர் குழு உங்களை நேரடியாக தொடர்பு கொண்டு இந்த பிரச்சனையை விரைவாக சரிசெய்வர். 
-அவசர உதவிக்கு நீங்கள் எங்கள் நிர்வாகியை நேரடியாகவும் அழைக்கலாம்: **+91 80724 54996**.`;
+எங்கள் தொழில்நுட்ப பொறியாளர் உங்களை விரைவில் (${phone}) தொடர்பு கொள்வார். இந்த டிக்கெட் எண் மூலம் உங்கள் டாஷ்போர்டில் நிலையை கண்காணிக்கலாம்.
+அவசர உதவிக்கு நேரடியாக நிர்வாகியை அழைக்கவும்: 📞 **+91 80724 54996**.`;
   }
 
   let safetyAdvice = '';
@@ -156,16 +157,17 @@ export function buildEscalationChatReply({ customer, problem, message, language 
     safetyAdvice = '\n💡 **Initial Advice**: Note down the specific Error Code displayed on the inverter screen. Avoid tampering with DC isolators.';
   }
 
-  return `🚨 **Urgent Incident Note Dispatched to Owner Portal**
+  return `🚨 **Urgent Service Ticket #${tNum} Created & Escalated!**
 
-I have detected a high-priority issue and immediately forwarded a **short alert note** to the **MRS SOLAR Owner / Management Portal**:
+I have logged a high-priority service ticket and immediately dispatched an alert note to the **MRS SOLAR Owner / Management Portal** and Field Technical Team:
 
-📝 **Short Note Sent to Owner**:
-*"${shortNote}"*
-
+📋 **Official Ticket ID**: **#${tNum}**
 👤 **Customer**: ${custName} (${custId})
 📱 **Contact Phone**: ${phone}
-⚡ **Issue Category**: ${problem.summaryEn}${safetyAdvice}
+⚡ **Issue Category**: ${problem.summaryEn}
+📌 **Status**: Open (Assigned to Field Support Engineer)
+📝 **Dispatched Summary**: *"${shortNote}"*${safetyAdvice}
 
-Our field engineering team has been notified and will prioritize resolving this problem for you. For immediate emergency assistance, you can also contact the owner directly at **+91 80724 54996**.`;
+Our field engineering team has been notified and will prioritize resolving this problem for you. You can track this ticket in your dashboard.
+For immediate emergency assistance, contact the owner directly: 📞 **+91 80724 54996**.`;
 }

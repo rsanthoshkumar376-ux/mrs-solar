@@ -6,6 +6,7 @@ import InstallAppBanner from '../components/InstallAppBanner.jsx';
 import { AppUpdateModalButton } from '../components/AppUpdateModal.jsx';
 import SolarSunriseBackground from '../components/SolarSunriseBackground.jsx';
 import SolarCalculatorModal from '../components/SolarCalculatorModal.jsx';
+import AiChatbot from '../components/AiChatbot.jsx';
 import { translations, getLanguage, setLanguage } from '../utils/translations.js';
 
 export default function Login() {
@@ -400,6 +401,9 @@ export default function Login() {
           isOpen={showCalculator} 
           onClose={() => setShowCalculator(false)} 
         />
+
+        {/* 24/7 BILINGUAL AI SOLAR COPILOT */}
+        <AiChatbot />
 
       </div>
     </div>

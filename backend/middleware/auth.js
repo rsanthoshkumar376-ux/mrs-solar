@@ -19,6 +19,25 @@ export function authenticateToken(req, res, next) {
   });
 }
 
+export function optionalAuthenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  jwt.verify(token, JWT_SECRET, { ignoreExpiration: true }, (err, user) => {
+    if (!err && user) {
+      req.user = user;
+    } else {
+      req.user = null;
+    }
+    next();
+  });
+}
+
 export function authorizeRole(roles) {
   return (req, res, next) => {
     if (!req.user) {

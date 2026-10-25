@@ -1,11 +1,12 @@
 import express from 'express';
 import multer from 'multer';
 import { db } from '../database/db.js';
-import { authenticateToken, authorizeRole } from '../middleware/auth.js';
+import { authenticateToken, optionalAuthenticateToken, authorizeRole } from '../middleware/auth.js';
 import { getAiConfig, saveAiConfig, callGeminiApi } from '../utils/aiConfig.js';
 import { generateSolarDiagnostics, generateSmartChatResponse, extractKycFromText } from '../utils/aiEngines.js';
 import { findMatchingCustomer } from '../utils/customerResolver.js';
 import { detectProblem, buildEscalationChatReply } from '../utils/problemDetector.js';
+import { getDefaultSubsidyDetails } from '../utils/subsidyHelper.js';
 
 const router = express.Router();
 
@@ -192,7 +193,7 @@ Only output raw JSON. If a field is not present, use an empty string.`;
  * 5. POST Conversational Solar & Loan AI Chatbot
  * Available to both Customer and Admin roles
  */
-router.post('/chat', authenticateToken, async (req, res) => {
+router.post('/chat', optionalAuthenticateToken, async (req, res) => {
   try {
     const { message, language = 'en' } = req.body;
     if (!message || !message.trim()) {
@@ -200,7 +201,9 @@ router.post('/chat', authenticateToken, async (req, res) => {
     }
 
     let customerData = null;
+    let customerTickets = [];
     let adminStatsData = null;
+    let allTickets = [];
     let allCustomers = [];
 
     try {
@@ -209,12 +212,22 @@ router.post('/chat', authenticateToken, async (req, res) => {
       console.warn('Could not load all customers for AI context:', e.message);
     }
 
-    if (req.user.role === 'customer') {
+    if (req.user?.role === 'customer') {
       customerData = await db.findOne('customers', { customerId: req.user.customerId });
       if (!customerData) {
         customerData = allCustomers.find(c => c.customerId === req.user.customerId);
       }
-    } else if (req.user.role === 'admin') {
+      try {
+        customerTickets = (await db.find('tickets', { customerId: req.user.customerId })) || [];
+      } catch (tErr) {
+        console.warn('Could not load customer tickets:', tErr.message);
+      }
+    } else if (req.user?.role === 'admin') {
+      try {
+        allTickets = (await db.find('tickets')) || [];
+      } catch (tErr) {
+        console.warn('Could not load all tickets:', tErr.message);
+      }
       const activeCustomers = allCustomers.filter(c => c.loanStatus === 'Active').length;
       const overdueCustomers = allCustomers.filter(c => c.paymentStatus === 'Overdue').length;
       const totalAmountCollected = allCustomers.reduce((sum, c) => sum + (Number(c.totalPaidAmount) || 0), 0);
@@ -228,6 +241,7 @@ router.post('/chat', authenticateToken, async (req, res) => {
         totalAmountCollected,
         totalOutstandingAmount,
         totalProfit,
+        openTicketsCount: allTickets.filter(t => t.status === 'Open').length,
         parMetrics: {
           collectionEfficiencyPct: allCustomers.length ? Math.round(((allCustomers.length - overdueCustomers) / allCustomers.length) * 100) : 100
         }
@@ -235,25 +249,44 @@ router.post('/chat', authenticateToken, async (req, res) => {
 
       // Resolve specific customer mentioned by name, nickname, ID or phone
       customerData = findMatchingCustomer(message, allCustomers);
+      if (customerData) {
+        customerTickets = allTickets.filter(t => t.customerId === customerData.customerId);
+      }
     }
 
-    // Automatic Escalation to Owner Portal when customer reports a big problem:
-    // If the requester is a customer (role === 'customer' or non-admin session) and reports a high-severity problem
-    // (inverter failure, zero power, smoke hazard, physical damage, payment discrepancy):
-    // 1. Dispatch short note to Owner Portal (notifications collection with role: 'admin')
-    // 2. Record in audit_logs
-    // 3. Return reassuring response with emergency hotline & safety steps
-    const isCustomerSession = req.user.role === 'customer' || (customerData && req.user.role !== 'admin');
+    // Automatic Escalation & Ticket Generation when customer reports an urgent fault:
+    // (inverter failure, zero power, smoke hazard, physical damage, payment discrepancy)
+    const isCustomerSession = req.user?.role === 'customer' || (customerData && req.user?.role !== 'admin');
     if (isCustomerSession) {
       const problem = detectProblem(message);
       if (problem.isBigProblem) {
-        const cust = customerData || (req.user.customerId ? allCustomers.find(c => c.customerId === req.user.customerId) : null);
-        const custName = cust?.fullName || req.user.username || 'Customer';
-        const custId = cust?.customerId || req.user.customerId || 'Registered Account';
-        const phone = cust?.mobileNumber || req.user.mobileNumber || '+91 80724 54996';
+        const cust = customerData || (req.user?.customerId ? allCustomers.find(c => c.customerId === req.user.customerId) : null);
+        const custName = cust?.fullName || req.user?.username || 'Customer';
+        const custId = cust?.customerId || req.user?.customerId || 'Registered Account';
+        const phone = cust?.mobileNumber || req.user?.mobileNumber || '+91 80724 54996';
+        const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
         const shortNote = `${custName} (${custId}) - ${problem.summaryEn}: "${message.slice(0, 100)}"`;
 
-        // Check if an unread alert for this customer & issue already exists to prevent duplicate spam
+        let createdTicket = null;
+        try {
+          createdTicket = await db.create('tickets', {
+            ticketNumber,
+            customerId: custId,
+            customerName: custName,
+            customerMobile: phone,
+            category: problem.category,
+            description: String(message).trim(),
+            priority: problem.severity === 'CRITICAL' ? 'Urgent' : 'High',
+            status: 'Open',
+            source: 'AI Copilot Auto-Escalation',
+            assignedTechnician: 'Field Engineering Team',
+            createdAt: new Date().toISOString()
+          });
+        } catch (tktErr) {
+          console.warn('Could not persist ticket to database:', tktErr.message);
+        }
+
+        // Dispatch alert notification to Owner Portal
         const existingUnread = await db.findOne('notifications', {
           role: 'admin',
           customerId: custId,
@@ -266,11 +299,13 @@ router.post('/chat', authenticateToken, async (req, res) => {
             role: 'admin',
             type: 'CUSTOMER_PROBLEM_ALERT',
             priority: 'urgent',
-            title: `🚨 ${problem.summaryEn}`,
-            message: `Short Note: ${shortNote}. Contact: ${phone}. Immediate owner attention requested.`,
+            title: `🚨 ${problem.summaryEn} (${ticketNumber})`,
+            message: `Ticket #${ticketNumber} created for ${custName} (${custId}): "${message.slice(0, 100)}". Contact: ${phone}. Immediate owner attention requested.`,
             customerId: custId,
             customerName: custName,
             customerPhone: phone,
+            ticketNumber,
+            ticketId: createdTicket?._id,
             issueCategory: problem.category,
             severity: problem.severity,
             read: false,
@@ -281,7 +316,7 @@ router.post('/chat', authenticateToken, async (req, res) => {
         await db.create('audit_logs', {
           action: 'CUSTOMER_PROBLEM_ESCALATION',
           category: 'SUPPORT',
-          details: shortNote,
+          details: `Ticket #${ticketNumber} created for ${custName} (${custId}): ${shortNote}`,
           customerId: custId,
           performedBy: custName,
           severity: problem.severity,
@@ -292,7 +327,9 @@ router.post('/chat', authenticateToken, async (req, res) => {
           customer: cust,
           problem,
           message,
-          language
+          language,
+          ticketNumber,
+          ticket: createdTicket
         });
 
         return res.json({
@@ -301,9 +338,63 @@ router.post('/chat', authenticateToken, async (req, res) => {
           language,
           escalated: true,
           category: problem.category,
-          shortNote
+          shortNote,
+          ticket: {
+            ticketNumber,
+            _id: createdTicket?._id,
+            category: problem.category,
+            priority: problem.severity === 'CRITICAL' ? 'Urgent' : 'High',
+            status: 'Open',
+            createdAt: createdTicket?.createdAt || new Date().toISOString()
+          },
+          action: {
+            type: 'TICKET_CREATED',
+            ticketNumber,
+            category: problem.category
+          }
         });
       }
+    }
+
+    // Determine Action Intent (Subsidy / Pay / Calculator / Support / Referral)
+    let detectedAction = null;
+    const lower = (message || '').toLowerCase();
+
+    if (/(subsidy|pm surya|surya ghar|surya|muft bijli|central subsidy|78000|30000|60000|மானியம்|சூர்யா கர்)/i.test(lower)) {
+      if (customerData) {
+        const sub = customerData.subsidyDetails || getDefaultSubsidyDetails(customerData);
+        detectedAction = {
+          type: 'SUBSIDY_STATUS',
+          stage: sub.currentStage || 1,
+          eligibleAmount: sub.eligibleAmount || (Number(customerData.solarCapacity) >= 3 ? 78000 : Number(customerData.solarCapacity) === 2 ? 60000 : 30000),
+          applicationNumber: sub.applicationNumber || 'PMSGY-TN-2026'
+        };
+      }
+    } else if (/(emi|due|payment|installment|pay|upi|gpay|phonepe|தவணை|கடன்)/i.test(lower)) {
+      if (customerData) {
+        const schedule = Array.isArray(customerData.emiSchedule) ? customerData.emiSchedule : [];
+        const nextPending = schedule.find(e => e.status !== 'Paid');
+        if (nextPending) {
+          detectedAction = {
+            type: 'EMI_PAY',
+            amount: nextPending.emiAmount,
+            dueDate: nextPending.dueDate,
+            emiNumber: nextPending.emiNumber,
+            upiId: 'rsanthoshkumar376@oksbi'
+          };
+        }
+      }
+    } else if (/(calculator|calculate|savings|how much save|roi|payback|கணக்கீடு|சேமிப்பு)/i.test(lower)) {
+      detectedAction = {
+        type: 'OPEN_CALCULATOR',
+        suggestedKw: customerData?.solarCapacity || 3
+      };
+    } else if (/(contact|helpline|phone|call|address|office|support|உதவி|தொடர்பு)/i.test(lower)) {
+      detectedAction = {
+        type: 'CONTACT_INFO',
+        phone: '+91 80724 54996',
+        email: 'rsanthoshkumar376@gmail.com'
+      };
     }
 
     const config = await getAiConfig();
@@ -311,7 +402,7 @@ router.post('/chat', authenticateToken, async (req, res) => {
     if (config.geminiApiKey) {
       try {
         const customerDirectorySummary = allCustomers.map((c, i) =>
-          `${i + 1}. Customer: ${c.fullName} (ID: ${c.customerId}, Nicknames: Sanju, Sunju, Sandy)
+          `${i + 1}. Customer: ${c.fullName} (ID: ${c.customerId})
              - Solar System: ${c.solarCapacity || 3} kW (${c.solarBrand || 'MRS Solar'})
              - Financials: System Cost ₹${c.solarCost || 0}, Down Payment ₹${c.downPayment || 0}, Loan Amount ₹${c.loanAmount || 0}, Monthly EMI ₹${c.monthlyEmi || 0}
              - Loan Status: ${c.loanStatus || 'Active'} (${c.paymentStatus || 'Pending'}), Overdue Days: ${c.daysOverdue || 0}
@@ -327,19 +418,21 @@ Primary UPI ID for payments: rsanthoshkumar376@oksbi | Secondary: mrssolar@okaxi
 You have complete real-time access to the registered customer database:
 ${customerDirectorySummary}
 
-Financial Summary:
+Financial & Operations Summary:
 - Total Customers: ${allCustomers.length}
 - Active Accounts: ${adminStatsData?.activeCustomers || allCustomers.length}
 - Overdue Accounts: ${adminStatsData?.overdueCustomers || 0}
 - Total Capital Collected: ₹${adminStatsData?.totalAmountCollected || 0}
 - Total Dues Outstanding: ₹${adminStatsData?.totalOutstandingAmount || 0}
+- Open Service Tickets: ${allTickets.filter(t => t.status === 'Open').length}
 
 Guidelines:
 1. Always answer the user's specific question directly, warmly, concisely, and accurately.
 2. If asked about a customer's kW, solar capacity, loan, EMI, or details (e.g. "how many kw for sunju", "sanju emi", "deepi"), directly retrieve and state the exact numbers for that customer.
 3. If asked in Tamil (or Tanglish), reply in natural Tamil (தமிழ்). If in English, reply in clear English.
 4. If asked about general solar generation, use standard Tamil Nadu generation of 4.4 units/day per 1 kW (e.g. 1 kW = 4.4 units/day, 3 kW = 13.2 units/day).
-5. Never refuse to answer or give a robotic boilerplate telling the user to ask another question.`;
+5. Residential rooftop solar qualifies for up to ₹78,000 direct subsidy under PM Surya Ghar Muft Bijli Yojana (1 kW: ₹30,000, 2 kW: ₹60,000, 3+ kW: ₹78,000).
+6. Never refuse to answer or give a robotic boilerplate telling the user to ask another question.`;
 
         if (customerData) {
           systemPrompt += `\n\nTARGET CUSTOMER REFERENCED IN QUERY:
@@ -352,7 +445,8 @@ Monthly EMI: ₹${customerData.monthlyEmi}
 Next Due Date: ${customerData.emiSchedule?.find(e => e.status !== 'Paid')?.dueDate || 'Completed'}
 Overdue Days: ${customerData.daysOverdue || 0}
 Total Outstanding: ₹${customerData.totalOutstandingAmount || 0}
-TNEB Consumer No: ${customerData.tnebConsumerNumber || 'N/A'}`;
+TNEB Consumer No: ${customerData.tnebConsumerNumber || 'N/A'}
+Service Tickets: ${customerTickets.length} (${customerTickets.filter(t => t.status === 'Open').length} Open)`;
         }
 
         const reply = await callGeminiApi({
@@ -367,7 +461,8 @@ TNEB Consumer No: ${customerData.tnebConsumerNumber || 'N/A'}`;
         return res.json({
           reply: reply.trim(),
           source: 'Gemini AI',
-          language
+          language,
+          action: detectedAction
         });
       } catch (geminiErr) {
         console.warn('Gemini chat failed, using smart offline fallback:', geminiErr.message);
@@ -381,13 +476,16 @@ TNEB Consumer No: ${customerData.tnebConsumerNumber || 'N/A'}`;
       customer: customerData,
       allCustomers,
       adminStats: adminStatsData,
-      role: req.user.role
+      role: req.user?.role || 'guest',
+      customerTickets,
+      allTickets
     });
 
     res.json({
       reply: fallbackReply,
       source: 'MRS Solar Smart Engine',
-      language
+      language,
+      action: detectedAction
     });
 
   } catch (err) {

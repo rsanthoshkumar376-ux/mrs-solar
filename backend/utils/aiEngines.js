@@ -110,7 +110,9 @@ export function generateSmartChatResponse({
   customer = null,
   allCustomers = [],
   adminStats = null,
-  role = 'customer'
+  role = 'customer',
+  customerTickets = [],
+  allTickets = []
 }) {
   const query = (message || '').toLowerCase().trim();
   const isTa = language === 'ta' || /[அ-ஹ]/.test(message);
@@ -139,10 +141,7 @@ export function generateSmartChatResponse({
 
   // 4. SPECIFIC CUSTOMER SOLAR CAPACITY / KW QUERY
   // Matches "tell me how many kw for sunju", "how many kw for deepi", "sunju kw", "capacity of sanju", etc.
-  if (targetCustomer && (
-    /\b(kw|kwh|kilowatt|capacity|solar size|system size|how many kw|how much kw|solar capacity|பேனல் அளவு|திறன்|எத்தனை கிலோவாட்|எவ்வளவு kw)\b/i.test(query) ||
-    !/(emi|due|payment|installment|loan|balance|outstanding|penalty|bill|contact|phone|address)/i.test(query)
-  )) {
+  if (targetCustomer && /\b(kw|kwh|kilowatt|capacity|solar size|system size|how many kw|how much kw|solar capacity|பேனல் அளவு|திறன்|எத்தனை கிலோவாட்|எவ்வளவு kw)\b/i.test(query)) {
     const cap = Number(targetCustomer.solarCapacity) || 3;
     const dailyEst = (cap * 4.4).toFixed(1);
     const monthlyEst = Math.round(cap * 4.4 * 30);
@@ -196,7 +195,7 @@ export function generateSmartChatResponse({
 
   // 5. SPECIFIC CUSTOMER EMI, LOAN & DUE DATE QUERY
   // Matches "when is emi due for sunju", "sanju emi", "deepi pending emi", "due date of sanju", etc.
-  if (targetCustomer && /(emi|due|payment|installment|loan|balance|outstanding|late fee|penalty|status|தவணை|கடன்|நிலுவை|கடைசி தேதி)/i.test(query)) {
+  if (targetCustomer && /(emi|due|payment|installment|loan|balance|outstanding|late fee|penalty|loan status|தவணை|கடன்|நிலுவை|கடைசி தேதி)/i.test(query) && !/(subsidy|pm surya|surya ghar|surya|மானியம்)/i.test(query)) {
     const schedule = Array.isArray(targetCustomer.emiSchedule) ? targetCustomer.emiSchedule : [];
     const nextPending = schedule.find(e => e.status !== 'Paid');
 
@@ -228,7 +227,10 @@ export function generateSmartChatResponse({
   }
 
   // 6. SPECIFIC CUSTOMER PROFILE / DETAILS / CONTACT QUERY
-  if (targetCustomer && /(detail|details|info|information|profile|who is|tell me about|contact|address|phone|mobile|tneb|விவரம்|யார்|முகவரி)/i.test(query)) {
+  if (targetCustomer && (
+    /(detail|details|info|information|profile|who is|tell me about|contact|address|phone|mobile|tneb|விவரம்|யார்|முகவரி)/i.test(query) ||
+    new RegExp(`\\b${targetCustomer.fullName}\\b`, 'i').test(query)
+  )) {
     if (isTa) {
       return `**${targetCustomer.fullName}** வாடிக்கையாளர் விவரங்கள்:
 
@@ -570,6 +572,94 @@ For any expedited liaisoning, contact MRS SOLAR support: 📞 +91 80724 54996`;
 📧 **Email**: rsanthoshkumar376@gmail.com
 📍 **Head Office**: 74, Gandhi Road, MGM Nagar, Thiruvallur, Tamil Nadu – 602001.
 ⏰ **Operating Hours**: Monday to Saturday, 9:00 AM – 7:00 PM IST.`;
+  }
+
+  // 17b. CUSTOMER SERVICE TICKETS & COMPLAINTS QUERY
+  if (/(ticket|tickets|complaint|complaints|service request|issue status|status of my complaint|புகார்|டிக்கெட்)/i.test(query)) {
+    if (role === 'customer' || targetCustomer) {
+      const tickets = Array.isArray(customerTickets) && customerTickets.length > 0 ? customerTickets : [];
+      if (tickets.length > 0) {
+        if (isTa) {
+          return `உங்கள் **${tickets.length} சேவை டிக்கெட்டுகள் (Service Tickets)** விவரம்:
+
+${tickets.map((t, idx) => `${idx + 1}. **${t.ticketNumber || `#TKT-${idx + 1}`}** (${t.category || 'பொதுவான சேவை'})
+   • நிலை: **${t.status === 'Open' ? '🟢 திறக்கப்பட்டுள்ளது (Open)' : t.status === 'Resolved' ? '✅ தீர்க்கப்பட்டது (Resolved)' : t.status}**
+   • முன்னுரிமை: **${t.priority || 'Normal'}**
+   • பதிவு தேதி: ${t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-IN') : 'சமீபத்தியது'}
+   • பிரச்சனை: "${(t.description || '').slice(0, 80)}"`).join('\n\n')}
+
+புதிய புகார் பதிவு செய்ய உங்கள் பிரச்சனையை இங்கே விளக்கலாம் அல்லது எங்கள் உதவி மையத்தை அழைக்கலாம்: 📞 **+91 80724 54996**.`;
+        }
+
+        return `Status of your **${tickets.length} Service Tickets**:
+
+${tickets.map((t, idx) => `${idx + 1}. **${t.ticketNumber || `#TKT-${idx + 1}`}** (${t.category || 'General Support'})
+   • **Status**: ${t.status === 'Open' ? '🟢 Open (Assigned)' : t.status === 'Resolved' ? '✅ Resolved' : t.status}
+   • **Priority**: ${t.priority || 'Normal'}
+   • **Date Logged**: ${t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-IN') : 'Recent'}
+   • **Summary**: "${(t.description || '').slice(0, 80)}"`).join('\n\n')}
+
+To report a new problem, simply describe it in chat or contact customer support at 📞 **+91 80724 54996**.`;
+      } else {
+        return isTa
+          ? `உங்களுக்கு தற்போது எந்த நிலுவை சேவை புகார்களும் (Open Tickets) இல்லை! உங்கள் சோலார் கட்டமைப்பு நல்ல முறையில் இயங்குகிறது. புதிய உதவி தேவைப்பட்டால் இங்கே தெரிவிக்கவும்.`
+          : `You currently have no open complaints or service tickets! Your solar system is operating under normal benchmark conditions. If you ever face an issue, simply describe it here and an official ticket will be logged instantly.`;
+      }
+    } else if (role === 'admin') {
+      const openTkts = (allTickets || []).filter(t => t.status === 'Open');
+      if (isTa) {
+        return `நிர்வாகி அறிக்கை: தற்போது **${openTkts.length} திறந்த சேவை டிக்கெட்டுகள் (Open Tickets)** உள்ளன:
+${openTkts.length > 0 ? openTkts.map((t, idx) => `${idx + 1}. **${t.ticketNumber || `#TKT-${idx + 1}`}** - ${t.customerName} (${t.customerMobile}): ${(t.description || '').slice(0, 60)}`).join('\n') : 'அனைத்து வாடிக்கையாளர் டிக்கெட்டுகளும் தீர்க்கப்பட்டுவிட்டன.'}`;
+      }
+      return `Owner Portal Status: There are currently **${openTkts.length} open service tickets**:
+${openTkts.length > 0 ? openTkts.map((t, idx) => `${idx + 1}. **${t.ticketNumber || `#TKT-${idx + 1}`}** - ${t.customerName} (${t.customerMobile}): ${(t.description || '').slice(0, 60)}`).join('\n') : 'All customer service requests are resolved.'}`;
+    }
+  }
+
+  // 17c. REFERRAL BONUS QUERY
+  if (/(referral|refer a friend|refer.*earn|bonus|earn money|refer|பரிந்துரை)/i.test(query)) {
+    if (isTa) {
+      return `🎁 **MRS SOLAR வாடிக்கையாளர் பரிந்துரை திட்டம் (Customer Referral Program)**:
+
+உங்கள் நண்பர்கள், குடும்பத்தினர் அல்லது அக்கம்பக்கத்தினரை கூரை சோலார் அமைக்க பரிந்துரைத்து **₹2,000 நேரடி ரொக்கப் போனஸ்** பெறலாம்!
+
+• **பரிந்துரை போனஸ்**: ஒவ்வொரு புதிய சோலார் அமைப்பிற்கும் **₹2,000**
+• **பெறும் முறை**: பரிந்துரைக்கப்பட்ட வாடிக்கையாளரின் கூரை சோலார் வெற்றிகரமாக நிறுவப்பட்ட பின், உங்கள் UPI அல்லது வங்கிக் கணக்கில் நேரடியாக வரவு வைக்கப்படும்.
+• **எப்படி தொடங்குவது**: உங்கள் வாடிக்கையாளர் எண் (${targetCustomer?.customerId || 'SOL-XXXX'}) அல்லது பதிவு செய்யப்பட்ட தொலைபேசி எண்ணை பரிந்துரைக் குறியீடாகப் பயன்படுத்தலாம்.
+
+மேலும் விவரங்களுக்கு உங்கள் டாஷ்போர்டில் உள்ள "Referral Program" கார்டைப் பார்க்கவும்!`;
+    }
+
+    return `🎁 **MRS SOLAR Customer Referral Program**:
+
+Refer your friends, neighbors, or colleagues to install rooftop solar and earn **₹2,000 Instant Cash Bonus** per successful installation!
+
+• **Referral Reward**: **₹2,000 cash credit** per commissioning
+• **Disbursement**: Directly credited to your UPI ID or bank account once the referred customer's system is installed.
+• **Referral Code**: Share your Customer ID (${targetCustomer?.customerId || 'Your Registered ID'}) or phone number.
+
+Check the Referral Program card on your dashboard to share directly via WhatsApp!`;
+  }
+
+  // 17d. TECHNICIAN & COMMISSIONING CHECKLIST
+  if (/(checklist|commissioning|inspection checklist|installation check|சரிபார்ப்பு)/i.test(query)) {
+    if (isTa) {
+      return `📋 **MRS SOLAR கூரை சோலார் கமிஷனிங் சரிபார்ப்புப் பட்டியல் (MNRE / TANGEDCO)**:
+
+1. **கட்டமைப்பு & எர்த்திங்**: GI ஸ்ட்ரக்சர் நட்டு-போல்ட் உறுதி மற்றும் பிரத்யேக எர்த்திங் எதிர்ப்பு < 5 Ohms.
+2. **DC ஸ்ட்ரிங் சோதனை**: ஓபன்-சர்க்யூட் வோல்டேஜ் (Voc) மற்றும் பொலாரிட்டி சரிபார்த்தல்.
+3. **இன்வெர்ட்டர் ஒத்திசைவு**: TNEB கிரிட் மின்னழுத்தம் (220-245V) உடன் ஆன்-கிரிட் சின்க்ரோனைசேஷன்.
+4. **பாதுகாப்பு சாதனங்கள்**: AC/DC SPD சர்ஜ் ப்ரொடெக்டர் மற்றும் MCB ட்ரிப் சோதனை.
+5. **நெட்-மீட்டர்**: TANGEDCO இருவழி நெட்-மீட்டரில் Export (Code 02) பதிவு சீராக இயங்குதல்.`;
+    }
+
+    return `📋 **MRS SOLAR 5-Point Rooftop Solar Commissioning Checklist**:
+
+1. **Mounting & Earthing**: High-wind-rated GI fasteners tightened; dedicated copper-bonded chemical earthing resistance < 5.0 Ω.
+2. **DC String Health**: String open-circuit voltage (Voc) and short-circuit current (Isc) within manufacturer MPPT specs.
+3. **Inverter Grid Sync**: Smooth phase synchronization with TANGEDCO 230V AC grid; zero leakage current.
+4. **Surge & Disconnect Protection**: Type-II AC & DC SPDs operational with quick-break isolator switches.
+5. **Bidirectional Net Metering**: TANGEDCO Net Meter seal intact; Export register (Register 02) incrementing actively.`;
   }
 
   // 18. ADMIN PORTFOLIO & RECOVERY STATS
