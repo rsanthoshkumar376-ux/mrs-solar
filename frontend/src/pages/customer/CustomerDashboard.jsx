@@ -28,6 +28,7 @@ import SubsidyTrackerCard from '../../components/SubsidyTrackerCard.jsx';
 import ReferralShareCard from '../../components/ReferralShareCard.jsx';
 import ServiceTicketModal from '../../components/ServiceTicketModal.jsx';
 import SolarCalculatorModal from '../../components/SolarCalculatorModal.jsx';
+import AutoPayModal from '../../components/AutoPayModal.jsx';
 
 export default function CustomerDashboard() {
   const navigate = useNavigate();
@@ -42,6 +43,7 @@ export default function CustomerDashboard() {
   const [showSanctionModal, setShowSanctionModal] = useState(false);
   const [showServiceTicketModal, setShowServiceTicketModal] = useState(false);
   const [showCalculatorModal, setShowCalculatorModal] = useState(false);
+  const [showAutoPayModal, setShowAutoPayModal] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedPaymentLink, setCopiedPaymentLink] = useState(false);
   const [launchingApp, setLaunchingApp] = useState(null);
@@ -488,6 +490,60 @@ export default function CustomerDashboard() {
       {activeFolder === 'payments' && (
         <div className="space-y-6 animate-fade-in">
           
+          {/* AUTOPAY BANNER & SETUP CARD */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 rounded-3xl p-5 sm:p-7 text-white shadow-xl border border-indigo-500/30 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 flex-shrink-0">
+                  <Zap className="w-6 h-6 text-yellow-300 fill-current" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-extrabold text-lg sm:text-xl text-white">
+                      {lang === 'ta' ? 'தானியங்கி கட்டணம் (Set Up AutoPay)' : 'Never Miss an EMI — Set Up AutoPay'}
+                    </h3>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      customer?.autoPay?.status === 'Active'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40' 
+                        : 'bg-indigo-500/30 text-indigo-200 border border-indigo-400/30'
+                    }`}>
+                      {customer?.autoPay?.status === 'Active' 
+                        ? (lang === 'ta' ? 'செயலில் உள்ளது (Active)' : 'Active') 
+                        : (lang === 'ta' ? 'பரிந்துரைக்கப்படுகிறது' : 'Zero Penalty')}
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
+                    {customer?.autoPay?.status === 'Active' ? (
+                      lang === 'ta' 
+                        ? `தானியங்கி கட்டணம் செயலில் உள்ளது (${customer?.autoPay?.type === 'UPI_AUTOPAY' ? 'UPI AutoPay' : 'வங்கி eNACH/SI'}). தவணை தேதியில் தானாகவே கழிக்கப்படும்.`
+                        : `AutoPay is currently ACTIVE via ${customer?.autoPay?.type === 'UPI_AUTOPAY' ? 'UPI AutoPay' : 'Bank Mandate / eNACH'}. Your monthly solar EMI is automated with zero penalty.`
+                    ) : (
+                      lang === 'ta'
+                        ? 'Google Pay, PhonePe அல்லது உங்கள் வங்கி (SBI / Canara) மூலம் ஒருமுறை AutoPay அமைக்கவும். ஒவ்வொரு மாதமும் தானாகவே பாதுகாப்பாக செலுத்தப்படும்!'
+                        : 'Automate your monthly solar EMI via UPI AutoPay (Google Pay, PhonePe, Paytm) or SBI/Canara Standing Instruction. 100% automated, safe & hassle-free.'
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowAutoPayModal(true)}
+                  className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-white font-black rounded-2xl text-xs sm:text-sm shadow-lg shadow-teal-500/25 flex items-center justify-center space-x-2 transition-all hover:scale-105 active:scale-95"
+                >
+                  <Zap className="w-4 h-4 fill-current text-yellow-300" />
+                  <span>
+                    {customer?.autoPay?.status === 'Active' 
+                      ? (lang === 'ta' ? 'AutoPay மாற்ற / பார்க்க' : 'Manage AutoPay') 
+                      : (lang === 'ta' ? 'AutoPay அமைக்கவும்' : 'Set Up AutoPay')}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* HERO PAYMENT OPTION HUB */}
           <div className="glass-premium rounded-3xl p-6 sm:p-8 shadow-md border-2 border-teal-500/30">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200/60 dark:border-slate-800/60 gap-3 mb-6">
@@ -506,7 +562,15 @@ export default function CustomerDashboard() {
               </div>
 
               {nextPendingEmi && (
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAutoPayModal(true)}
+                    className="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-teal-600 hover:from-indigo-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-sm transition-all"
+                  >
+                    <Zap className="w-3.5 h-3.5 fill-current text-yellow-300" />
+                    <span>{customer?.autoPay?.status === 'Active' ? 'AutoPay Active' : 'Set Up AutoPay'}</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => openPaymentModal(nextPendingEmi)}
@@ -1220,6 +1284,14 @@ export default function CustomerDashboard() {
       <SolarCalculatorModal 
         isOpen={showCalculatorModal} 
         onClose={() => setShowCalculatorModal(false)} 
+      />
+
+      {/* AUTOPAY SETUP & MANAGEMENT MODAL */}
+      <AutoPayModal
+        isOpen={showAutoPayModal}
+        onClose={() => setShowAutoPayModal(false)}
+        customer={customer}
+        onSuccess={() => fetchDashboardData()}
       />
 
       {/* FLOATING WHATSAPP SUPPORT BUTTON */}

@@ -337,4 +337,51 @@ router.get('/tickets', authenticateToken, authorizeRole(['customer']), async (re
   }
 });
 
+// 5. Customer Set Up / Manage AutoPay (UPI Mandate or Bank Standing Instruction)
+router.post('/autopay', authenticateToken, authorizeRole(['customer']), async (req, res) => {
+  try {
+    const customerId = req.user.customerId;
+    const { status, type, mandateRef, bankName, upiId } = req.body;
+
+    const customer = await db.findOne('customers', { customerId });
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer record not found.' });
+    }
+
+    const autoPayConfig = {
+      status: status || 'Active', // 'Active', 'Pending', 'Disabled'
+      type: type || 'UPI_AUTOPAY', // 'UPI_AUTOPAY', 'BANK_MANDATE', 'ENACH'
+      mandateRef: mandateRef ? String(mandateRef).trim() : (customer.autoPay?.mandateRef || `UMN-${Date.now()}`),
+      bankName: bankName || customer.bankDetails?.bankName || 'State Bank of India',
+      upiId: upiId || 'rsanthoshkumar376@oksbi',
+      monthlyAmount: customer.monthlyEmi || 0,
+      frequency: 'Monthly',
+      activatedAt: new Date().toISOString()
+    };
+
+    await db.updateOne('customers', { customerId }, { autoPay: autoPayConfig });
+
+    // Send owner notification about AutoPay activation
+    try {
+      await db.create('notifications', {
+        type: 'AutoPay_Configured',
+        title: `⚡ AutoPay ${autoPayConfig.status}: ${customer.fullName}`,
+        message: `Customer ${customer.fullName} (${customer.customerId}) configured ${autoPayConfig.type} AutoPay for ₹${customer.monthlyEmi}/month. Mandate Ref: ${autoPayConfig.mandateRef}`,
+        customerId,
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+    } catch (notifErr) {}
+
+    res.json({
+      success: true,
+      message: 'AutoPay configuration saved successfully.',
+      autoPay: autoPayConfig
+    });
+  } catch (err) {
+    console.error('Error saving AutoPay:', err);
+    res.status(500).json({ message: 'Failed to update AutoPay settings.' });
+  }
+});
+
 export default router;
