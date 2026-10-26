@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Smartphone, Download, X } from 'lucide-react';
+import { Smartphone, Download, X, Zap } from 'lucide-react';
 import AppDownloadModal from './AppDownloadModal.jsx';
+import { getLanguage } from '../utils/translations.js';
 
 const isRunningInApp = () => {
   if (typeof window === 'undefined') return false;
@@ -82,6 +83,9 @@ export default function InstallAppBanner({ compact = false }) {
     ) : null;
   }
 
+  const lang = getLanguage();
+  const isTa = lang === 'ta';
+
   // Compact Button (Navbar / Header)
   if (compact) {
     return (
@@ -89,11 +93,11 @@ export default function InstallAppBanner({ compact = false }) {
         <button
           type="button"
           onClick={handleOpenModal}
-          className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-600/20 transition-all transform hover:scale-105"
-          title="Download Android APK or Install App"
+          className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/20 transition-all transform hover:scale-105 active:scale-95"
+          title="Install MRS SOLAR App"
         >
-          <Smartphone className="w-3.5 h-3.5" />
-          <span>Install / APK</span>
+          <Zap className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
+          <span>{isTa ? 'ஆப் நிறுவல் (1-Tap)' : 'Install App (1-Tap)'}</span>
         </button>
 
         <AppDownloadModal 
@@ -107,18 +111,20 @@ export default function InstallAppBanner({ compact = false }) {
   // Full Promotional Banner (Login page / Dashboard top)
   return (
     <>
-      <div className="bg-gradient-to-r from-teal-900/90 via-emerald-900/80 to-slate-900 p-4 rounded-2xl border border-teal-500/30 shadow-lg text-white flex flex-col sm:flex-row items-center justify-between gap-3 my-4">
+      <div className="bg-gradient-to-r from-teal-900/95 via-emerald-900/90 to-slate-900 p-4 rounded-2xl border border-emerald-500/30 shadow-lg text-white flex flex-col sm:flex-row items-center justify-between gap-3 my-4">
         <div className="flex items-center space-x-3 text-left">
-          <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center shrink-0">
-            <Smartphone className="w-6 h-6 text-teal-300" />
+          <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center shrink-0 shadow-inner">
+            <Smartphone className="w-6 h-6 text-emerald-300" />
           </div>
           <div>
-            <h4 className="font-bold text-sm flex items-center gap-2">
-              <span>Install MRS SOLAR Mobile App</span>
-              <span className="text-[10px] bg-teal-500/30 text-teal-200 px-2 py-0.5 rounded-full font-semibold uppercase">Free APK & PWA</span>
+            <h4 className="font-black text-sm flex items-center gap-2">
+              <span>{isTa ? 'MRS SOLAR மொபைல் செயலியை நிறுவவும்' : 'Install MRS SOLAR Mobile App'}</span>
+              <span className="text-[10px] bg-emerald-400 text-slate-900 px-2 py-0.5 rounded-full font-black uppercase">
+                {isTa ? '1-Tap நிறுவல்' : '1-Tap Install'}
+              </span>
             </h4>
-            <p className="text-xs text-teal-100/80 mt-0.5">
-              Direct Android APK (~5 MB) or 1-tap browser install. No Play Store account required.
+            <p className="text-xs text-teal-100/90 mt-0.5">
+              {isTa ? 'எந்த Android அல்லது iPhone மொபைலிலும் பிழையின்றி 2 நொடிகளில் நிறுவலாம்.' : 'Add to home screen instantly on Android & iPhone with zero download errors.'}
             </p>
           </div>
         </div>
@@ -127,10 +133,10 @@ export default function InstallAppBanner({ compact = false }) {
           <button
             type="button"
             onClick={handleOpenModal}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-2 px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs rounded-xl shadow transition transform hover:scale-105"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Get App</span>
+            <Zap className="w-3.5 h-3.5" />
+            <span>{isTa ? 'நிறுவ (Get App)' : 'Get App'}</span>
           </button>
           <button
             type="button"
