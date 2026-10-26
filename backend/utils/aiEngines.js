@@ -616,29 +616,23 @@ ${openTkts.length > 0 ? openTkts.map((t, idx) => `${idx + 1}. **${t.ticketNumber
     }
   }
 
-  // 17c. REFERRAL BONUS QUERY
-  if (/(referral|refer a friend|refer.*earn|bonus|earn money|refer|பரிந்துரை)/i.test(query)) {
+  // 17c. INQUIRY ABOUT SPECIAL DISCOUNTS & OFFERS
+  if (/(referral|refer a friend|refer.*earn|bonus|earn money|refer|off|discount|offer|பரிந்துரை|தள்ளுபடி)/i.test(query)) {
     if (isTa) {
-      return `🎁 **MRS SOLAR வாடிக்கையாளர் பரிந்துரை திட்டம் (Customer Referral Program)**:
+      return `☀️ **MRS SOLAR சலுகைகள் & உதவி மையம்**:
 
-உங்கள் நண்பர்கள், குடும்பத்தினர் அல்லது அக்கம்பக்கத்தினரை கூரை சோலார் அமைக்க பரிந்துரைத்து **₹2,000 நேரடி ரொக்கப் போனஸ்** பெறலாம்!
+எங்கள் நேரடி கூரை சோலார் நிறுவல் மற்றும் மத்திய அரசின் **PM சூர்யா கர் முஃப்ட் பிஜ்லி யோஜனா** மூலம் **₹78,000 வரை நேரடி மானியம்** பெறலாம். 
 
-• **பரிந்துரை போனஸ்**: ஒவ்வொரு புதிய சோலார் அமைப்பிற்கும் **₹2,000**
-• **பெறும் முறை**: பரிந்துரைக்கப்பட்ட வாடிக்கையாளரின் கூரை சோலார் வெற்றிகரமாக நிறுவப்பட்ட பின், உங்கள் UPI அல்லது வங்கிக் கணக்கில் நேரடியாக வரவு வைக்கப்படும்.
-• **எப்படி தொடங்குவது**: உங்கள் வாடிக்கையாளர் எண் (${targetCustomer?.customerId || 'SOL-XXXX'}) அல்லது பதிவு செய்யப்பட்ட தொலைபேசி எண்ணை பரிந்துரைக் குறியீடாகப் பயன்படுத்தலாம்.
-
-மேலும் விவரங்களுக்கு உங்கள் டாஷ்போர்டில் உள்ள "Referral Program" கார்டைப் பார்க்கவும்!`;
+கூடுதல் திட்டங்கள் மற்றும் சிறப்பு சலுகைகளுக்கு எங்கள் அலுவலகத்தை நேரடியாக தொடர்பு கொள்ளவும்:
+📞 **+91 80724 54996**`;
     }
 
-    return `🎁 **MRS SOLAR Customer Referral Program**:
+    return `☀️ **MRS SOLAR Offers & Information**:
 
-Refer your friends, neighbors, or colleagues to install rooftop solar and earn **₹2,000 Instant Cash Bonus** per successful installation!
+Get up to **₹78,000 Direct Central Subsidy** via the **PM Surya Ghar Muft Bijli Yojana** with 0-downpayment bank financing options.
 
-• **Referral Reward**: **₹2,000 cash credit** per commissioning
-• **Disbursement**: Directly credited to your UPI ID or bank account once the referred customer's system is installed.
-• **Referral Code**: Share your Customer ID (${targetCustomer?.customerId || 'Your Registered ID'}) or phone number.
-
-Check the Referral Program card on your dashboard to share directly via WhatsApp!`;
+For any custom project inquiries or partner programs, please contact our support desk directly at:
+📞 **+91 80724 54996** | ✉️ **rsanthoshkumar376@gmail.com**`;
   }
 
   // 17d. TECHNICIAN & COMMISSIONING CHECKLIST

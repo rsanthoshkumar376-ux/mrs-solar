@@ -89,8 +89,8 @@ export default function AiChatbot() {
       ta: 'என் சேவை புகார்கள் & டிக்கெட்டுகள் நிலை'
     },
     {
-      en: 'Referral program bonus (₹2,000)',
-      ta: 'வாடிக்கையாளர் பரிந்துரை போனஸ் (₹2,000)'
+      en: 'PM Surya Ghar subsidy status (₹78,000)',
+      ta: 'PM சூர்யா கர் மானியம் நிலை (₹78,000)'
     },
     {
       en: 'Customer care helpline number & office',
