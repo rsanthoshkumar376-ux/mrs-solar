@@ -25,6 +25,7 @@ const TaxInvoiceModal = React.lazy(() => import('../../components/TaxInvoiceModa
 const SanctionLetterModal = React.lazy(() => import('../../components/SanctionLetterModal.jsx'));
 import SolarTrackerCard from '../../components/SolarTrackerCard.jsx';
 import SubsidyTrackerCard from '../../components/SubsidyTrackerCard.jsx';
+import ReferralShareCard from '../../components/ReferralShareCard.jsx';
 import ServiceTicketModal from '../../components/ServiceTicketModal.jsx';
 import SolarCalculatorModal from '../../components/SolarCalculatorModal.jsx';
 
@@ -475,6 +476,9 @@ export default function CustomerDashboard() {
           <React.Suspense fallback={<div className="h-64 rounded-3xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs text-slate-400">Loading Solar Site Map...</div>}>
             <SolarSiteMap customer={customer} />
           </React.Suspense>
+
+          {/* REFER A NEIGHBOR & FRIEND (NO 1000 OFF) */}
+          <ReferralShareCard customer={customer} lang={lang} />
         </div>
       )}
 
@@ -916,6 +920,9 @@ export default function CustomerDashboard() {
         <div className="space-y-6 animate-fade-in">
           {/* PM SURYA GHAR MUFT BIJLI YOJANA CENTRAL SUBSIDY TRACKER */}
           <SubsidyTrackerCard customer={customer} />
+
+          {/* REFER A NEIGHBOR & FRIEND (NO 1000 OFF) */}
+          <ReferralShareCard customer={customer} lang={lang} />
         </div>
       )}
 
