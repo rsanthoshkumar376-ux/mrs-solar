@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Sun, Gift, ShieldCheck, Zap, Award, CheckCircle2, 
   ArrowRight, MessageCircle, Phone, Calculator, X, Sparkles,
-  Check, Copy, ChevronRight, HelpCircle, Layers
+  Check, Copy, ChevronRight, HelpCircle, Layers, Play
 } from 'lucide-react';
 import { OWNER_PAYMENT_PHONE } from '../utils/whatsapp.js';
 
@@ -237,7 +237,38 @@ Please help me book a Free Rooftop Solar Survey & Consultation for my property.`
             </div>
           </div>
 
-          {/* 3. INTERACTIVE SYSTEM PACKAGES (1kW to 10kW) */}
+          {/* 3. VIDEO SHOWCASE SECTION */}
+          <div className="rounded-2xl p-4 sm:p-5 bg-slate-950/80 border border-teal-500/30 space-y-3 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 rounded-lg bg-teal-500/20 text-teal-400">
+                  <Play className="w-4 h-4 fill-current" />
+                </div>
+                <h4 className="font-extrabold text-sm sm:text-base text-white">
+                  {isTa ? 'வீடியோ: கூரை சோலார் அமைப்பது எப்படி?' : 'Watch: How Rooftop Solar Works for You'}
+                </h4>
+              </div>
+              <span className="text-[10px] text-teal-300 font-bold bg-teal-950/60 border border-teal-800/80 px-2.5 py-0.5 rounded-full">
+                HD Video
+              </span>
+            </div>
+
+            {/* Responsive 16:9 Video Player */}
+            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-inner">
+              <iframe
+                src="https://drive.google.com/file/d/1M6Alo9HbaIfD93t7RwWT_OXPcJCwtuRN/preview"
+                title="MRS Solar Rooftop Video"
+                className="w-full h-full border-0"
+                allow="autoplay; encrypted-media; fullscreen"
+                allowFullScreen
+              />
+            </div>
+            <p className="text-[11px] text-slate-400 text-center">
+              {isTa ? 'முழுத்திரையில் பார்க்க வீடியோவின் கீழ் வலது மூலையில் உள்ள ஐகானை அழுத்தவும்' : 'Click the full-screen icon at the bottom right of the player to watch full screen'}
+            </p>
+          </div>
+
+          {/* 4. INTERACTIVE SYSTEM PACKAGES (1kW to 10kW) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
