@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api.js';
 import { formatCurrency, formatDate } from '../../utils/format.js';
 import { 
   Sun, DollarSign, Calendar, ShieldCheck, Zap, X,
   QrCode, Landmark, User, FileText, Info, Calculator, MessageCircle,
   Copy, Check, Leaf, Printer, Phone, Download, AlertCircle, Send,
-  ChevronDown, ChevronUp, Award, Wrench
+  ChevronDown, ChevronUp, Award, Wrench, Folder, CreditCard, ChevronRight,
+  ExternalLink, CheckCircle2, History
 } from 'lucide-react';
 import { 
   openCustomerSupportChat,
@@ -27,6 +29,7 @@ import ServiceTicketModal from '../../components/ServiceTicketModal.jsx';
 import SolarCalculatorModal from '../../components/SolarCalculatorModal.jsx';
 
 export default function CustomerDashboard() {
+  const navigate = useNavigate();
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -39,11 +42,23 @@ export default function CustomerDashboard() {
   const [showServiceTicketModal, setShowServiceTicketModal] = useState(false);
   const [showCalculatorModal, setShowCalculatorModal] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
-  const [copiedMobile, setCopiedMobile] = useState(false);
   const [copiedPaymentLink, setCopiedPaymentLink] = useState(false);
-  const [showQrCode, setShowQrCode] = useState(false);
   const [launchingApp, setLaunchingApp] = useState(null);
   const [lang, setLang] = useState(getLanguage);
+
+  // 4 FOLDERS STATE (solar, payments, subsidy, documents)
+  const [activeFolder, setActiveFolder] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const f = params.get('folder') || params.get('tab');
+    return ['solar', 'payments', 'subsidy', 'documents'].includes(f) ? f : 'solar';
+  });
+
+  const switchFolder = (folderId) => {
+    setActiveFolder(folderId);
+    const url = new URL(window.location);
+    url.searchParams.set('folder', folderId);
+    window.history.replaceState({}, '', url);
+  };
 
   useEffect(() => {
     const handleLangChange = () => setLang(getLanguage());
@@ -97,13 +112,13 @@ export default function CustomerDashboard() {
     }
   }, [calcCost, calcDownPayment, calcMonths]);
 
-  const copyPaymentLink = () => {
-    if (!selectedEmi) return;
+  const copyPaymentLink = (emiToPay = selectedEmi) => {
+    if (!emiToPay) return;
     const activeUpiId = customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi';
     const activePayeeName = customer?.activeUpi?.payeeName || 'Mr Santhoshkumar R';
-    const totalAmount = (selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2);
+    const totalAmount = (emiToPay.emiAmount + (emiToPay.lateFee || 0)).toFixed(2);
     const cleanCustId = (customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '');
-    const upiLink = `upi://pay?pa=${activeUpiId}&pn=${encodeURIComponent(activePayeeName)}&am=${totalAmount}&cu=INR&tn=EMI_${selectedEmi.emiNumber}_${cleanCustId}`;
+    const upiLink = `upi://pay?pa=${activeUpiId}&pn=${encodeURIComponent(activePayeeName)}&am=${totalAmount}&cu=INR&tn=EMI_${emiToPay.emiNumber}_${cleanCustId}`;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(upiLink).catch(() => {});
     }
@@ -111,29 +126,29 @@ export default function CustomerDashboard() {
     setTimeout(() => setCopiedPaymentLink(false), 2500);
   };
 
-  const handleDownloadQr = () => {
-    if (!selectedEmi) return;
+  const handleDownloadQr = (emiToPay = selectedEmi) => {
+    if (!emiToPay) return;
     const activeUpiId = customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi';
     const activePayeeName = customer?.activeUpi?.payeeName || 'Mr Santhoshkumar R';
-    const totalAmount = (selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2);
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=upi://pay?pa=${activeUpiId}%26pn=${encodeURIComponent(activePayeeName)}%26am=${totalAmount}%26cu=INR%26tn=EMI_${selectedEmi.emiNumber}_${customer?.customerId || ''}`;
+    const totalAmount = (emiToPay.emiAmount + (emiToPay.lateFee || 0)).toFixed(2);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=upi://pay?pa=${activeUpiId}%26pn=${encodeURIComponent(activePayeeName)}%26am=${totalAmount}%26cu=INR%26tn=EMI_${emiToPay.emiNumber}_${customer?.customerId || ''}`;
     const link = document.createElement('a');
     link.href = qrUrl;
-    link.download = `MRS_SOLAR_EMI_${selectedEmi.emiNumber}_Payment_QR.png`;
+    link.download = `MRS_SOLAR_EMI_${emiToPay.emiNumber}_Payment_QR.png`;
     link.target = '_blank';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const handleLaunchUpi = (appKey) => {
-    if (!selectedEmi) return;
+  const handleLaunchUpi = (appKey, emiToPay = selectedEmi) => {
+    if (!emiToPay) return;
     setLaunchingApp(appKey);
-    const amount = (selectedEmi.emiAmount + (selectedEmi.lateFee || 0)).toFixed(2);
-    const payeeVpa = 'rsanthoshkumar376@oksbi';
-    const payeeName = 'Mr Santhoshkumar R';
+    const amount = (emiToPay.emiAmount + (emiToPay.lateFee || 0)).toFixed(2);
+    const payeeVpa = customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi';
+    const payeeName = customer?.activeUpi?.payeeName || 'Mr Santhoshkumar R';
     const cleanCustId = (customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '');
-    const note = `EMI_${selectedEmi.emiNumber}_${cleanCustId}`;
+    const note = `EMI_${emiToPay.emiNumber}_${cleanCustId}`;
 
     const upiQuery = `pa=${payeeVpa}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
     const universalUpi = `upi://pay?${upiQuery}`;
@@ -159,21 +174,17 @@ export default function CustomerDashboard() {
     let targetUrl = universalUpi;
 
     if (isAndroid && !isApp && packageMap[appKey]) {
-      // In mobile Chrome / external Android browser: Use targeted Android Intent
       targetUrl = `intent://pay?${upiQuery}#Intent;scheme=upi;package=${packageMap[appKey]};S.browser_fallback_url=${encodedUniversal};end`;
     } else {
-      // In APK (MRSSolarApp) or universal: Use standard upi://pay
       targetUrl = universalUpi;
     }
 
-    // 1. Direct location change
     try {
       window.location.href = targetUrl;
     } catch (e) {
       window.location.href = universalUpi;
     }
 
-    // 2. Dynamic link click fallback
     try {
       const link = document.createElement('a');
       link.href = targetUrl;
@@ -185,7 +196,6 @@ export default function CustomerDashboard() {
       }, 500);
     } catch (err) {}
 
-    // 3. Fallback to universal UPI if still on page after 1.5s
     setTimeout(() => {
       setLaunchingApp(null);
       if (document.visibilityState === 'visible' && targetUrl !== universalUpi) {
@@ -231,250 +241,786 @@ export default function CustomerDashboard() {
     setShowQrModal(true);
   };
 
+  // 4 FOLDERS DEFINITION
+  const folders = [
+    {
+      id: 'solar',
+      number: '1',
+      label: t.folderSolar || 'Solar & Generation',
+      desc: t.folderOverviewDesc || 'Generation, readings & rooftop site map',
+      icon: Sun,
+      badge: `${customer.solarCapacity || 3} kW System`,
+      badgeAlert: false
+    },
+    {
+      id: 'payments',
+      number: '2',
+      label: t.folderPayments || 'Payment Option & EMI',
+      desc: t.folderPaymentsDesc || 'UPI Quick Pay, loan schedule & calculator',
+      icon: CreditCard,
+      badge: nextPendingEmi 
+        ? (nextPendingEmi.status === 'Overdue' ? 'Overdue Due' : formatCurrency(nextPendingEmi.emiAmount + (nextPendingEmi.lateFee || 0))) 
+        : 'All Paid Off',
+      badgeAlert: nextPendingEmi?.status === 'Overdue'
+    },
+    {
+      id: 'subsidy',
+      number: '3',
+      label: t.folderSubsidy || 'PM Surya Ghar Subsidy',
+      desc: t.folderSubsidyDesc || '5-Stage PM Surya Ghar subsidy tracker',
+      icon: Award,
+      badge: '₹78,000 Subsidy',
+      badgeAlert: false
+    },
+    {
+      id: 'documents',
+      number: '4',
+      label: t.folderDocs || 'Documents & Profile',
+      desc: t.folderDocsDesc || 'Tax invoice, sanction letter & KYC files',
+      icon: Folder,
+      badge: 'Tax & Legal',
+      badgeAlert: false
+    }
+  ];
+
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 pb-16">
       
-      {/* HEADER BANNER */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-teal-700 to-emerald-600 dark:from-teal-950 dark:to-emerald-950 rounded-3xl p-6 md:p-8 shadow-lg shadow-teal-700/10 text-white">
-        <div className="absolute top-0 right-0 -mt-6 -mr-6 w-36 h-36 bg-yellow-300/10 rounded-full blur-xl animate-pulse-soft"></div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {/* 1. PERSISTENT HEADER BANNER */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-teal-700 via-teal-800 to-emerald-700 dark:from-teal-950 dark:via-slate-900 dark:to-emerald-950 rounded-3xl p-6 md:p-8 shadow-xl shadow-teal-900/15 text-white">
+        <div className="absolute top-0 right-0 -mt-6 -mr-6 w-36 h-36 bg-yellow-300/15 rounded-full blur-2xl animate-pulse-soft"></div>
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-teal-200 bg-teal-800/50 px-3 py-1 rounded-full">{t.activeFinancing}</span>
-            <h2 className="text-3xl font-extrabold mt-3">{t.welcome}, {customer.fullName}</h2>
-            <p className="text-sm text-teal-100 mt-1">{t.customerId}: {customer.customerId} | {t.installationDate}: {formatDate(customer.installationDate)}</p>
+            <div className="flex items-center space-x-2">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-teal-200 bg-teal-800/60 border border-teal-600/40 px-3 py-1 rounded-full">
+                {t.activeFinancing}
+              </span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-200 bg-emerald-800/50 border border-emerald-600/40 px-3 py-1 rounded-full">
+                {customer.solarCapacity} kW Rooftop Solar
+              </span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black mt-3 tracking-tight">
+              {t.welcome}, {customer.fullName}
+            </h2>
+            <p className="text-xs sm:text-sm text-teal-100 mt-1 font-medium">
+              {t.customerId}: <span className="font-mono font-bold text-white">{customer.customerId}</span> | {t.installationDate}: {formatDate(customer.installationDate)}
+            </p>
           </div>
-          <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
-            <div className="flex-1 min-w-[130px] bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2.5 sm:px-5 sm:py-3 border border-white/10 text-center">
-              <p className="text-[11px] sm:text-xs text-teal-200">{t.totalOutstanding}</p>
+
+          <div className="flex flex-wrap gap-2.5 sm:gap-3 items-center">
+            {/* Metric 1: Total Outstanding */}
+            <div className="flex-1 min-w-[125px] bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2.5 sm:px-5 sm:py-3 border border-white/10 text-center">
+              <p className="text-[10px] sm:text-xs font-semibold text-teal-200 uppercase tracking-wider">{t.totalOutstanding}</p>
               <p className="text-xl sm:text-2xl font-black mt-0.5">{formatCurrency(outstandingAmount)}</p>
             </div>
-            <div className="flex-1 min-w-[130px] bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2.5 sm:px-5 sm:py-3 border border-white/10 text-center">
-              <p className="text-[11px] sm:text-xs text-teal-200">{t.nextEmiDate}</p>
-              <p className="text-xl sm:text-2xl font-black mt-0.5">{nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : t.completed}</p>
+
+            {/* Metric 2: Next EMI Date */}
+            <div className="flex-1 min-w-[125px] bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2.5 sm:px-5 sm:py-3 border border-white/10 text-center">
+              <p className="text-[10px] sm:text-xs font-semibold text-teal-200 uppercase tracking-wider">{t.nextEmiDate}</p>
+              <p className="text-xl sm:text-2xl font-black mt-0.5">
+                {nextPendingEmi ? formatDate(nextPendingEmi.dueDate) : t.completed}
+              </p>
             </div>
-            <div className="w-full grid grid-cols-2 sm:grid-cols-6 gap-2">
-              <button
-                type="button"
-                onClick={() => setShowStatementModal(true)}
-                className="justify-center bg-white/20 hover:bg-white/30 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-white/20 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
-                title="View & Download official loan amortization statement with stamp"
-              >
-                <Printer className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{t.loanStatementBtn}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowInvoiceModal(true)}
-                className="justify-center bg-amber-500/80 hover:bg-amber-500 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-amber-300/30 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
-                title="View & Download official GST Tax Invoice"
-              >
-                <FileText className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{t.taxInvoiceBtn}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowSanctionModal(true)}
-                className="justify-center bg-indigo-500/80 hover:bg-indigo-500 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-indigo-300/30 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
-                title="View & Download official Solar Loan Sanction & 25-Year Warranty Letter"
-              >
-                <Award className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{t.sanctionLetterBtn}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowServiceTicketModal(true)}
-                className="justify-center bg-teal-500/80 hover:bg-teal-500 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-teal-300/30 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
-                title="Request Panel Cleaning, Inverter Check or Maintenance"
-              >
-                <Wrench className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{lang === 'ta' ? 'பழுது நீக்கம்' : 'Service'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCalculatorModal(true)}
-                className="justify-center bg-orange-500/80 hover:bg-orange-500 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-orange-300/30 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
-                title="Calculate Solar Savings and Subsidy"
-              >
-                <Calculator className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{lang === 'ta' ? 'சேமிப்பு' : 'Calculator'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => openCustomerSupportChat({ customer })}
-                className="justify-center bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl px-2.5 py-2.5 sm:px-3 sm:py-3 border border-white/20 flex items-center space-x-1.5 text-xs font-bold shadow-lg transition-all"
-                title="Chat with MRS SOLAR support on WhatsApp"
-              >
-                <MessageCircle className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{t.whatsappHelp}</span>
-              </button>
-            </div>
+
+            {/* HIGH-VISIBILITY PAYMENT OPTION BUTTON */}
+            <button
+              type="button"
+              onClick={() => {
+                switchFolder('payments');
+                if (nextPendingEmi) {
+                  openPaymentModal(nextPendingEmi);
+                }
+              }}
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-300 hover:from-amber-300 hover:to-teal-200 text-slate-900 font-black rounded-2xl px-5 py-3 sm:py-3.5 flex items-center justify-center space-x-2 text-xs sm:text-sm shadow-xl shadow-teal-950/40 transition-all hover:scale-[1.02] active:scale-95 border border-white/30"
+              title="Open Payment Option & Pay Current Installment"
+            >
+              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-slate-900 fill-current" />
+              <span>{t.paymentOptionBtn || 'Payment Option'}</span>
+              {nextPendingEmi && (
+                <span className="bg-slate-900/15 px-2 py-0.5 rounded-full text-[11px] font-mono">
+                  {formatCurrency(nextPendingEmi.emiAmount + (nextPendingEmi.lateFee || 0))}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* PM SURYA GHAR MUFT BIJLI YOJANA CENTRAL SUBSIDY TRACKER */}
-      <SubsidyTrackerCard customer={customer} />
-
-      {/* SOLAR USAGE, RUNTIME, CONSUMPTION & TNEB QUICK PAY INTEGRATION */}
-      <SolarTrackerCard 
-        solarStats={customer.solarStats}
-        customer={customer}
-        t={t}
-        lang={lang}
-        onLogReading={handleLogReading}
-        isAdmin={false}
-      />
-
-      {/* LOAN PROGRESS TIMELINE */}
-      <div className="glass-premium rounded-3xl p-6 md:p-8 shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-bold text-lg text-slate-800 dark:text-white">{t.loanRepaymentProgress}</h3>
-          <span className="text-sm font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 px-3 py-1 rounded-full">
-            {t.paidOfText.replace('{paid}', emisPaidCount).replace('{total}', totalEmisCount).replace('{percent}', progressPercentage)}
-          </span>
-        </div>
-        
-        {/* Progress Bar */}
-        <div className="w-full h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-6 p-0.5 border border-slate-200/50 dark:border-slate-700/50">
-          <div 
-            className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-1000 ease-out shadow-inner"
-            style={{ width: `${progressPercentage}%` }}
-          ></div>
-        </div>
-
-        {/* Installment Progress Timeline */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-3">
-          {emiSchedule.map((emi) => {
-            let color = 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800/40 dark:border-slate-800 dark:text-slate-600';
-            let statusText = emi.status;
-            if (emi.status === 'Paid') {
-              color = 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50';
-              statusText = t.statusPaid;
-            } else if (emi.status === 'Overdue') {
-              color = 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/50 animate-pulse';
-              statusText = t.statusOverdue;
-            } else if (emi.status === 'Due Soon') {
-              color = 'bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/50';
-              statusText = t.statusDueSoon;
-            }
-            
+      {/* 2. THE 4 FOLDERS NAVIGATION TABS */}
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl p-2 sm:p-2.5 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          {folders.map(folder => {
+            const isActive = activeFolder === folder.id;
+            const Icon = folder.icon;
             return (
-              <div 
-                key={emi.emiNumber}
-                className={`border rounded-xl p-2.5 text-center flex flex-col items-center justify-center transition-all hover:scale-105 cursor-help ${color}`}
-                title={`Due: ${formatDate(emi.dueDate)}\nAmount: ${formatCurrency(emi.emiAmount + (emi.lateFee || 0))}`}
+              <button
+                key={folder.id}
+                type="button"
+                onClick={() => switchFolder(folder.id)}
+                className={`flex flex-col sm:flex-row items-center sm:items-start text-left p-3 sm:p-4 rounded-2xl transition-all relative overflow-hidden group ${
+                  isActive
+                    ? 'bg-gradient-to-br from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-600/25 scale-[1.01]'
+                    : 'bg-slate-50/80 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}
               >
-                <span className="text-[10px] uppercase font-bold tracking-wider opacity-85">{t.emiLabel}</span>
-                <span className="text-lg font-black mt-0.5">#{emi.emiNumber}</span>
-                <span className="text-[9px] font-bold mt-1 uppercase tracking-tight">{statusText}</span>
-              </div>
+                <div className="flex items-center space-x-3 w-full">
+                  <div className={`p-2.5 rounded-xl shrink-0 transition-colors ${
+                    isActive 
+                      ? 'bg-white/20 text-white shadow-inner' 
+                      : 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 group-hover:bg-teal-100 dark:group-hover:bg-teal-900/40'
+                  }`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`text-[10px] font-black uppercase tracking-wider block ${
+                        isActive ? 'text-teal-200' : 'text-slate-400 dark:text-slate-500'
+                      }`}>
+                        Folder #{folder.number}
+                      </span>
+                      {folder.badge && (
+                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                          isActive 
+                            ? 'bg-white/20 text-white' 
+                            : folder.badgeAlert
+                            ? 'bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400 font-bold animate-pulse'
+                            : 'bg-teal-100/80 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300'
+                        }`}>
+                          {folder.badge}
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="font-black text-xs sm:text-sm truncate mt-0.5">{folder.label}</h4>
+                    <p className={`text-[11px] truncate hidden sm:block mt-0.5 ${
+                      isActive ? 'text-teal-100' : 'text-slate-400'
+                    }`}>
+                      {folder.desc}
+                    </p>
+                  </div>
+                </div>
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* THREE PANELS GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* PANEL 1: PROJECT DETAILS */}
-        <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-6">
-          <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
-            <Zap className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <h3 className="font-bold text-slate-800 dark:text-white">{t.solarProjectDetails}</h3>
-          </div>
-          <div className="space-y-4 text-sm">
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.capacityKw}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.solarCapacity} kW</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.solarBrand}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.solarBrand || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.totalSystemCost}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(customer.solarCost)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.downPayment}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(customer.downPayment)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.loanPrincipal}</span>
-              <span className="font-semibold text-teal-600 dark:text-teal-400">{formatCurrency(customer.loanAmount)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.interestRate}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.interestRate}{t.perMonthRate}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.warrantyDetails}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{customer.warrantyDetails || t.standardWarranty}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* PANEL 2: LOAN TIMING & BANK */}
-        <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-6">
-          <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
-            <Landmark className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <h3 className="font-bold text-slate-800 dark:text-white">{t.financingBanking}</h3>
-          </div>
-          <div className="space-y-4 text-sm">
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.monthlyEmi}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(customer.monthlyEmi)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.durationMonths}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.emiDuration} {t.monthsSuffix}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.loanStartDate}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{formatDate(customer.loanStartDate)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.loanEndDate}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{formatDate(customer.loanEndDate)}</span>
-            </div>
-            <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t.repaymentBankAccount}</p>
-              <div className="flex justify-between">
-                <span className="text-slate-500">{t.bankName}</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.bankDetails?.bankName || 'N/A'}</span>
+      {/* ============================================================== */}
+      {/* FOLDER 1: SOLAR & GENERATION                                   */}
+      {/* ============================================================== */}
+      {activeFolder === 'solar' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* Solar Project Quick Specifications Banner */}
+          <div className="glass-premium rounded-3xl p-5 sm:p-6 shadow-sm">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/50 dark:border-slate-800/50 mb-4">
+              <div className="flex items-center space-x-2">
+                <Zap className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                <h3 className="font-bold text-slate-800 dark:text-white">{t.solarProjectDetails}</h3>
               </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-slate-500">{t.accountNo}</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.bankDetails?.accountNumber || 'N/A'}</span>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowServiceTicketModal(true)}
+                  className="px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 hover:bg-teal-100 text-xs font-bold flex items-center space-x-1.5 transition-all"
+                >
+                  <Wrench className="w-3.5 h-3.5" />
+                  <span>{lang === 'ta' ? 'பழுது நீக்கம் / சேவை' : 'Service Request'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCalculatorModal(true)}
+                  className="px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 hover:bg-orange-100 text-xs font-bold flex items-center space-x-1.5 transition-all"
+                >
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>{lang === 'ta' ? 'சேமிப்பு கணக்கீடு' : 'Solar Calculator'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200/40 dark:border-slate-800/40">
+                <p className="text-[11px] font-semibold text-slate-400 uppercase">{t.capacityKw}</p>
+                <p className="text-lg font-black text-slate-800 dark:text-white mt-0.5">{customer.solarCapacity} kW</p>
+                <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">On-Grid Rooftop</span>
+              </div>
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200/40 dark:border-slate-800/40">
+                <p className="text-[11px] font-semibold text-slate-400 uppercase">{t.solarBrand}</p>
+                <p className="text-lg font-black text-slate-800 dark:text-white mt-0.5 truncate">{customer.solarBrand || 'MRS Solar'}</p>
+                <span className="text-[10px] text-slate-500">Tier-1 Mono PERC</span>
+              </div>
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200/40 dark:border-slate-800/40">
+                <p className="text-[11px] font-semibold text-slate-400 uppercase">{t.totalSystemCost}</p>
+                <p className="text-lg font-black text-slate-800 dark:text-white mt-0.5">{formatCurrency(customer.solarCost)}</p>
+                <span className="text-[10px] text-slate-500">Down Pay: {formatCurrency(customer.downPayment)}</span>
+              </div>
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200/40 dark:border-slate-800/40">
+                <p className="text-[11px] font-semibold text-slate-400 uppercase">{t.warrantyDetails}</p>
+                <p className="text-lg font-black text-teal-600 dark:text-teal-400 mt-0.5 truncate">25 Years</p>
+                <span className="text-[10px] text-slate-500">Performance Warranty</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* PANEL 3: CONTACT & DOCUMENTS */}
-        <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-6">
-          <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
-            <User className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <h3 className="font-bold text-slate-800 dark:text-white">{t.customerDocuments}</h3>
+          {/* SOLAR USAGE, RUNTIME, CONSUMPTION & TNEB INTEGRATION */}
+          <SolarTrackerCard 
+            solarStats={customer.solarStats}
+            customer={customer}
+            t={t}
+            lang={lang}
+            onLogReading={handleLogReading}
+            isAdmin={false}
+          />
+
+          {/* SOLAR ROOFTOP SITE MAP & GPS NAVIGATION */}
+          <React.Suspense fallback={<div className="h-64 rounded-3xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs text-slate-400">Loading Solar Site Map...</div>}>
+            <SolarSiteMap customer={customer} />
+          </React.Suspense>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* FOLDER 2: PAYMENT OPTION & EMI                                 */}
+      {/* ============================================================== */}
+      {activeFolder === 'payments' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* HERO PAYMENT OPTION HUB */}
+          <div className="glass-premium rounded-3xl p-6 sm:p-8 shadow-md border-2 border-teal-500/30">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200/60 dark:border-slate-800/60 gap-3 mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-xl text-slate-900 dark:text-white">
+                    {t.payCurrentInstallment} (Payment Option)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {lang === 'ta' ? 'UPI, கூகுள் பே, போன்பே அல்லது வங்கி கணக்கு மூலம் எளிதாக கட்டணம் செலுத்தலாம்' : 'Pay seamlessly via UPI, Google Pay, PhonePe, Paytm, or Direct Bank Transfer'}
+                  </p>
+                </div>
+              </div>
+
+              {nextPendingEmi && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => openPaymentModal(nextPendingEmi)}
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-md transition-all"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    <span>{t.generateQrBtn || 'Scan QR Code'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/customer/payments')}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs flex items-center space-x-1.5 transition-all"
+                  >
+                    <History className="w-4 h-4" />
+                    <span>{t.paymentHistory}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {nextPendingEmi ? (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* Left: EMI Summary & 1-Tap UPI Launch */}
+                <div className="lg:col-span-7 space-y-5">
+                  <div className="bg-slate-50 dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.currentScheduledEmi}</span>
+                        <h4 className="text-2xl font-black text-slate-800 dark:text-white mt-1">
+                          {t.emiLabel} #{nextPendingEmi.emiNumber}
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {t.dueDate || 'Due Date'}: <strong className="text-slate-700 dark:text-slate-300">{formatDate(nextPendingEmi.dueDate)}</strong>
+                        </p>
+                      </div>
+                      <span className={`text-xs font-bold px-3 py-1.5 rounded-full uppercase ${
+                        customer.requestingEmi === nextPendingEmi.emiNumber
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300/50'
+                          : nextPendingEmi.status === 'Overdue' 
+                          ? 'bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400 border border-red-200/30 font-black animate-pulse'
+                          : nextPendingEmi.status === 'Due Soon'
+                          ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 border border-orange-200/30'
+                          : 'bg-teal-50 text-teal-600 dark:bg-teal-950/20 dark:text-teal-400 border border-teal-200/30'
+                      }`}>
+                        {customer.requestingEmi === nextPendingEmi.emiNumber 
+                          ? 'Verification Pending' 
+                          : nextPendingEmi.status === 'Overdue' ? t.statusOverdue : nextPendingEmi.status === 'Due Soon' ? t.statusDueSoon : t.statusActive}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
+                      <div>
+                        <span className="text-slate-400">{t.emiBaseAmount}</span>
+                        <p className="font-bold text-slate-800 dark:text-white mt-0.5">{formatCurrency(nextPendingEmi.emiAmount)}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">{t.latePenaltyFee}</span>
+                        <p className={`font-bold mt-0.5 ${nextPendingEmi.lateFee > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'}`}>
+                          {formatCurrency(nextPendingEmi.lateFee)}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">{t.interestPortion}</span>
+                        <p className="font-semibold text-slate-800 dark:text-white mt-0.5">{formatCurrency(nextPendingEmi.interestPaid)}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">{t.principalPortion}</span>
+                        <p className="font-semibold text-slate-800 dark:text-white mt-0.5">{formatCurrency(nextPendingEmi.principalPaid)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-gradient-to-r from-teal-600 to-emerald-600 text-white p-4 sm:p-5 rounded-2xl shadow-lg shadow-teal-600/20">
+                      <div>
+                        <p className="text-xs uppercase font-bold tracking-wider text-teal-100">{t.totalOutstandingDue}</p>
+                        <p className="text-[11px] text-teal-200 mt-0.5">{t.includingLateFees}</p>
+                      </div>
+                      <p className="text-3xl font-black">
+                        {formatCurrency(nextPendingEmi.emiAmount + (nextPendingEmi.lateFee || 0))}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Instant 1-Tap UPI Launch Buttons */}
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {lang === 'ta' ? 'நேரடி UPI கட்டண விருப்பங்கள் (1-Tap Pay):' : '1-Tap Direct UPI Payment Options:'}
+                    </p>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => handleLaunchUpi('gpay', nextPendingEmi)}
+                        className="py-3 px-4 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-white font-bold rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-center space-x-2 text-xs transition-all hover:scale-[1.02]"
+                      >
+                        <span className="text-blue-500 font-black">G</span>
+                        <span className="text-red-500 font-black">P</span>
+                        <span className="text-yellow-500 font-black">a</span>
+                        <span className="text-green-500 font-black">y</span>
+                        <span>Google Pay</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleLaunchUpi('phonepe', nextPendingEmi)}
+                        className="py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md flex items-center justify-center space-x-1.5 text-xs transition-all hover:scale-[1.02]"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-white fill-current" />
+                        <span>PhonePe</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleLaunchUpi('paytm', nextPendingEmi)}
+                        className="py-3 px-4 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl shadow-md flex items-center justify-center space-x-1.5 text-xs transition-all hover:scale-[1.02]"
+                      >
+                        <Landmark className="w-3.5 h-3.5 text-white" />
+                        <span>Paytm</span>
+                      </button>
+                    </div>
+
+                    <a
+                      href={`upi://pay?pa=${customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi'}&pn=${encodeURIComponent(customer?.activeUpi?.payeeName || 'Mr Santhoshkumar R')}&am=${(nextPendingEmi.emiAmount + (nextPendingEmi.lateFee || 0)).toFixed(2)}&cu=INR&tn=EMI_${nextPendingEmi.emiNumber}_${(customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`}
+                      className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-2 text-xs sm:text-sm"
+                    >
+                      <Zap className="w-4 h-4 text-yellow-300 fill-current" />
+                      <span>{lang === 'ta' ? 'அனைத்து UPI செயலிகள் மூலம் செலுத்தவும்' : 'Pay via Any UPI App (BHIM / Cred / Amazon Pay)'}</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Right: Embedded QR Code, Bank Details & UTR Submission */}
+                <div className="lg:col-span-5 bg-slate-50 dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 flex flex-col justify-between space-y-4">
+                  <div className="text-center space-y-3">
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-500">
+                      {lang === 'ta' ? 'ஸ்கேன் செய்து செலுத்த QR குறியீடு' : 'Scan QR to Pay Now'}
+                    </p>
+
+                    <div className="w-44 h-44 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center mx-auto p-2.5 shadow-sm">
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=${customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi'}%26pn=${encodeURIComponent(customer?.activeUpi?.payeeName || 'Mr Santhoshkumar R')}%26am=${(nextPendingEmi.emiAmount + (nextPendingEmi.lateFee || 0)).toFixed(2)}%26cu=INR%26tn=EMI_${nextPendingEmi.emiNumber}_${(customer?.customerId || '').replace(/[^a-zA-Z0-9]/g, '')}`}
+                        alt="Payment QR Code"
+                        className="w-full h-full object-contain rounded-lg"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadQr(nextPendingEmi)}
+                        className="py-1.5 px-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 flex items-center space-x-1 shadow-sm transition-all"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>{t.saveQrImage || 'Save QR'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi');
+                          setCopiedUpi(true);
+                          setTimeout(() => setCopiedUpi(false), 2000);
+                        }}
+                        className="py-1.5 px-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 flex items-center space-x-1 shadow-sm transition-all"
+                      >
+                        {copiedUpi ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            <span className="text-emerald-600 font-bold">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy UPI ID</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <p className="text-[11px] font-mono text-slate-500 font-bold">
+                      UPI ID: {customer?.activeUpi?.upiId || 'rsanthoshkumar376@oksbi'}
+                    </p>
+                  </div>
+
+                  {/* Bank & UTR Reference Box */}
+                  <div className="space-y-3 pt-3 border-t border-slate-200/60 dark:border-slate-800/60">
+                    <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-slate-200/50 dark:border-slate-800/50 space-y-1">
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        {t.enterUtr || 'After Payment, Enter 12-Digit UPI UTR:'}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          maxLength={16}
+                          value={customerUtr}
+                          onChange={(e) => setCustomerUtr(e.target.value.replace(/[^0-9a-zA-Z]/g, ''))}
+                          placeholder="12-digit UTR No"
+                          className="flex-1 px-3 py-1.5 text-xs font-mono font-bold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-1 focus:ring-teal-500 text-slate-800 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          disabled={submittingUtr}
+                          onClick={async () => {
+                            setSubmittingUtr(true);
+                            try {
+                              await api.post('/customer/notify-payment', { 
+                                emiNumber: nextPendingEmi.emiNumber,
+                                utrNumber: customerUtr ? customerUtr.trim() : undefined
+                              });
+                              alert(lang === 'ta' ? 'கட்டண அறிவிப்பு அனுப்பப்பட்டது! நிர்வாகி சரிபார்த்து ரசீதை உறுதி செய்வார்.' : "Payment notification sent! Admin will verify and confirm your receipt.");
+                              fetchDashboardData();
+                            } catch (err) {
+                              alert(lang === 'ta' ? 'கட்டண விபரம் பதிவு செய்யப்பட்டது.' : "Payment recorded! Administrator will verify shortly.");
+                            } finally {
+                              setSubmittingUtr(false);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-lg text-xs transition-colors shrink-0"
+                        >
+                          {submittingUtr ? '...' : 'Notify'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            ) : (
+              <div className="text-center py-10 space-y-3">
+                <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h4 className="text-xl font-black text-slate-800 dark:text-white">{t.allEmisPaidTitle}</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">{t.allEmisPaidDesc}</p>
+              </div>
+            )}
           </div>
-          <div className="space-y-4 text-sm">
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.mobile}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.mobileNumber}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.email}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{customer.email || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">{t.installationAddress}</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 text-right truncate max-w-[180px]" title={customer.installationAddress}>
-                {customer.installationAddress || 'N/A'}
+
+          {/* LOAN REPAYMENT PROGRESS TIMELINE */}
+          <div className="glass-premium rounded-3xl p-6 md:p-8 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-lg text-slate-800 dark:text-white">{t.loanRepaymentProgress}</h3>
+              <span className="text-sm font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 px-3 py-1 rounded-full">
+                {t.paidOfText.replace('{paid}', emisPaidCount).replace('{total}', totalEmisCount).replace('{percent}', progressPercentage)}
               </span>
             </div>
-            <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t.uploadedFiles}</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+            
+            {/* Progress Bar */}
+            <div className="w-full h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-6 p-0.5 border border-slate-200/50 dark:border-slate-700/50">
+              <div 
+                className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-1000 ease-out shadow-inner"
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
+
+            {/* Installment Progress Timeline */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-3">
+              {emiSchedule.map((emi) => {
+                let color = 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800/40 dark:border-slate-800 dark:text-slate-600';
+                let statusText = emi.status;
+                if (emi.status === 'Paid') {
+                  color = 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50';
+                  statusText = t.statusPaid;
+                } else if (emi.status === 'Overdue') {
+                  color = 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/50 animate-pulse';
+                  statusText = t.statusOverdue;
+                } else if (emi.status === 'Due Soon') {
+                  color = 'bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/50';
+                  statusText = t.statusDueSoon;
+                }
+                
+                return (
+                  <div 
+                    key={emi.emiNumber}
+                    onClick={() => {
+                      if (emi.status !== 'Paid') {
+                        openPaymentModal(emi);
+                      }
+                    }}
+                    className={`border rounded-xl p-2.5 text-center flex flex-col items-center justify-center transition-all hover:scale-105 cursor-pointer ${color}`}
+                    title={`Due: ${formatDate(emi.dueDate)}\nAmount: ${formatCurrency(emi.emiAmount + (emi.lateFee || 0))}\nClick to pay`}
+                  >
+                    <span className="text-[10px] uppercase font-bold tracking-wider opacity-85">{t.emiLabel}</span>
+                    <span className="text-lg font-black mt-0.5">#{emi.emiNumber}</span>
+                    <span className="text-[9px] font-bold mt-1 uppercase tracking-tight">{statusText}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* FINANCING & BANK DETAILS + AMORTIZATION CALCULATOR */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Panel: Loan Terms & Registered Bank Account */}
+            <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-6">
+              <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
+                <Landmark className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                <h3 className="font-bold text-slate-800 dark:text-white">{t.financingBanking}</h3>
+              </div>
+              <div className="space-y-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.loanPrincipal}</span>
+                  <span className="font-semibold text-teal-600 dark:text-teal-400">{formatCurrency(customer.loanAmount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.monthlyEmi}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(customer.monthlyEmi)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.durationMonths}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.emiDuration} {t.monthsSuffix}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.loanStartDate}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{formatDate(customer.loanStartDate)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.loanEndDate}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{formatDate(customer.loanEndDate)}</span>
+                </div>
+                <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t.repaymentBankAccount}</p>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">{t.bankName}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.bankDetails?.bankName || 'State Bank of India'}</span>
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-slate-500">{t.accountNo}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{customer.bankDetails?.accountNumber || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Panel: Interactive Loan Amortization Calculator */}
+            <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-6">
+              <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
+                <Calculator className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                <h3 className="font-bold text-slate-800 dark:text-white">{t.calculatorTitle}</h3>
+              </div>
+              
+              <div className="space-y-4 text-sm">
+                <div>
+                  <div className="flex justify-between mb-1 text-xs">
+                    <span className="text-slate-500">{t.projectCostLabel}</span>
+                    <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(calcCost, false)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="50000"
+                    max="500000"
+                    step="10000"
+                    value={calcCost}
+                    onChange={(e) => setCalcCost(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-600"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1 text-xs">
+                    <span className="text-slate-500">{t.downPaymentLabel}</span>
+                    <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(calcDownPayment, false)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10000"
+                    max={calcCost - 20000}
+                    step="5000"
+                    value={calcDownPayment}
+                    onChange={(e) => setCalcDownPayment(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-600"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1 text-xs">
+                    <span className="text-slate-500">{t.durationLabel}</span>
+                    <span className="font-bold text-slate-800 dark:text-white">{calcMonths} {t.monthsSuffix}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="3"
+                    max="84"
+                    step="3"
+                    value={calcMonths}
+                    onChange={(e) => setCalcMonths(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-600"
+                  />
+                </div>
+
+                <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-[11px] text-slate-400 uppercase tracking-wider">{t.estMonthlyEmi}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{t.reducingBalanceNote}</p>
+                  </div>
+                  <p className="text-2xl font-black text-teal-600 dark:text-teal-400">{formatCurrency(calcEmiResult)}</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* FOLDER 3: PM SURYA GHAR CENTRAL SUBSIDY TRACKER                */}
+      {/* ============================================================== */}
+      {activeFolder === 'subsidy' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* PM SURYA GHAR MUFT BIJLI YOJANA CENTRAL SUBSIDY TRACKER */}
+          <SubsidyTrackerCard customer={customer} />
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* FOLDER 4: DOCUMENTS, CONTRACT & PROFILE                        */}
+      {/* ============================================================== */}
+      {activeFolder === 'documents' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* Official Printable Legal Documents Hub */}
+          <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
+              <Award className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+              <h3 className="font-bold text-slate-800 dark:text-white">
+                {lang === 'ta' ? 'அதிகாரப்பூர்வ சட்ட & வரி ஆவணங்கள்' : 'Official Legal & Tax Documents'}
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => setShowStatementModal(true)}
+                className="p-4 bg-slate-50 dark:bg-slate-900/50 hover:bg-teal-50 dark:hover:bg-teal-950/20 rounded-2xl border border-slate-200 dark:border-slate-800 text-left transition-all group flex items-start space-x-3"
+              >
+                <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                  <Printer className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-white text-xs sm:text-sm">{t.loanStatementBtn}</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Stamped amortization ledger with official seal</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowInvoiceModal(true)}
+                className="p-4 bg-slate-50 dark:bg-slate-900/50 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-2xl border border-slate-200 dark:border-slate-800 text-left transition-all group flex items-start space-x-3"
+              >
+                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-white text-xs sm:text-sm">{t.taxInvoiceBtn}</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Official GST invoice and supply bill</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowSanctionModal(true)}
+                className="p-4 bg-slate-50 dark:bg-slate-900/50 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 rounded-2xl border border-slate-200 dark:border-slate-800 text-left transition-all group flex items-start space-x-3"
+              >
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-white text-xs sm:text-sm">{t.sanctionLetterBtn}</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Solar loan sanction & 25-yr performance warranty</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* KYC Documents & Uploaded Files */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Customer Contact & Installation Details */}
+            <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-6">
+              <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
+                <User className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                <h3 className="font-bold text-slate-800 dark:text-white">{t.customerDocuments}</h3>
+              </div>
+              <div className="space-y-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.fullName || 'Customer Name'}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.fullName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.customerId}</span>
+                  <span className="font-mono font-bold text-teal-600 dark:text-teal-400">{customer.customerId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.mobile}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.mobileNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.email}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[180px]">{customer.email || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.installationAddress}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 text-right truncate max-w-[200px]" title={customer.installationAddress}>
+                    {customer.installationAddress || 'N/A'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Uploaded Site & Legal Files */}
+            <div className="glass-premium rounded-3xl p-6 shadow-sm space-y-6">
+              <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
+                <FileText className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                <h3 className="font-bold text-slate-800 dark:text-white">{t.uploadedFiles}</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                 {customer.documents && Object.keys(customer.documents).map((docName) => {
                   const url = customer.documents[docName];
                   if (!url) return null;
@@ -485,221 +1031,24 @@ export default function CustomerDashboard() {
                       href={fullUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/20 text-slate-600 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 rounded-xl transition-all border border-slate-200/50 dark:border-slate-700/50 truncate"
+                      className="flex items-center space-x-2 px-3.5 py-3 bg-slate-50 dark:bg-slate-900/40 hover:bg-teal-50 dark:hover:bg-teal-950/20 text-slate-700 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 rounded-xl transition-all border border-slate-200/50 dark:border-slate-700/50 truncate"
                     >
-                      <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span className="capitalize truncate">{docName.replace('File', '')}</span>
+                      <FileText className="w-4 h-4 flex-shrink-0 text-teal-600 dark:text-teal-400" />
+                      <span className="capitalize truncate font-semibold">{docName.replace('File', '')}</span>
                     </a>
                   );
                 })}
               </div>
             </div>
+
           </div>
+
         </div>
+      )}
 
-      </div>
-
-      {/* SOLAR ROOFTOP SITE MAP & GPS NAVIGATION */}
-      <React.Suspense fallback={<div className="h-64 rounded-3xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs text-slate-400">Loading Solar Site Map...</div>}>
-        <SolarSiteMap customer={customer} />
-      </React.Suspense>
-
-
-
-      {/* LIVE EMI CALCULATOR SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* EMI CALCULATOR */}
-        <div className="glass-premium rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
-          <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
-            <Calculator className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            <h3 className="font-bold text-slate-800 dark:text-white">{t.calculatorTitle}</h3>
-          </div>
-          
-          <div className="space-y-5 text-sm">
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-slate-500">{t.projectCostLabel}</span>
-                <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(calcCost, false)}</span>
-              </div>
-              <input
-                type="range"
-                min="50000"
-                max="500000"
-                step="10000"
-                value={calcCost}
-                onChange={(e) => setCalcCost(Number(e.target.value))}
-                className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-600 dark:accent-teal-400"
-              />
-            </div>
-
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-slate-500">{t.downPaymentLabel}</span>
-                <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(calcDownPayment, false)}</span>
-              </div>
-              <input
-                type="range"
-                min="10000"
-                max={calcCost - 20000}
-                step="5000"
-                value={calcDownPayment}
-                onChange={(e) => setCalcDownPayment(Number(e.target.value))}
-                className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-600 dark:accent-teal-400"
-              />
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-slate-500">{t.durationLabel}</span>
-                <span className="font-bold text-slate-800 dark:text-white">
-                  {calcMonths} {t.monthsSuffix}
-                  {calcMonths >= 12 && (
-                    <span className="ml-1.5 text-xs text-teal-600 dark:text-teal-400 font-semibold">
-                      ({calcMonths % 12 === 0 ? calcMonths / 12 : (calcMonths / 12).toFixed(1)} {calcMonths === 12 ? (t.yearSuffix || 'Year') : (t.yearsSuffix || 'Years')})
-                    </span>
-                  )}
-                </span>
-              </div>
-              <input
-                type="range"
-                min="3"
-                max="84"
-                step="3"
-                value={calcMonths}
-                onChange={(e) => setCalcMonths(Number(e.target.value))}
-                className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-600 dark:accent-teal-400"
-              />
-              <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-medium">
-                <span>3 M</span>
-                <span>1 Yr (12M)</span>
-                <span>3 Yrs (36M)</span>
-                <span>5 Yrs (60M)</span>
-                <span className="text-teal-600 dark:text-teal-400 font-bold">7 Yrs (84M)</span>
-              </div>
-
-              {/* Quick Tenure Preset Buttons */}
-              <div className="flex flex-wrap gap-1.5 mt-2.5">
-                {[
-                  { label: '1 Yr', months: 12 },
-                  { label: '2 Yrs', months: 24 },
-                  { label: '3 Yrs', months: 36 },
-                  { label: '5 Yrs', months: 60 },
-                  { label: '7 Yrs', months: 84 },
-                ].map((item) => (
-                  <button
-                    key={item.months}
-                    type="button"
-                    onClick={() => setCalcMonths(item.months)}
-                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
-                      calcMonths === item.months
-                        ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
-                        : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/60 hover:text-teal-600 dark:hover:text-teal-400'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-teal-500/5 dark:bg-teal-400/5 border border-teal-500/20 dark:border-teal-400/10 rounded-2xl p-4 flex justify-between items-center">
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider">{t.estMonthlyEmi}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{t.reducingBalanceNote}</p>
-              </div>
-              <p className="text-3xl font-black text-teal-600 dark:text-teal-400">{formatCurrency(calcEmiResult)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* CURRENT DUES & UPI QR QUICK PAY */}
-        <div className="glass-premium rounded-3xl p-6 md:p-8 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center space-x-2 pb-3 border-b border-slate-200/50 dark:border-slate-800/50 mb-6">
-              <QrCode className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-              <h3 className="font-bold text-slate-800 dark:text-white">{t.payCurrentInstallment}</h3>
-            </div>
-            
-            {nextPendingEmi ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.currentScheduledEmi}</span>
-                    <h4 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{t.emiLabel} #{nextPendingEmi.emiNumber}</h4>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase ${
-                      customer.requestingEmi === nextPendingEmi.emiNumber
-                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300/50'
-                        : nextPendingEmi.status === 'Overdue' 
-                        ? 'bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400 border border-red-200/30'
-                        : nextPendingEmi.status === 'Due Soon'
-                        ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 border border-orange-200/30'
-                        : 'bg-teal-50 text-teal-600 dark:bg-teal-950/20 dark:text-teal-400 border border-teal-200/30'
-                    }`}>
-                      {customer.requestingEmi === nextPendingEmi.emiNumber 
-                        ? 'Verification Pending' 
-                        : nextPendingEmi.status === 'Overdue' ? t.statusOverdue : nextPendingEmi.status === 'Due Soon' ? t.statusDueSoon : t.statusActive}
-                    </span>
-                    {customer.requestingEmi === nextPendingEmi.emiNumber && customer.submittedUtr && (
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono">UTR: {customer.submittedUtr}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
-                  <div>
-                    <span className="text-slate-500">{t.emiBaseAmount}</span>
-                    <p className="font-bold text-slate-800 dark:text-white mt-0.5">{formatCurrency(nextPendingEmi.emiAmount)}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">{t.latePenaltyFee}</span>
-                    <p className={`font-bold mt-0.5 ${nextPendingEmi.lateFee > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'}`}>
-                      {formatCurrency(nextPendingEmi.lateFee)}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">{t.interestPortion}</span>
-                    <p className="font-semibold text-slate-800 dark:text-white mt-0.5">{formatCurrency(nextPendingEmi.interestPaid)}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">{t.principalPortion}</span>
-                    <p className="font-semibold text-slate-800 dark:text-white mt-0.5">{formatCurrency(nextPendingEmi.principalPaid)}</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center bg-teal-600 text-white p-4 rounded-2xl shadow-lg shadow-teal-500/10">
-                  <div>
-                    <p className="text-xs opacity-80 uppercase font-semibold">{t.totalOutstandingDue}</p>
-                    <p className="text-lg opacity-70 text-teal-100">{t.includingLateFees}</p>
-                  </div>
-                  <p className="text-3xl font-black">{formatCurrency(nextPendingEmi.emiAmount + nextPendingEmi.lateFee)}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 space-y-3">
-                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <h4 className="font-bold text-slate-800 dark:text-white">{t.allEmisPaidTitle}</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">{t.allEmisPaidDesc}</p>
-              </div>
-            )}
-          </div>
-
-          {nextPendingEmi && (
-            <button
-              onClick={() => openPaymentModal(nextPendingEmi)}
-              className="w-full mt-6 py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-2xl transition-colors shadow-lg shadow-teal-500/10 flex items-center justify-center space-x-2 outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
-            >
-              <QrCode className="w-5 h-5" />
-              <span>{t.generateQrBtn || 'Generate Quick Pay QR Code'}</span>
-            </button>
-          )}
-        </div>
-
-      </div>
+      {/* ============================================================== */}
+      {/* UNIVERSAL POPUP MODALS                                         */}
+      {/* ============================================================== */}
 
       {/* ORIGINAL QUICK PAY QR PAYMENT POPUP MODAL */}
       {showQrModal && selectedEmi && (
@@ -731,7 +1080,7 @@ export default function CustomerDashboard() {
             <div className="flex justify-center">
               <button
                 type="button"
-                onClick={handleDownloadQr}
+                onClick={() => handleDownloadQr(selectedEmi)}
                 className="py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
               >
                 <Download className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
@@ -756,9 +1105,6 @@ export default function CustomerDashboard() {
                 <Zap className="w-4 h-4 text-yellow-300 fill-current" />
                 <span>Pay via GPay / PhonePe / Paytm</span>
               </a>
-              <p className="text-[10px] text-slate-400 text-center">
-                {lang === 'ta' ? 'மொபைலில் ஜிபே, போன்பே அல்லது பேடிஎம் செயலியை நேரடியாக திறக்கும்' : 'Opens GPay / PhonePe / Paytm directly on mobile'}
-              </p>
 
               {/* Copy UPI ID Button */}
               <button
@@ -784,7 +1130,7 @@ export default function CustomerDashboard() {
               </button>
             </div>
 
-            {/* UTR Reference Input (Optional) */}
+            {/* UTR Reference Input */}
             <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 space-y-1 text-left">
               <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300">
                 {t.enterUtr || 'UPI UTR / Reference No. (Optional)'}
@@ -855,8 +1201,6 @@ export default function CustomerDashboard() {
           />
         )}
       </React.Suspense>
-
-
 
       {/* CUSTOMER SERVICE & MAINTENANCE TICKET MODAL */}
       <ServiceTicketModal 
