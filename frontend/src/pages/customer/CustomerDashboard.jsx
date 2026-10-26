@@ -23,7 +23,6 @@ const TaxInvoiceModal = React.lazy(() => import('../../components/TaxInvoiceModa
 const SanctionLetterModal = React.lazy(() => import('../../components/SanctionLetterModal.jsx'));
 import SolarTrackerCard from '../../components/SolarTrackerCard.jsx';
 import SubsidyTrackerCard from '../../components/SubsidyTrackerCard.jsx';
-import ReferralProgramCard from '../../components/ReferralProgramCard.jsx';
 import ServiceTicketModal from '../../components/ServiceTicketModal.jsx';
 import SolarCalculatorModal from '../../components/SolarCalculatorModal.jsx';
 
@@ -315,9 +314,6 @@ export default function CustomerDashboard() {
 
       {/* PM SURYA GHAR MUFT BIJLI YOJANA CENTRAL SUBSIDY TRACKER */}
       <SubsidyTrackerCard customer={customer} />
-
-      {/* REFER A NEIGHBOR / CASHBACK REWARDS HUB */}
-      <ReferralProgramCard customer={customer} />
 
       {/* SOLAR USAGE, RUNTIME, CONSUMPTION & TNEB QUICK PAY INTEGRATION */}
       <SolarTrackerCard 
