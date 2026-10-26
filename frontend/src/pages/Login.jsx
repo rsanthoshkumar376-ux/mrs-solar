@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Sun, Moon, Lock, User, ShieldAlert, Eye, EyeOff, Languages, Sparkles, ShieldCheck, ArrowRight, Zap } from 'lucide-react';
+import { Sun, Moon, Lock, User, ShieldAlert, Eye, EyeOff, Languages, Sparkles, ShieldCheck, ArrowRight, Zap, Gift } from 'lucide-react';
 import InstallAppBanner from '../components/InstallAppBanner.jsx';
 import { AppUpdateModalButton } from '../components/AppUpdateModal.jsx';
 import SolarSunriseBackground from '../components/SolarSunriseBackground.jsx';
 import SolarCalculatorModal from '../components/SolarCalculatorModal.jsx';
+import NewCustomerReferralModal from '../components/NewCustomerReferralModal.jsx';
 import AiChatbot from '../components/AiChatbot.jsx';
 import { translations, getLanguage, setLanguage } from '../utils/translations.js';
 
@@ -19,6 +20,16 @@ export default function Login() {
   const [demoLoadingRole, setDemoLoadingRole] = useState(null); // 'admin' | 'customer' | null
   const [showCalculator, setShowCalculator] = useState(false);
   const [lang, setLang] = useState(getLanguage);
+
+  // Referral URL query param detection (?ref=MRS-SOL1001 or ?code=...)
+  const [referralCode, setReferralCode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('ref') || params.get('code') || params.get('referral') || '';
+  });
+  const [showReferralModal, setShowReferralModal] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return !!(params.get('ref') || params.get('code') || params.get('referral'));
+  });
 
   useEffect(() => {
     const handleLangChange = () => setLang(getLanguage());
@@ -181,6 +192,35 @@ export default function Login() {
         {/* INSTALL APP PROMPT */}
         <div className="mb-4">
           <InstallAppBanner />
+        </div>
+
+        {/* SPECIAL REFERRAL & NEW CUSTOMER SHOWCASE BANNER */}
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => setShowReferralModal(true)}
+            className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-purple-950/90 via-indigo-950/85 to-slate-900 border border-purple-500/40 hover:border-purple-300 text-left transition-all shadow-xl hover:shadow-purple-500/25 active:scale-[0.99] group flex items-center justify-between"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 via-rose-500 to-purple-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-pink-500/30">
+                <Gift className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 pr-2">
+                <div className="flex items-center space-x-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-purple-300 bg-purple-900/60 border border-purple-500/30 px-2 py-0.5 rounded-full">
+                    {referralCode ? `${referralCode}` : (lang === 'ta' ? 'புதிய வாடிக்கையாளர் சலுகை' : 'New Customer Offer')}
+                  </span>
+                  <span className="text-[10px] text-amber-300 font-bold">
+                    ★ ₹78,000 Subsidy
+                  </span>
+                </div>
+                <h4 className="font-extrabold text-xs sm:text-sm text-white group-hover:text-purple-200 mt-0.5 truncate">
+                  {lang === 'ta' ? 'சோலார் நன்மைகள் & மத்திய மானிய விபரம்' : 'See What You Get: Solar Plans & Benefits'}
+                </h4>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform shrink-0" />
+          </button>
         </div>
 
         {/* FROSTED GLASS LOGIN CARD */}
@@ -400,6 +440,15 @@ export default function Login() {
         <SolarCalculatorModal 
           isOpen={showCalculator} 
           onClose={() => setShowCalculator(false)} 
+        />
+
+        {/* NEW CUSTOMER REFERRAL BENEFITS MODAL */}
+        <NewCustomerReferralModal 
+          isOpen={showReferralModal} 
+          onClose={() => setShowReferralModal(false)} 
+          initialCode={referralCode}
+          onOpenCalculator={() => setShowCalculator(true)}
+          onDemoTour={() => handleDemoLogin('customer')}
         />
 
         {/* 24/7 BILINGUAL AI SOLAR COPILOT */}
