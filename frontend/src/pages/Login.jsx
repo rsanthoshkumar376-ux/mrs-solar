@@ -11,7 +11,6 @@ import AiChatbot from '../components/AiChatbot.jsx';
 import { translations, getLanguage, setLanguage } from '../utils/translations.js';
 
 export default function Login() {
-  const [roleTab, setRoleTab] = useState('customer'); // 'customer' or 'admin'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +19,9 @@ export default function Login() {
   const [demoLoadingRole, setDemoLoadingRole] = useState(null); // 'admin' | 'customer' | null
   const [showCalculator, setShowCalculator] = useState(false);
   const [lang, setLang] = useState(getLanguage);
+
+  const trimmedUser = username.trim().toLowerCase();
+  const isAdminDetected = trimmedUser === 'mrsassociates' || trimmedUser.startsWith('admin') || trimmedUser === 'mrs';
 
   // Referral URL query param detection (?ref=MRS-SOL1001 or ?code=...)
   const [referralCode, setReferralCode] = useState(() => {
@@ -77,7 +79,6 @@ export default function Login() {
     const demoUser = role === 'admin' ? 'MRSassociates' : 'deepi';
     const demoPass = role === 'admin' ? '2332' : '08072454996';
 
-    setRoleTab(role);
     setUsername(demoUser);
     setPassword(demoPass);
 
@@ -135,14 +136,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const selectTab = (tab) => {
-    setRoleTab(tab);
-    setUsername('');
-    setPassword('');
-    setShowPassword(false);
-    setError('');
   };
 
   return (
@@ -316,32 +309,6 @@ export default function Login() {
             <div className="border-t border-slate-700/80 w-full"></div>
           </div>
 
-          {/* TAB HEADERS */}
-          <div className="flex space-x-1 p-1 bg-slate-950/70 rounded-2xl mb-6 border border-slate-800/80">
-            <button
-              type="button"
-              onClick={() => selectTab('customer')}
-              className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 ${
-                roleTab === 'customer'
-                  ? 'bg-teal-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {t.customerLoginTab}
-            </button>
-            <button
-              type="button"
-              onClick={() => selectTab('admin')}
-              className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 ${
-                roleTab === 'admin'
-                  ? 'bg-teal-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {t.adminLoginTab}
-            </button>
-          </div>
-
           {error && (
             <div className="flex items-center space-x-2 bg-red-500/15 border border-red-500/30 text-red-300 p-3 rounded-xl text-xs sm:text-sm mb-6">
               <ShieldAlert className="w-4 h-4 flex-shrink-0 text-red-400" />
@@ -349,12 +316,30 @@ export default function Login() {
             </div>
           )}
 
-          {/* FORM */}
+          {/* UNIFIED SINGLE SMART LOGIN FORM */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2">
-                {roleTab === 'customer' ? t.loginIdentifierLabel : t.loginIdentifierAdminLabel}
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                  {isAdminDetected 
+                    ? (lang === 'ta' ? 'நிர்வாகி பயனர்பெயர்' : 'Administrator Username')
+                    : (lang === 'ta' ? 'பயனர்பெயர் / வாடிக்கையாளர் எண் / மொபைல்' : 'Customer ID / Mobile / Username')}
+                </label>
+                <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full transition-all duration-300 ${
+                  isAdminDetected
+                    ? 'bg-purple-900/60 text-purple-300 border border-purple-500/40 shadow-sm'
+                    : trimmedUser.length > 0
+                    ? 'bg-teal-900/60 text-teal-300 border border-teal-500/40 shadow-sm'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}>
+                  {isAdminDetected 
+                    ? (lang === 'ta' ? '🛡️ நிர்வாக தளம்' : '🛡️ Owner Portal') 
+                    : trimmedUser.length > 0
+                    ? (lang === 'ta' ? '☀️ வாடிக்கையாளர் தளம்' : '☀️ Customer Portal')
+                    : (lang === 'ta' ? 'ஒற்றை உள்நுழைவு' : 'Unified Login')}
+                </span>
+              </div>
+
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                   <User className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -363,8 +348,12 @@ export default function Login() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder={roleTab === 'customer' ? t.loginIdentifierPlaceholder : t.loginIdentifierAdminPlaceholder}
-                  className="w-full bg-slate-950/70 border border-slate-700/80 focus:border-teal-400 focus:ring-1 focus:ring-teal-400 rounded-xl py-3 pl-10 pr-4 outline-none transition-all text-white placeholder:text-slate-500 text-xs sm:text-sm"
+                  placeholder={lang === 'ta' ? 'மொபைல் எண், SOL-XXXX அல்லது பயனர்பெயர்' : 'Mobile No, Customer ID (SOL-XXXX), or Username'}
+                  className={`w-full bg-slate-950/70 border rounded-xl py-3 pl-10 pr-4 outline-none transition-all text-white placeholder:text-slate-500 text-xs sm:text-sm ${
+                    isAdminDetected
+                      ? 'border-purple-500/60 focus:border-purple-400 focus:ring-1 focus:ring-purple-400'
+                      : 'border-slate-700/80 focus:border-teal-400 focus:ring-1 focus:ring-teal-400'
+                  }`}
                 />
               </div>
             </div>
@@ -374,11 +363,13 @@ export default function Login() {
                 <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
                   {t.passwordLabel}
                 </label>
-                {roleTab === 'customer' && (
-                  <span className="text-[11px] text-teal-400 font-medium">
-                    {t.passwordHint}
-                  </span>
-                )}
+                <span className={`text-[11px] font-medium transition-colors ${
+                  isAdminDetected ? 'text-purple-300 font-bold' : 'text-teal-400'
+                }`}>
+                  {isAdminDetected
+                    ? (lang === 'ta' ? 'நிர்வாக முதன்மை கடவுச்சொல் / PIN' : 'Master PIN or Admin Password')
+                    : (lang === 'ta' ? 'இயல்புநிலை: 10-இலக்க மொபைல் எண்' : 'Default: 10-digit mobile number')}
+                </span>
               </div>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
@@ -388,8 +379,14 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={roleTab === 'customer' ? t.passwordPlaceholderCustomer : t.passwordPlaceholderAdmin}
-                  className="w-full bg-slate-950/70 border border-slate-700/80 focus:border-teal-400 focus:ring-1 focus:ring-teal-400 rounded-xl py-3 pl-10 pr-11 outline-none transition-all text-white placeholder:text-slate-500 text-xs sm:text-sm"
+                  placeholder={isAdminDetected 
+                    ? (lang === 'ta' ? 'நிர்வாக கடவுச்சொல் உள்ளிடவும்' : 'Enter Admin Password') 
+                    : (lang === 'ta' ? '10-இலக்க மொபைல் எண் உள்ளிடவும்' : 'Enter 10-digit mobile number')}
+                  className={`w-full bg-slate-950/70 border rounded-xl py-3 pl-10 pr-11 outline-none transition-all text-white placeholder:text-slate-500 text-xs sm:text-sm ${
+                    isAdminDetected
+                      ? 'border-purple-500/60 focus:border-purple-400 focus:ring-1 focus:ring-purple-400'
+                      : 'border-slate-700/80 focus:border-teal-400 focus:ring-1 focus:ring-teal-400'
+                  }`}
                 />
                 <button
                   type="button"
@@ -410,15 +407,21 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-teal-600 hover:bg-teal-500 disabled:bg-teal-600/50 text-white font-bold rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 focus:ring-offset-slate-900 text-xs sm:text-sm active:scale-[0.99]"
+              className={`w-full py-3.5 text-white font-bold rounded-xl transition-all shadow-lg outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 text-xs sm:text-sm active:scale-[0.99] ${
+                isAdminDetected
+                  ? 'bg-purple-600 hover:bg-purple-500 focus:ring-purple-400 shadow-purple-500/25 hover:shadow-purple-500/40'
+                  : 'bg-teal-600 hover:bg-teal-500 focus:ring-teal-400 shadow-teal-500/25 hover:shadow-teal-500/40'
+              }`}
             >
               {loading ? (
                 <div className="flex items-center justify-center space-x-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>{t.loggingInBtn}</span>
                 </div>
+              ) : isAdminDetected ? (
+                (lang === 'ta' ? 'நிர்வாகியாக உள்நுழைக' : 'Sign In as Owner / Admin')
               ) : (
-                t.signInBtn
+                (lang === 'ta' ? 'உள்நுழைக' : 'Sign In to Portal')
               )}
             </button>
           </form>
