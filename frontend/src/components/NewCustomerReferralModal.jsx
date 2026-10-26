@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { OWNER_PAYMENT_PHONE } from '../utils/whatsapp.js';
 
-export default function NewCustomerReferralModal({ isOpen, onClose, initialCode = '', onOpenCalculator, onDemoTour }) {
+export default function NewCustomerReferralModal({ isOpen, onClose, initialCode = '', onOpenCalculator }) {
   const [selectedKw, setSelectedKw] = useState(3);
   const [copiedCode, setCopiedCode] = useState(false);
   const [lang, setLang] = useState(() => localStorage.getItem('appLanguage') || 'en');
@@ -364,19 +364,13 @@ Please help me book a Free Rooftop Solar Survey & Consultation for my property.`
               </button>
             )}
 
-            {onDemoTour && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onDemoTour();
-                }}
-                className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-teal-400 hover:text-white flex items-center justify-center space-x-1.5 transition-colors border border-slate-700"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{isTa ? 'டெமோ பார்' : 'View Demo'}</span>
-              </button>
-            )}
+            <a
+              href="tel:+918072454996"
+              className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-teal-400 hover:text-white flex items-center justify-center space-x-1.5 transition-colors border border-slate-700"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>{isTa ? 'அழைக்க' : 'Call Helpline'}</span>
+            </a>
           </div>
 
           <button

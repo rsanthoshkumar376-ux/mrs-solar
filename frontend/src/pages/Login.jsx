@@ -448,7 +448,6 @@ export default function Login() {
           onClose={() => setShowReferralModal(false)} 
           initialCode={referralCode}
           onOpenCalculator={() => setShowCalculator(true)}
-          onDemoTour={() => handleDemoLogin('customer')}
         />
 
         {/* 24/7 BILINGUAL AI SOLAR COPILOT */}
