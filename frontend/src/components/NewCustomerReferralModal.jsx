@@ -254,14 +254,23 @@ Please help me book a Free Rooftop Solar Survey & Consultation for my property.`
             </div>
 
             {/* Responsive 16:9 Video Player */}
-            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-inner">
-              <iframe
-                src="https://drive.google.com/file/d/1M6Alo9HbaIfD93t7RwWT_OXPcJCwtuRN/preview"
-                title="MRS Solar Rooftop Video"
-                className="w-full h-full border-0"
-                allow="autoplay; encrypted-media; fullscreen"
-                allowFullScreen
-              />
+            <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-2xl flex items-center justify-center">
+              <video
+                controls
+                playsInline
+                preload="metadata"
+                className="w-full h-full object-contain rounded-2xl"
+                src="/solar-video.mp4"
+              >
+                <source src="/solar-video.mp4" type="video/mp4" />
+                <iframe
+                  src="https://drive.google.com/file/d/1M6Alo9HbaIfD93t7RwWT_OXPcJCwtuRN/preview"
+                  title="MRS Solar Rooftop Video"
+                  className="w-full h-full border-0"
+                  allow="autoplay; encrypted-media; fullscreen"
+                  allowFullScreen
+                />
+              </video>
             </div>
             <p className="text-[11px] text-slate-400 text-center">
               {isTa ? 'முழுத்திரையில் பார்க்க வீடியோவின் கீழ் வலது மூலையில் உள்ள ஐகானை அழுத்தவும்' : 'Click the full-screen icon at the bottom right of the player to watch full screen'}
