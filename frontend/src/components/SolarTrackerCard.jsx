@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Sun, Zap, Clock, Home, ArrowUpRight, TrendingUp, Calendar, 
-  PlusCircle, CheckCircle2, ExternalLink, Copy, Check, BatteryCharging,
+  PlusCircle, CheckCircle2, ExternalLink, Copy, Check, IndianRupee,
   ShieldCheck, Leaf, Wifi, Cpu, Calculator, Radio, Sparkles, RefreshCw, X
 } from 'lucide-react';
 import { formatCurrency } from '../utils/format.js';
@@ -25,18 +25,24 @@ export default function SolarTrackerCard({
   const [iotSynced, setIotSynced] = useState(false);
   const [biMonthlyConsumption, setBiMonthlyConsumption] = useState(500);
 
+  // Net Meter Tally & Calculation View Tab ('verified' | 'simulator')
+  const netMeterTally = solarStats?.netMeterTally || null;
+  const isVerifiedTally = Boolean(netMeterTally?.isVerified);
+  const [calcViewTab, setCalcViewTab] = useState(() => isVerifiedTally ? 'verified' : 'simulator');
+
   // AI Solar Health Diagnostic State
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDiagnostic, setAiDiagnostic] = useState(null);
 
-  // Form state for logging reading
+  // Form state for logging reading (includes bi-directional net meter import & export)
   const [logForm, setLogForm] = useState({
     date: new Date().toISOString().split('T')[0],
     unitsGenerated: '',
     runtimeHours: '',
     unitsConsumed: '',
     gridExport: '',
+    gridImport: '',
     notes: ''
   });
 
@@ -45,6 +51,7 @@ export default function SolarTrackerCard({
     runtimeHours: 7.5,
     unitsConsumed: Math.round((Number(customer?.solarCapacity) || 3) * 3.1 * 10) / 10,
     gridExport: Math.round((Number(customer?.solarCapacity) || 3) * 1.2 * 10) / 10,
+    gridImport: Math.round((Number(customer?.solarCapacity) || 3) * 1.5 * 10) / 10,
     savingsAmount: Math.round((Number(customer?.solarCapacity) || 3) * 4.3 * 6.5)
   };
 
@@ -86,7 +93,8 @@ export default function SolarTrackerCard({
             runtimeHours: iotDongle.runtime,
             unitsConsumed: Math.round(iotDongle.todayYield * 0.72 * 10) / 10,
             gridExport: Math.round(iotDongle.todayYield * 0.28 * 10) / 10,
-            notes: `Auto-synced via ${iotDongle.brand} IoT Dongle (S/N: ${iotDongle.serialNo})`
+            gridImport: Math.round(iotDongle.todayYield * 0.35 * 10) / 10,
+            notes: `Auto-synced via ${iotDongle.brand} On-Grid IoT Dongle (S/N: ${iotDongle.serialNo})`
           });
           setTimeout(() => {
             setShowIotModal(false);
@@ -146,6 +154,7 @@ export default function SolarTrackerCard({
         runtimeHours: '',
         unitsConsumed: '',
         gridExport: '',
+        gridImport: '',
         notes: ''
       });
     } catch (err) {
@@ -229,11 +238,19 @@ export default function SolarTrackerCard({
               <Sun className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                {t.solarTrackingTitle || 'Daily Solar Generation & Runtime'}
-              </h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-bold text-lg text-slate-800 dark:text-white">
+                  {t.solarTrackingTitle || 'Daily Solar Generation & Runtime'}
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-100 text-teal-800 dark:bg-teal-950/80 dark:text-teal-300 border border-teal-300/50 flex items-center space-x-1">
+                  <Zap className="w-3 h-3 text-teal-600 fill-current" />
+                  <span>{lang === 'ta' ? 'பேட்டரி இல்லாத ஆன்-கிரிட் கட்டமைப்பு' : 'Battery-Free On-Grid System'}</span>
+                </span>
+              </div>
               <p className="text-xs text-slate-500">
-                {t.solarTrackingSubtitle || 'Energy produced by your panels, inverter runtime, and daily EB savings.'}
+                {lang === 'ta'
+                  ? 'கிரிட்-இணைக்கப்பட்ட இன்வெர்ட்டர், இருவழி நெட்-மீட்டர் மற்றும் TNEB மின் கட்டண சேமிப்பு'
+                  : (t.solarTrackingSubtitle || 'On-grid inverter, bi-directional net meter, and verified TNEB bill tallying.')}
               </p>
             </div>
           </div>
@@ -287,115 +304,263 @@ export default function SolarTrackerCard({
         {/* TANGEDCO BI-MONTHLY NET-METER CALCULATOR ACCORDION */}
         {showCalculator && (
           <div className="my-6 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-500/[0.07] via-slate-50 dark:via-slate-900 to-yellow-500/[0.05] border border-amber-300 dark:border-amber-800/60 shadow-lg animate-fade-in space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-amber-200/60 dark:border-amber-800/40 gap-2">
+            
+            {/* ACCORDION HEADER WITH TABS & TARIFF BADGE */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-amber-200/60 dark:border-amber-800/40 gap-3">
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0">
                   <Calculator className="w-4 h-4" />
                 </div>
                 <div>
                   <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                    {lang === 'ta' ? 'TANGEDCO இருமாத நெட்-மீட்டர் கட்டண கால்குலேட்டர்' : 'TANGEDCO Bi-Monthly Solar Net-Meter Calculator'}
+                    {lang === 'ta' ? 'TANGEDCO இருமாத நெட்-மீட்டர் பில் கணக்கீடு' : 'TANGEDCO Bi-Monthly Solar Net-Meter Bill Tally'}
                   </h4>
                   <p className="text-[11px] text-slate-500">
-                    {lang === 'ta' ? 'தமிழ்நாடு அரசு 100 இலவச யூனிட்கள் & சோலார் கழிவுடன் கூடிய அதிகாரப்பூர்வ கட்டண மதிப்பீடு' : 'Official Tamil Nadu LT-1A Domestic Tariff model with 100 Free Units & Solar offset'}
+                    {lang === 'ta' ? 'பேட்டரி இல்லாத ஆன்-கிரிட் இருவழி மீட்டர் அளவீடுகள் & 100 இலவச யூனிட்கள் கழிவு' : 'Battery-free on-grid bi-directional import/export meter tally with 100 Free Units'}
                   </p>
                 </div>
               </div>
-              <span className="self-start sm:self-auto px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 border border-amber-300">
-                TNERC Tariff Order 2026
-              </span>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* INPUT SLIDER */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-3">
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                  {lang === 'ta' ? 'இருமாத மின்தேவை (Grid Consumption):' : 'Bi-Monthly Grid Consumption:'}
-                </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="range"
-                    min="50"
-                    max="1500"
-                    step="10"
-                    value={biMonthlyConsumption}
-                    onChange={(e) => setBiMonthlyConsumption(Number(e.target.value))}
-                    className="w-full accent-amber-600 cursor-pointer"
-                  />
-                  <span className="font-mono font-bold text-sm text-amber-700 dark:text-amber-400 min-w-[65px] text-right">
-                    {biMonthlyConsumption} kWh
-                  </span>
-                </div>
-                <div className="text-[10px] text-slate-500 flex justify-between">
-                  <span>50 Units</span>
-                  <span>500 (Typical)</span>
-                  <span>1500 Units</span>
-                </div>
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
-                  <p><strong>Rooftop Solar Plant:</strong> {capacity} kWp</p>
-                  <p><strong>Bi-Monthly Solar Yield:</strong> ~{biMonthlySolarUnits} Units</p>
-                </div>
-              </div>
-
-              {/* BEFORE & AFTER BILL MATRIX */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
-                <h5 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] border-b pb-1">
-                  {lang === 'ta' ? 'மின் கட்டண ஒப்பீடு' : 'Electricity Bill Comparison'}
-                </h5>
-                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
-                  <span>Bill WITHOUT Solar:</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-white line-through text-red-500">
-                    {formatCurrency(netMeterCalc.grossBill, false)}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
-                  <span>Solar Net-Meter Credit:</span>
-                  <span className="font-mono font-bold text-emerald-600">
-                    - {Math.min(biMonthlyConsumption, biMonthlySolarUnits)} Units
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 font-bold text-slate-900 dark:text-white text-sm">
-                  <span>Net Bill WITH Solar:</span>
-                  <span className={netMeterCalc.netBill === 0 ? "font-black text-emerald-600" : "font-black text-amber-600"}>
-                    {netMeterCalc.netBill === 0 ? "₹0.00 (FREE)" : formatCurrency(netMeterCalc.netBill, false)}
-                  </span>
-                </div>
-                {netMeterCalc.isFreeTier && (
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                    ✓ Tamil Nadu 100 Free Units Applied
-                  </span>
-                )}
-                {netMeterCalc.surplusUnits > 0 && (
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300">
-                    +{netMeterCalc.surplusUnits} Surplus Solar Units Banked
-                  </span>
-                )}
-              </div>
-
-              {/* POCKET SAVINGS HIGHLIGHT */}
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-300 dark:border-emerald-700/60 flex flex-col justify-between">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400">
-                    {lang === 'ta' ? 'இருமாத நிகர மிச்சம்' : 'Bi-Monthly Net Savings'}
-                  </span>
-                  <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">
-                    {formatCurrency(netMeterCalc.biMonthlySavings, false)}
-                  </p>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                    Direct cash saved on each bi-monthly TNEB billing cycle.
-                  </p>
-                </div>
-
-                <div className="mt-3 pt-2 border-t border-emerald-200 dark:border-emerald-800">
-                  <span className="text-[10px] font-bold uppercase text-slate-500">
-                    {lang === 'ta' ? 'வருடாந்திர மிச்சம் (Projected)' : 'Projected Annual Savings'}
-                  </span>
-                  <p className="text-lg font-bold text-teal-800 dark:text-teal-200">
-                    {formatCurrency(netMeterCalc.annualSavings, false)} / year
-                  </p>
-                </div>
+              {/* VIEW MODE TABS */}
+              <div className="flex items-center space-x-1.5 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setCalcViewTab('verified')}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                    calcViewTab === 'verified'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  ⚡ {lang === 'ta' ? 'உண்மை மீட்டர் பில்' : 'Actual Meter Tally'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCalcViewTab('simulator')}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                    calcViewTab === 'simulator'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  📊 {lang === 'ta' ? 'பயன்பாட்டு மாதிரி' : 'Usage Simulator'}
+                </button>
+                <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 border border-amber-300">
+                  TNERC LT-1A
+                </span>
               </div>
             </div>
+
+            {/* TAB CONTENT */}
+            {calcViewTab === 'verified' ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* 1. METER READINGS COLUMN */}
+                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between border-b pb-1.5">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px]">
+                      {lang === 'ta' ? 'இருவழி மீட்டர் அளவீடுகள்' : 'Bi-Directional Meter Readings'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      isVerifiedTally
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                    }`}>
+                      {isVerifiedTally ? '✓ Verified Actuals' : 'Projected Baseline'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                    <span>{lang === 'ta' ? 'TNEB கிரிட் பயன்பாடு (Import):' : 'TNEB Grid Import:'}</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      {netMeterTally?.biMonthlyImport || 320} Units
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                    <span>{lang === 'ta' ? 'சோலார் மின்சார ஏற்றுமதி (Export):' : 'Solar Grid Export:'}</span>
+                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      - {netMeterTally?.biMonthlyExport || 280} Units
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between py-1 font-bold text-slate-900 dark:text-white text-xs border-b border-slate-100 dark:border-slate-800">
+                    <span>{lang === 'ta' ? 'நிகர கணக்கீட்டு அலகுகள் (Net Units):' : 'Net Billed Units (Import - Export):'}</span>
+                    <span className="font-mono font-black text-amber-600 dark:text-amber-400">
+                      {netMeterTally?.netUnits !== undefined ? netMeterTally.netUnits : Math.max(0, 320 - 280)} Units
+                    </span>
+                  </div>
+
+                  <div className="pt-1 text-[11px] text-slate-500">
+                    <p><strong>System:</strong> {capacity} kWp Battery-Free On-Grid</p>
+                    <p><strong>Inverter:</strong> {customer?.solarBrand || 'On-Grid String Inverter'}</p>
+                  </div>
+                </div>
+
+                {/* 2. BILL COMPARISON MATRIX */}
+                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                  <h5 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] border-b pb-1.5">
+                    {lang === 'ta' ? 'TNEB கட்டண ஒப்பீடு' : 'TNEB Electricity Bill Comparison'}
+                  </h5>
+                  <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                    <span>Bill WITHOUT Solar:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white line-through text-red-500">
+                      {formatCurrency(netMeterTally?.grossBill || 765, false)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                    <span>100 Free Units Subsidy:</span>
+                    <span className="font-mono font-bold text-emerald-600">
+                      - 100 Units FREE
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 font-bold text-slate-900 dark:text-white text-sm">
+                    <span>Net Bill WITH Solar:</span>
+                    <span className={(netMeterTally?.netBill ?? 0) === 0 ? "font-black text-emerald-600" : "font-black text-amber-600"}>
+                      {(netMeterTally?.netBill ?? 0) === 0 ? "₹0.00 (100% FREE)" : formatCurrency(netMeterTally?.netBill || 0, false)}
+                    </span>
+                  </div>
+                  {(netMeterTally?.isFreeTier ?? true) && (
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                      ✓ Tamil Nadu 100 Free Units Applied
+                    </span>
+                  )}
+                  {(netMeterTally?.bankedUnits || 0) > 0 && (
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300">
+                      +{netMeterTally.bankedUnits} Surplus Solar Units Banked (Carried Forward)
+                    </span>
+                  )}
+                </div>
+
+                {/* 3. POCKET SAVINGS COLUMN */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-300 dark:border-emerald-700/60 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400">
+                      {lang === 'ta' ? 'இருமுறை TNEB மிச்சம்' : 'Bi-Monthly Net Cash Savings'}
+                    </span>
+                    <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">
+                      {formatCurrency(netMeterTally?.biMonthlySavings || 765, false)}
+                    </p>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
+                      Direct cash saved on your actual bi-monthly TNEB electricity cycle.
+                    </p>
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-emerald-200 dark:border-emerald-800">
+                    <span className="text-[10px] font-bold uppercase text-slate-500">
+                      {lang === 'ta' ? 'ஆண்டு சேமிப்பு' : 'Projected Annual Savings'}
+                    </span>
+                    <p className="text-lg font-bold text-teal-800 dark:text-teal-200">
+                      {formatCurrency(netMeterTally?.annualSavings || (765 * 6), false)} / year
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* SIMULATOR SLIDER */
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'ta' ? 'மாதிரி இருமாத மின்தேவை:' : 'Simulated Grid Consumption:'}
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="range"
+                      min="50"
+                      max="1500"
+                      step="10"
+                      value={biMonthlyConsumption}
+                      onChange={(e) => setBiMonthlyConsumption(Number(e.target.value))}
+                      className="w-full accent-amber-600 cursor-pointer"
+                    />
+                    <span className="font-mono font-bold text-sm text-amber-700 dark:text-amber-400 min-w-[65px] text-right">
+                      {biMonthlyConsumption} kWh
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 flex justify-between">
+                    <span>50 Units</span>
+                    <span>500 (Typical)</span>
+                    <span>1500 Units</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
+                    <p><strong>Rooftop Solar Plant:</strong> {capacity} kWp</p>
+                    <p><strong>Bi-Monthly Solar Yield:</strong> ~{biMonthlySolarUnits} Units</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                  <h5 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] border-b pb-1">
+                    {lang === 'ta' ? 'மின் கட்டண ஒப்பீடு' : 'Electricity Bill Comparison'}
+                  </h5>
+                  <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                    <span>Bill WITHOUT Solar:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white line-through text-red-500">
+                      {formatCurrency(netMeterCalc.grossBill, false)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                    <span>Solar Net-Meter Credit:</span>
+                    <span className="font-mono font-bold text-emerald-600">
+                      - {Math.min(biMonthlyConsumption, biMonthlySolarUnits)} Units
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 font-bold text-slate-900 dark:text-white text-sm">
+                    <span>Net Bill WITH Solar:</span>
+                    <span className={netMeterCalc.netBill === 0 ? "font-black text-emerald-600" : "font-black text-amber-600"}>
+                      {netMeterCalc.netBill === 0 ? "₹0.00 (FREE)" : formatCurrency(netMeterCalc.netBill, false)}
+                    </span>
+                  </div>
+                  {netMeterCalc.isFreeTier && (
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                      ✓ Tamil Nadu 100 Free Units Applied
+                    </span>
+                  )}
+                  {netMeterCalc.surplusUnits > 0 && (
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300">
+                      +{netMeterCalc.surplusUnits} Surplus Solar Units Banked
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-300 dark:border-emerald-700/60 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400">
+                      {lang === 'ta' ? 'மாதிரி இருமாத மிச்சம்' : 'Simulated Net Savings'}
+                    </span>
+                    <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">
+                      {formatCurrency(netMeterCalc.biMonthlySavings, false)}
+                    </p>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
+                      Direct cash saved on each bi-monthly TNEB billing cycle.
+                    </p>
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-emerald-200 dark:border-emerald-800">
+                    <span className="text-[10px] font-bold uppercase text-slate-500">
+                      {lang === 'ta' ? 'வருடாந்திர மிச்சம்' : 'Projected Annual Savings'}
+                    </span>
+                    <p className="text-lg font-bold text-teal-800 dark:text-teal-200">
+                      {formatCurrency(netMeterCalc.annualSavings, false)} / year
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* BATTERY-FREE ON-GRID SYSTEM ARCHITECTURE NOTE */}
+            <div className="p-3.5 rounded-2xl bg-teal-50/80 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/60 text-xs text-teal-900 dark:text-teal-200 flex items-start space-x-2.5">
+              <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold">
+                  {lang === 'ta' ? 'பேட்டரி இல்லாத ஆன்-கிரிட் நெட்-மீட்டரிங் முறைமை:' : '100% Battery-Free On-Grid Net-Metering Standard:'}
+                </p>
+                <p className="text-[11px] text-teal-800 dark:text-teal-300 leading-relaxed">
+                  {lang === 'ta'
+                    ? 'பகலில் சோலார் மின்சாரம் உங்கள் வீட்டின் உபயோகத்திற்கு நேரடியாகச் செல்கிறது. உபரி மின்சாரம் TNEB கிரிட்டுக்கு ஏற்றுமதி செய்யப்பட்டு, யூனிட்-டு-யூனிட் கழிவாக வழங்கப்படுகிறது. இரவில் கிரிட் மூலம் மின்சாரம் பெறப்படும். பேட்டரி பராமரிப்பு அல்லது மாற்று செலவுகள் முற்றிலும் இல்லை!'
+                    : 'Daytime solar powers your appliances directly; surplus generation is fed into the TNEB grid via the bi-directional net meter. At night, power is imported from TNEB. Your bi-monthly bill is calculated on Net Units (Import minus Export) with 100 Free Units applied. Zero batteries, zero replacement costs.'}
+                </p>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -461,7 +626,7 @@ export default function SolarTrackerCard({
           <div className="col-span-2 md:col-span-1 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/20 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800/50">
             <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 mb-1">
               <span className="text-[10px] font-bold uppercase tracking-wider">{t.todaySavings || "Today's Savings"}</span>
-              <BatteryCharging className="w-4 h-4" />
+              <TrendingUp className="w-4 h-4" />
             </div>
             <p className="text-xl sm:text-2xl font-black text-emerald-700 dark:text-emerald-300">
               {formatCurrency(today.savingsAmount, false)}
@@ -615,6 +780,7 @@ export default function SolarTrackerCard({
                     onChange={(e) => setLogForm(prev => ({ ...prev, unitsConsumed: e.target.value }))}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white"
                   />
+                  <span className="text-[10px] text-slate-400">Direct daytime self-use</span>
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-500 mb-1">{t.gridExport || 'Grid Export (kWh)'}</label>
@@ -626,7 +792,23 @@ export default function SolarTrackerCard({
                     onChange={(e) => setLogForm(prev => ({ ...prev, gridExport: e.target.value }))}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white"
                   />
+                  <span className="text-[10px] text-slate-400">Exported to net meter</span>
                 </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-500 mb-1">
+                  {lang === 'ta' ? 'TNEB கிரிட் பயன்பாடு - இறக்குமதி (kWh)' : 'TNEB Grid Import (kWh)'}
+                </label>
+                <input 
+                  type="number" 
+                  step="0.1" 
+                  placeholder="e.g. 6.5 (Night/grid power drawn)"
+                  value={logForm.gridImport} 
+                  onChange={(e) => setLogForm(prev => ({ ...prev, gridImport: e.target.value }))}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white"
+                />
+                <span className="text-[10px] text-slate-400 block mt-0.5">Bi-directional net meter import register reading</span>
               </div>
 
               <div>

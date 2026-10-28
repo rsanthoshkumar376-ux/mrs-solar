@@ -334,7 +334,7 @@ Please check the spelling or ask about one of the registered customers above!`;
   // 10. SOLAR GENERATION & BENCHMARKS (General)
   if (
     /(generat|electric|power|solar.*units?|rooftop.*power|output|produce|production|yield|how much.*(solar|electr|unit|power)|கரண்ட்|மின்சாரம்|உற்பத்தி|யூனிட்|தயாரிக்கும்)/i.test(query) &&
-    !/(cost|price|quotation|subsidy|emi|due|clean|wash|dust|service|maintenance|warranty|contact|phone|help|number)/i.test(query)
+    !/(cost|price|quotation|subsidy|emi|due|clean|wash|dust|service|maintenance|warranty|contact|phone|help|number|battery|batteries|backup|cut|outage|ups|off-grid|hybrid|load shedding|பேட்டரி|மின்வெட்டு)/i.test(query)
   ) {
     if (isTa) {
       return `தமிழ்நாட்டின் சராசரி 4.4 மணிநேர சூரிய வெளிச்சத்தில் சோலார் உற்பத்தி விவரங்கள்:
@@ -418,22 +418,52 @@ For any expedited liaisoning, contact MRS SOLAR support: 📞 +91 80724 54996`;
   }
 
   // 12. TNEB / TANGEDCO NET-METERING & BILL SAVINGS
-  if (/(tangedco|tneb|net meter|metering|bi-monthly|tariff|slab|lt-1a|100 free|100 unit|eb bill|electricity bill|bill saving|surplus|grid export|மின்வாரியம்|டான்ஜெட்கோ|நெட் மீட்டர்|கரண்ட் பில்|ஈபி பில்|இலவச மின்சாரம்|100 யூனிட்|சேமிப்பு)/i.test(query)) {
+  if (/(tangedco|tneb|net meter|metering|bi-monthly|tariff|slab|lt-1a|100 free|100 unit|eb bill|electricity bill|bill saving|surplus|grid export|grid import|import.*export|bill tally|tally|மின்வாரியம்|டான்ஜெட்கோ|நெட் மீட்டர்|கரண்ட் பில்|ஈபி பில்|இலவச மின்சாரம்|100 யூனிட்|சேமிப்பு|பில் கணக்கீடு)/i.test(query)) {
     if (isTa) {
-      return `தமிழ்நாடு மின்சார ஒழுங்குமுறை ஆணையத்தின் (TNERC LT-1A) சோலார் நெட்-மீட்டரிங் விதிகள்:
+      return `தமிழ்நாடு மின்சார ஒழுங்குமுறை ஆணையத்தின் (TNERC LT-1A) ஆன்-கிரிட் சோலார் நெட்-மீட்டர் பில் கணக்கீடு முறை:
 
-1. **முதல் 100 யூனிட்கள் இலவசம்**: தமிழக அரசின் வழிகாட்டுதலின்படி முதல் 100 யூனிட் எப்போதும் இலவசம்.
-2. **இருவழி நெட்-மீட்டர் (Net Metering)**: பகலில் நீங்கள் பயன்படுத்தியது போக உபரி சோலார் மின்சாரம் தானாகவே TNEB கட்டமைப்புக்கு (Grid) செல்லும்.
-3. **யூனிட் கழிவு**: இருமாத கணக்கீட்டில் நீங்கள் பயன்படுத்திய யூனிட்களில் இருந்து சோலார் ஏற்றுமதி கழித்துக் கொள்ளப்படும்.
-4. **உபரி சேமிப்பு**: உற்பத்தி அதிகமாக இருந்தால், உபரி யூனிட்கள் அடுத்த இருமாத பில்லுக்கு எடுத்துச் செல்லப்படும் (Rollover). இதனால் கரண்ட் பில் கிட்டத்தட்ட ₹0 ஆக குறையும்!`;
+1. **இருவழி மீட்டர் அளவீடு (Bi-Directional Readings)**:
+   • **Grid Import**: இரவு மற்றும் மேகமூட்ட நேரங்களில் TNEB கிரிட்டில் இருந்து நீங்கள் பயன்படுத்திய அலகுகள்.
+   • **Grid Export**: பகலில் உங்கள் வீட்டு உபயோகம் போக TNEB-க்கு ஏற்றுமதி செய்யப்பட்ட உபரி சோலார் அலகுகள்.
+2. **நிகர கணக்கீட்டு அலகுகள் (Net Units)**:
+   • \`நிகர அலகுகள் = கிரிட் பயன்பாடு (Import) - சோலார் ஏற்றுமதி (Export)\`.
+3. **முதல் 100 யூனிட்கள் 100% இலவசம்**: தமிழக அரசு வழங்கும் 100 இலவச யூனிட்கள் இந்த நிகர அலகுகளுக்கு பொருந்தும். நிகர அலகுகள் 100-க்குள் இருந்தால் பில் **₹0.00**!
+4. **உபரி சேமிப்பு (Banked Energy Credit)**: சோலார் ஏற்றுமதி பயன்பாட்டை விட அதிகமாக இருந்தால் (\`Export > Import\`), உபரி அலகுகள் அடுத்த இருமாத பில்லுக்கு வரவு வைக்கப்படும்.
+5. **விலை உயர்ந்த ஸ்லாப்கள் ரத்து**: TNEB-ன் அதிகபட்ச கட்டண ஸ்லாப்கள் (₹6 - ₹11/யூனிட்) சோலார் மூலம் முதலில் கழிக்கப்படுவதால் 85% முதல் 100% வரை மின் கட்டணம் மிச்சமாகும்!`;
     }
 
-    return `TANGEDCO / TNERC Tariff LT-1A Domestic Net-Metering Rules:
+    return `TANGEDCO / TNERC Tariff LT-1A Domestic Net-Metering & Bill Tallying Architecture:
 
-1. **First 100 Units Free**: The first 100 units bi-monthly remain 100% free under the Tamil Nadu Government scheme.
-2. **1:1 Bi-directional Credit**: Excess solar units exported to the grid during daylight are credited 1:1 against your evening consumption.
-3. **High Slab Elimination**: TNEB domestic tariffs charge up to ₹11.00/unit for higher consumption slabs. Solar completely wipes out these expensive slabs first!
-4. **Credit Rollover**: Unused solar credits roll over to future billing cycles, driving your bi-monthly electricity bill to near zero!`;
+1. **Bi-Directional Meter Registers**:
+   • **Grid Import (kWh)**: Units drawn from the TNEB grid at night or during high household load.
+   • **Grid Export (kWh)**: Surplus solar units pushed into the TNEB grid after instant daytime home self-use.
+2. **Net Billed Units Equation**:
+   • \`Net Billed Units = max(0, Grid Import - Grid Export - Banked Credit)\`.
+3. **100 Free Units Subsidy**: Tamil Nadu's 100 Free Units domestic subsidy applies directly to your Net Billed Units. If Net Units ≤ 100, your energy charges are **₹0.00 (100% FREE)**!
+4. **Banked Surplus Energy Rollover**: If solar export exceeds grid import, surplus units are banked as energy credits and carried forward to offset future billing cycles.
+5. **High Slab Elimination**: High TNEB telescopic tiers (up to ₹11.00/unit) are eliminated first, yielding typical bi-monthly bill reductions of 90% to 100%!`;
+  }
+
+  // 12b. BATTERY-FREE ON-GRID SYSTEM ARCHITECTURE & POWER CUT / BACKUP QUERIES
+  if (/(battery|batteries|backup|power cut|current cut|current poiruchu|ups|off grid|off-grid|hybrid|blackout|outage|load shedding|inverter battery|பேட்டரி|பேட்டரியா|மின்வெட்டு|கரண்ட் போனா|பேக் அப்)/i.test(query)) {
+    if (isTa) {
+      return `MRS SOLAR அமைப்பது **100% பேட்டரி இல்லாத ஆன்-கிரிட் (Battery-Free On-Grid) சோலார் கட்டமைப்பு** ஆகும்:
+
+1. **பேட்டரிகள் முற்றிலும் தேவையில்லை**: 3-5 ஆண்டுகளுக்கு ஒருமுறை மாற்ற வேண்டிய விலை உயர்ந்த ரசாயன பேட்டரிகள் இதில் கிடையாது (₹80,000+ பராமரிப்பு செலவு மிச்சம்).
+2. **நேரடி பயன்பாடு & நெட்-மீட்டர்**: பகலில் சோலார் மின்சாரம் உங்கள் வீட்டின் உபயோகத்திற்கு நேரடியாக பயன்படும்; மீதமுள்ள மின்சாரம் TNEB கிரிட்டுக்கு இருவழி நெட்-மீட்டர் மூலம் ஏற்றுமதி செய்யப்படும்.
+3. **இரவு நேர பயன்பாடு**: இரவில் தேவையான மின்சாரம் வழக்கம்போல TNEB கிரிட் மூலமாக பெறப்படும்.
+4. **மின்வெட்டு (Power Cut) போது என்ன நடக்கும்?**: மத்திய மின்சார ஆணையத்தின் (CEA / TNERC) பாதுகாப்பு விதிகளின்படி, TNEB மின்கம்பங்களில் வேலை செய்யும் ஊழியர்களின் பாதுகாப்புக்காக (**Anti-Islanding Safety**), மின்வெட்டின் போது ஆன்-கிரிட் இன்வெர்ட்டர் தானாகவே பாதுகாப்பாக நின்றுவிடும்.
+5. **பில் மிச்சம்**: உங்கள் இருமாத பில்லில் கிரிட் இறக்குமதியில் இருந்து சோலார் ஏற்றுமதி கழிக்கப்பட்டு (Import - Export), 100 இலவச யூனிட்களும் பொருந்தி பில் ₹0 ஆக குறையும்!`;
+    }
+
+    return `MRS SOLAR installs **100% Battery-Free On-Grid (Grid-Tied) Rooftop Solar Systems**:
+
+1. **Zero Battery Overhead**: No heavy chemical batteries to maintain, top up with acid, or replace every 3–5 years, saving you over ₹80,000+ in maintenance costs over the system lifetime.
+2. **Daytime Self-Consumption**: Solar power generated by Tier-1 PV modules is converted directly by your on-grid string inverter (Growatt / Solis / Deye) and powers your household appliances in real-time.
+3. **Bi-Directional Net-Meter Export**: All surplus power not consumed during the day flows directly into the TANGEDCO grid, spinning your net meter in reverse.
+4. **Night Grid Import**: At night or during peak load demand, electricity is drawn seamlessly from the TNEB grid.
+5. **Why Inverter Trips During Outages (Anti-Islanding)?**: As mandated by CEA and TNERC electrical safety standards, all grid-tied on-grid inverters must automatically shut down during a TNEB grid power failure to prevent back-feeding electricity into external power lines and protecting linesmen.
+6. **TNEB Bill Tally**: You are billed only on Net Units (Grid Import minus Solar Export) with Tamil Nadu's 100 Free Units applied, driving your bi-monthly bill to near zero!`;
   }
 
   // 13. UPI, GPAY & PAYMENT ASSISTANCE

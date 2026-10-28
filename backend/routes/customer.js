@@ -258,12 +258,13 @@ router.post('/solar-log', authenticateToken, authorizeRole(['customer']), async 
     const customer = await db.findOne('customers', { customerId });
     if (!customer) return res.status(404).json({ message: 'Customer record not found' });
 
-    const { date, unitsGenerated, runtimeHours, unitsConsumed, gridExport, notes } = req.body;
+    const { date, unitsGenerated, runtimeHours, unitsConsumed, gridExport, gridImport, notes } = req.body;
     const logDate = date || getFormattedDate();
     const unitsGen = Number(unitsGenerated) || 0;
     const runtime = Number(runtimeHours) || 0;
     const consumed = unitsConsumed !== undefined ? Number(unitsConsumed) : Math.round(unitsGen * 0.75 * 10) / 10;
-    const exported = gridExport !== undefined ? Number(gridExport) : Math.max(0, Math.round((unitsGen - consumed) * 10) / 10);
+    const exported = gridExport !== undefined && gridExport !== '' ? Number(gridExport) : Math.max(0, Math.round((unitsGen - consumed) * 10) / 10);
+    const imported = gridImport !== undefined && gridImport !== '' ? Number(gridImport) : 0;
 
     const logs = Array.isArray(customer.solarLogs) ? [...customer.solarLogs] : [];
     const existingIndex = logs.findIndex(l => l.date === logDate);
@@ -274,6 +275,7 @@ router.post('/solar-log', authenticateToken, authorizeRole(['customer']), async 
       runtimeHours: runtime,
       unitsConsumed: consumed,
       gridExport: exported,
+      gridImport: imported,
       notes: notes || '',
       loggedAt: new Date().toISOString(),
       loggedBy: 'customer'

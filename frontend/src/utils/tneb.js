@@ -208,18 +208,26 @@ export function launchTnebBbpsPay(consumerNumber, options = {}) {
 
 /**
  * Calculates official Tamil Nadu TANGEDCO / TNERC Bi-Monthly Domestic (Tariff 1A)
- * electricity bill with Solar Net-Meter export credit and 100 free units.
+ * electricity bill for a battery-free on-grid solar system with Bi-Directional Net-Meter
+ * export credit, banked energy carry-forward, and 100 free units.
  *
  * @param {object} params
- * @param {number} params.biMonthlyUnits - Total units consumed from grid in 2 months
- * @param {number} params.solarExportUnits - Total solar units generated/exported in 2 months
+ * @param {number} [params.biMonthlyUnits] - Total units consumed from grid in 2 months (or grid import)
+ * @param {number} [params.solarExportUnits] - Total solar units exported to grid in 2 months
+ * @param {number} [params.gridImportUnits] - Explicit verified grid import units from net meter
+ * @param {number} [params.bankedBroughtForward] - Surplus banked solar units from previous billing cycle
  * @returns {object} Detailed bill breakdown and savings metrics
  */
-export function calculateTnebBill({ biMonthlyUnits = 0, solarExportUnits = 0 }) {
-  const gross = Math.max(0, Number(biMonthlyUnits) || 0);
+export function calculateTnebBill({ biMonthlyUnits = 0, solarExportUnits = 0, gridImportUnits = null, bankedBroughtForward = 0 }) {
+  const gross = gridImportUnits !== null && gridImportUnits !== undefined
+    ? Math.max(0, Number(gridImportUnits) || 0)
+    : Math.max(0, Number(biMonthlyUnits) || 0);
   const solarCredit = Math.max(0, Number(solarExportUnits) || 0);
-  const netUnits = Math.max(0, gross - solarCredit);
-  const surplusUnits = Math.max(0, solarCredit - gross);
+  const bankedCredit = Math.max(0, Number(bankedBroughtForward) || 0);
+
+  const effectiveSolarCredit = solarCredit + bankedCredit;
+  const netUnits = Math.max(0, gross - effectiveSolarCredit);
+  const surplusUnits = Math.max(0, effectiveSolarCredit - gross);
 
   // Official TNERC LT-1A Domestic Bi-Monthly Slab Rates
   function computeSlabBill(units) {
