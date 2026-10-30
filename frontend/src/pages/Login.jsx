@@ -439,17 +439,7 @@ export default function Login() {
           </form>
         </div>
 
-        {/* PUBLIC SOLAR ROI & PM SURYA GHAR SUBSIDY CALCULATOR */}
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={() => setShowCalculator(true)}
-            className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-teal-500/20 hover:from-amber-500/30 hover:to-teal-500/30 border border-amber-400/40 text-amber-200 hover:text-white font-extrabold text-xs shadow-lg backdrop-blur-md flex items-center justify-center space-x-2 transition-all active:scale-[0.99]"
-          >
-            <Sun className="w-4 h-4 text-amber-400 animate-pulse" />
-            <span>{lang === 'ta' ? '☀️ சோலார் சேமிப்பு & மத்திய மானிய கணக்கீடு' : '☀️ Calculate Solar Savings & PM Surya Ghar Subsidy'}</span>
-          </button>
-        </div>
+
 
         {/* SOLAR CALCULATOR MODAL */}
         <SolarCalculatorModal 
