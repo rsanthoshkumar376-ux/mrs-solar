@@ -201,8 +201,12 @@ export default function Login() {
             </div>
             <button
               type="button"
-              onClick={() => setShowReferralModal(true)}
-              className="text-[11px] font-bold text-slate-300 hover:text-white underline cursor-pointer"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowReferralModal(true);
+              }}
+              className="text-[11px] font-bold text-teal-300 hover:text-white underline cursor-pointer px-1 py-0.5 rounded hover:bg-slate-800/60 transition-colors"
             >
               {lang === 'ta' ? 'மேலோட்டம்' : 'Quick View'}
             </button>

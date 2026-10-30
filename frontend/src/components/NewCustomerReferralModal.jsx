@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Sun, Gift, ShieldCheck, Zap, Award, CheckCircle2, 
   ArrowRight, MessageCircle, Phone, Calculator, X, Sparkles,
-  Check, Copy, ChevronRight, HelpCircle, Layers, Play
+  Check, Copy, ChevronRight, HelpCircle, Layers, Play, ExternalLink
 } from 'lucide-react';
 import { OWNER_PAYMENT_PHONE } from '../utils/whatsapp.js';
 
@@ -106,8 +106,14 @@ Please help me book a Free Rooftop Solar Survey & Consultation for my property.`
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto p-3 sm:p-4 flex items-center justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in no-print">
-      <div className="w-full max-w-2xl bg-slate-900 border border-teal-500/30 rounded-3xl shadow-2xl relative overflow-hidden my-auto max-h-[94vh] flex flex-col text-white">
+    <div 
+      className="fixed inset-0 z-[100] overflow-y-auto p-3 sm:p-4 flex items-center justify-center bg-slate-950/85 backdrop-blur-md animate-fade-in no-print"
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-2xl bg-slate-900 border border-teal-500/30 rounded-3xl shadow-2xl relative overflow-hidden my-auto max-h-[94vh] flex flex-col text-white"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Background glow effects */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -254,22 +260,15 @@ Please help me book a Free Rooftop Solar Survey & Consultation for my property.`
             </div>
 
             {/* Responsive 16:9 Video Player */}
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-2xl flex items-center justify-center">
+            <div className="rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-2xl relative aspect-video flex items-center justify-center">
               <video
                 controls
                 playsInline
                 preload="metadata"
-                className="w-full h-full object-contain rounded-2xl"
-                src="/solar-video.mp4"
+                className="w-full h-full object-cover"
               >
                 <source src="/solar-video.mp4" type="video/mp4" />
-                <iframe
-                  src="https://drive.google.com/file/d/1M6Alo9HbaIfD93t7RwWT_OXPcJCwtuRN/preview"
-                  title="MRS Solar Rooftop Video"
-                  className="w-full h-full border-0"
-                  allow="autoplay; encrypted-media; fullscreen"
-                  allowFullScreen
-                />
+                Your browser does not support HTML5 video.
               </video>
             </div>
             <p className="text-[11px] text-slate-400 text-center">
