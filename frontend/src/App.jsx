@@ -21,6 +21,9 @@ const Settings = React.lazy(() => import('./pages/admin/Settings.jsx'));
 const CustomerDashboard = React.lazy(() => import('./pages/customer/CustomerDashboard.jsx'));
 const EmiHistory = React.lazy(() => import('./pages/customer/EmiHistory.jsx'));
 
+// Referral & New Customer Standalone Portal
+const ReferralPortal = React.lazy(() => import('./pages/ReferralPortal.jsx'));
+
 function PageFallback() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
@@ -38,6 +41,9 @@ export default function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/referral" element={<ReferralPortal />} />
+            <Route path="/refer" element={<ReferralPortal />} />
+            <Route path="/join" element={<ReferralPortal />} />
 
           {/* Owner/Admin Portal Routes */}
           <Route

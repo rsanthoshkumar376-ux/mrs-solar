@@ -101,10 +101,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'MRS SOLAR Solar Panel Loan API is running' });
 });
 
-// Public Solar ROI Leads submission endpoint (Free Lead Capture)
+// Public Solar ROI Leads submission endpoint (Free Lead Capture & Referral Inquiries)
 app.post('/api/leads', async (req, res) => {
   try {
-    const { fullName, mobileNumber, email, district, monthlyEbBill, systemCapacity, estimatedSubsidy, roofType, notes } = req.body;
+    const { fullName, mobileNumber, email, district, monthlyEbBill, systemCapacity, estimatedSubsidy, roofType, notes, referralCode } = req.body;
     if (!fullName || !mobileNumber) {
       return res.status(400).json({ message: 'Name and mobile number are required.' });
     }
@@ -117,10 +117,25 @@ app.post('/api/leads', async (req, res) => {
       systemCapacity: Number(systemCapacity) || 1,
       estimatedSubsidy: Number(estimatedSubsidy) || 30000,
       roofType: roofType || 'RCC Concrete',
+      referralCode: referralCode ? String(referralCode).trim() : '',
       notes: notes || '',
       status: 'New',
       createdAt: new Date().toISOString()
     });
+
+    // Notify Administrator of new prospective lead / referral inquiry
+    try {
+      await db.create('notifications', {
+        role: 'admin',
+        type: 'NEW_LEAD',
+        title: `☀️ New Solar Inquiry: ${fullName}`,
+        message: `${fullName} (${mobileNumber}) from ${district || 'Thiruvallur'} inquired for a ${systemCapacity || 3} kW solar system.${referralCode ? ` Referred by: ${referralCode}` : ''}`,
+        leadId: lead._id,
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+    } catch (notifErr) {}
+
     res.json({ success: true, message: 'Inquiry submitted successfully! Our solar engineer will contact you shortly.', leadId: lead._id });
   } catch (err) {
     console.error('Lead submission error:', err);

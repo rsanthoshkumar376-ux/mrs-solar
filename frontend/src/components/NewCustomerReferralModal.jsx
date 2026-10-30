@@ -389,7 +389,17 @@ Please help me book a Free Rooftop Solar Survey & Consultation for my property.`
 
         {/* Modal Footer Actions */}
         <div className="relative z-10 p-4 sm:p-6 border-t border-slate-800 bg-slate-900/90 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center space-x-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <a
+              href={`/referral?ref=${referralCode}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-500/40 text-xs font-bold text-purple-200 hover:text-white flex items-center justify-center space-x-1.5 transition-all shadow-sm"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-pink-400" />
+              <span>{isTa ? 'பரிந்துரை இணையதளம்' : 'Open Referral Site'}</span>
+            </a>
+
             {onOpenCalculator && (
               <button
                 type="button"
@@ -409,7 +419,7 @@ Please help me book a Free Rooftop Solar Survey & Consultation for my property.`
               className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-teal-400 hover:text-white flex items-center justify-center space-x-1.5 transition-colors border border-slate-700"
             >
               <Phone className="w-3.5 h-3.5" />
-              <span>{isTa ? 'அழைக்க' : 'Call Helpline'}</span>
+              <span>{isTa ? 'அழைக்க' : 'Call'}</span>
             </a>
           </div>
 

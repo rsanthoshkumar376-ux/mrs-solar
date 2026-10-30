@@ -27,8 +27,8 @@ export default function ReferralShareCard({ customer, lang = 'en' }) {
 
 வணக்கம்! நான் MRS Solar Associates மூலம் எனது வீட்டில் *${capacity} kW* கூரை சோலார் அமைத்துள்ளேன். இதன் மூலம் மத்திய அரசின் *PM சூர்யா கர் திட்டத்தின் கீழ் ₹78,000 வரை நேரடி மானியம்* மற்றும் மாதாந்திர மின் கட்டணத்தில் பெரும் சேமிப்பு கிடைக்கிறது.
 
-உங்கள் வீடு அல்லது வணிக நிறுவனத்திற்கும் சோலார் அமைக்க விரும்பினால் தொடர்பு கொள்ளவும்:
-🌐 இணையதளம்: https://mrs-solar-yj6e.vercel.app?ref=${referralCode}
+முழு விபரங்கள், EMI மற்றும் சேமிப்பு கணக்கீட்டை பார்க்க எங்கள் பரிந்துரை தளத்திற்கு செல்லவும்:
+🌐 புதிய வாடிக்கையாளர் தளம்: https://mrs-solar-yj6e.vercel.app/referral?ref=${referralCode}
 📞 தொடர்பு எண்: +91 80724 54996
 
 தொடர்பு கொள்ளும்போது எனது பரிந்துரைக் குறியீட்டைக் குறிப்பிடவும்:
@@ -38,8 +38,8 @@ export default function ReferralShareCard({ customer, lang = 'en' }) {
 
 Hello! I have installed a *${capacity} kW* rooftop solar system with MRS Solar Associates. They helped me claim up to *₹78,000 Direct Central Subsidy* under PM Surya Ghar Muft Bijli Yojana with zero-downpayment bank financing and huge monthly electricity savings.
 
-If you are interested in rooftop solar for your home or business:
-🌐 Website: https://mrs-solar-yj6e.vercel.app?ref=${referralCode}
+Check out what is required, calculate your monthly EMI and savings on our new referral website:
+🌐 Referral Portal: https://mrs-solar-yj6e.vercel.app/referral?ref=${referralCode}
 📞 Call / WhatsApp: +91 80724 54996
 
 When contacting them, quote my referral code:
@@ -134,6 +134,22 @@ When contacting them, quote my referral code:
             </span>
           </button>
 
+        </div>
+
+        {/* PREVIEW LINK TO NEW REFERRAL WEBSITE */}
+        <div className="pt-1 flex items-center justify-between text-xs border-t border-slate-800/80">
+          <span className="text-slate-400 text-[11px]">
+            {isTa ? 'புதிய வாடிக்கையாளர் இணையதளத்தை பார்வையிட:' : 'Preview what your friends will see:'}
+          </span>
+          <a
+            href={`/referral?ref=${referralCode}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-purple-300 hover:text-purple-200 underline font-bold flex items-center space-x-1"
+          >
+            <span>{isTa ? 'பரிந்துரை இணையதளம் திறக்க' : 'Open Referral Website'}</span>
+            <Share2 className="w-3.5 h-3.5" />
+          </a>
         </div>
 
       </div>
