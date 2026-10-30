@@ -13,6 +13,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [leadsCount, setLeadsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [schedulerRunning, setSchedulerRunning] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
@@ -34,6 +35,11 @@ export default function AdminDashboard() {
       const notificationsRes = await api.get('/customer/notifications');
       // Fetch only top 5 recent notifications for dashboard activity
       setNotifications(notificationsRes.data.slice(0, 5));
+
+      try {
+        const leadsRes = await api.get('/admin/leads');
+        setLeadsCount(Array.isArray(leadsRes.data) ? leadsRes.data.filter(l => l.status !== 'Lost' && l.status !== 'Installed').length : 0);
+      } catch (lErr) {}
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
@@ -178,6 +184,36 @@ export default function AdminDashboard() {
           )}
           <span>{schedulerRunning ? t.runningMidnightAudit : t.runMidnightAuditCheck}</span>
         </button>
+      </div>
+
+      {/* OWNER LEAD CRM PIPELINE ACTION BANNER */}
+      <div 
+        onClick={() => navigate('/admin/leads')}
+        className="cursor-pointer p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-900/60 via-slate-900 to-indigo-950/60 border border-teal-500/30 hover:border-teal-500/60 shadow-md transition-all hover:scale-[1.01] flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+      >
+        <div className="flex items-center space-x-3.5">
+          <div className="w-10 h-10 rounded-2xl bg-teal-500/20 text-teal-300 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Zap className="w-5 h-5 text-amber-400" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h4 className="text-sm font-bold text-white group-hover:text-teal-300 transition-colors">
+                Lead CRM & Inquiries Pipeline
+              </h4>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                {leadsCount} Active
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Review new prospects from Referral Portal, book site surveys, send 1-click quotations, and advance stages in Kanban view.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-1.5 text-xs font-bold text-teal-400 group-hover:text-teal-300 shrink-0">
+          <span>Open CRM Board</span>
+          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </div>
       </div>
 
       {/* DASHBOARD STATS CARD GRID */}

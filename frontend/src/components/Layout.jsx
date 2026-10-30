@@ -6,7 +6,7 @@ import {
   Sun, Moon, LogOut, Menu, X, Bell, LayoutDashboard, 
   Users, DollarSign, History, Calculator, ShieldAlert,
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
-  Search, Languages, Mic, CreditCard, Trash2, Settings
+  Search, Languages, Mic, CreditCard, Trash2, Settings, KanbanSquare
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -202,6 +202,7 @@ export default function Layout({ children }) {
   // Define navigation links based on role
   const adminLinks = [
     { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
+    { label: t.leadsCrm || 'Leads & CRM', path: '/admin/leads', icon: KanbanSquare },
     { label: t.customers, path: '/admin/customers', icon: Users },
     { label: t.settings || 'Settings', path: '/admin/settings', icon: Settings }
   ];
@@ -216,6 +217,7 @@ export default function Layout({ children }) {
   const mobileLinks = user?.role === 'admin'
     ? [
         { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
+        { label: 'Leads', path: '/admin/leads', icon: KanbanSquare },
         { label: t.customers, path: '/admin/customers', icon: Users },
         { label: t.settings || 'Settings', path: '/admin/settings', icon: Settings },
         { label: t.moreMenu || 'More', action: () => setSidebarOpen(true), icon: Menu }

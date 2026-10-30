@@ -9,6 +9,7 @@ import Login from './pages/Login.jsx';
 
 // Admin Portal (Lazy loaded for fast cold start and small initial bundle)
 const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard.jsx'));
+const LeadManager = React.lazy(() => import('./pages/admin/LeadManager.jsx'));
 const CustomerManager = React.lazy(() => import('./pages/admin/CustomerManager.jsx'));
 const CustomerDetails = React.lazy(() => import('./pages/admin/CustomerDetails.jsx'));
 const AuditLogs = React.lazy(() => import('./pages/admin/AuditLogs.jsx'));
@@ -52,6 +53,16 @@ export default function App() {
               <ProtectedRoute allowedRoles={['admin']}>
                 <Layout>
                   <AdminDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/leads"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <LeadManager />
                 </Layout>
               </ProtectedRoute>
             }

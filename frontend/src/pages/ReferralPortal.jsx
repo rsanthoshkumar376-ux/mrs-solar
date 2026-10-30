@@ -6,12 +6,14 @@ import {
   Check, Copy, ChevronDown, ChevronUp, Layers, Play,
   FileText, Home, DollarSign, Trees, Leaf, HelpCircle,
   ExternalLink, User, MapPin, IndianRupee, ArrowDown,
-  Lock, Percent, CheckSquare, Clock, AlertCircle, Share2
+  Lock, Percent, CheckSquare, Clock, AlertCircle, Share2, Camera
 } from 'lucide-react';
 import api from '../utils/api.js';
 import { formatCurrency } from '../utils/format.js';
 import { OWNER_PAYMENT_PHONE } from '../utils/whatsapp.js';
 import { translations, getLanguage, setLanguage } from '../utils/translations.js';
+import TnebBillScannerModal from '../components/TnebBillScannerModal.jsx';
+import SolarQuotationModal from '../components/SolarQuotationModal.jsx';
 
 export default function ReferralPortal() {
   const navigate = useNavigate();
@@ -46,6 +48,30 @@ export default function ReferralPortal() {
   const [submittingLead, setSubmittingLead] = useState(false);
   const [leadSuccess, setLeadSuccess] = useState(false);
   const [leadError, setLeadError] = useState('');
+
+  // AI OCR Bill Scanner & 1-Click Quotation Modal State
+  const [showScannerModal, setShowScannerModal] = useState(false);
+  const [showQuotationModal, setShowQuotationModal] = useState(false);
+  const [scannedTnebData, setScannedTnebData] = useState(null);
+
+  const handleAppliedScannedBill = (data) => {
+    setScannedTnebData(data);
+    if (data.extractedBillAmount) {
+      setMonthlyEbBill(Number(data.extractedBillAmount));
+      setCalcMode('bill');
+    }
+    if (data.recommendedKw) {
+      setSelectedKw(Number(data.recommendedKw));
+      setCalcMode('kw');
+    }
+    if (data.consumerName && !fullName) {
+      setFullName(data.consumerName);
+    }
+    if (data.consumerNumber) {
+      setCustomNotes(prev => prev ? `${prev} | TNEB Service No: ${data.consumerNumber}` : `TNEB Service No: ${data.consumerNumber}`);
+    }
+    scrollToSection('calculator');
+  };
 
   // Switch language helper
   const handleToggleLanguage = () => {
@@ -719,6 +745,39 @@ Please help me schedule a Free Rooftop Site Survey and Loan Consultation.`;
 
           <div className="p-6 sm:p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-8">
             
+            {/* AI OCR PHOTO SCANNER BANNER */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-teal-950/50 to-slate-950 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
+              <div className="flex items-center space-x-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+                  <Camera className="w-6 h-6 text-amber-400" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h4 className="text-sm font-bold text-white">
+                      {isTa ? '📷 AI மூலம் உங்கள் TNEB பில்லை ஸ்கேன் செய்யுங்கள்' : '📷 Auto-Scan Your TNEB Electricity Bill with AI'}
+                    </h4>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Smart OCR
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    {isTa
+                      ? 'உங்கள் மின்கட்டண ரசீதை புகைப்படம் எடுத்தால் போதும் — நுகர்வோர் எண், கட்டணத் தொகை மற்றும் தேவையான சோலார் திறன் தானாக கணக்கிடப்படும்!'
+                      : 'Upload or snap a photo of your domestic TNEB bill to instantly extract units, bill amount, consumer number, and recommended solar capacity.'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowScannerModal(true)}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 flex items-center justify-center space-x-2 transition-all hover:scale-105 active:scale-95 shrink-0"
+              >
+                <Camera className="w-4 h-4" />
+                <span>{isTa ? 'பில்லை ஸ்கேன் செய்' : 'Scan Bill Photo Now'}</span>
+              </button>
+            </div>
+
             {/* INPUT CONTROLS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
@@ -869,6 +928,40 @@ Please help me schedule a Free Rooftop Site Survey and Loan Consultation.`;
                 <span className="text-2xl font-black text-teal-300 font-mono">
                   {formatCurrency(lifetime25YearSavings, false)}
                 </span>
+              </div>
+            </div>
+
+            {/* ACTION STRIP: 1-CLICK OFFICIAL PDF QUOTATION & BOOKING */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-bold text-white block">
+                  {isTa ? 'அங்கீகரிக்கப்பட்ட சோலார் மதிப்பீட்டு அறிக்கை வேண்டுமா?' : 'Need an Official Bank-Ready Solar Proposal?'}
+                </span>
+                <p className="text-[11px] text-slate-400">
+                  {isTa
+                    ? 'MRS SOLAR அதிகாரப்பூர்வ லெட்டர்ஹெட், Tier-1 பாகங்களின் விவரங்கள், மத்திய மானிய கழிவு மற்றும் EMI அட்டவணையுடன் 1-கிளிக் PDF பெறுங்கள்.'
+                    : 'Download or share official proposal with Tier-1 bifacial panels, DCR inverters, PM Surya Ghar ₹78,000 subsidy, and 36/60/120M EMI schedule.'}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-center sm:justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowQuotationModal(true)}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md shadow-purple-600/25 flex items-center justify-center space-x-2 transition-all hover:scale-105 active:scale-95"
+                >
+                  <FileText className="w-4 h-4 text-pink-300" />
+                  <span>{isTa ? '📄 அதிகாரப்பூர்வ அறிக்கை (PDF)' : '📄 Get Solar Quotation (PDF)'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('booking-form')}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black text-xs shadow-md shadow-teal-500/25 flex items-center justify-center space-x-2 transition-all hover:scale-105 active:scale-95"
+                >
+                  <span>{isTa ? 'ஆய்வு பதிவு செய்' : 'Book Site Survey'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
@@ -1372,6 +1465,28 @@ Please help me schedule a Free Rooftop Site Survey and Loan Consultation.`;
         <MessageCircle className="w-5 h-5 text-white fill-current" />
         <span className="hidden sm:inline">{isTa ? 'வாட்ஸ்அப் உதவி' : 'WhatsApp Support'}</span>
       </button>
+
+      {/* 14. TNEB BILL PHOTO SCANNER MODAL */}
+      <TnebBillScannerModal
+        isOpen={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+        onApplied={handleAppliedScannedBill}
+      />
+
+      {/* 15. 1-CLICK SOLAR PROPOSAL / QUOTATION MODAL */}
+      <SolarQuotationModal
+        isOpen={showQuotationModal}
+        onClose={() => setShowQuotationModal(false)}
+        customerData={{
+          customerName: fullName || 'Prospective Customer',
+          mobile: mobileNumber || '',
+          district: district || 'Thiruvallur',
+          roofType: roofType || 'RCC Concrete Flat',
+          ebBill: monthlyEbBill,
+          systemKw: activeKw,
+          tenureMonths: loanTenureMonths
+        }}
+      />
 
     </div>
   );

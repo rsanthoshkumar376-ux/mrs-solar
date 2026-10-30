@@ -2134,6 +2134,16 @@ router.put('/leads/:id', authenticateToken, authorizeRole(['admin']), async (req
   }
 });
 
+// Delete a Lead
+router.delete('/leads/:id', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    await db.deleteOne('leads', { _id: req.params.id });
+    res.json({ success: true, message: 'Lead deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete lead' });
+  }
+});
+
 // Get all Customer Service / Maintenance Tickets
 router.get('/tickets', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {

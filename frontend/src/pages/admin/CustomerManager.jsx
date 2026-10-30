@@ -201,6 +201,24 @@ export default function CustomerManager() {
     fetchCustomers(newPage);
   };
 
+  // Check for converted lead draft from CRM Kanban Board
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('action') === 'convert-lead' || searchParams.get('convert') === 'true') {
+        const draftStr = localStorage.getItem('mrs_convert_lead_draft');
+        if (draftStr) {
+          const draft = JSON.parse(draftStr);
+          setFormData(prev => ({ ...prev, ...draft }));
+          setShowAddModal(true);
+          localStorage.removeItem('mrs_convert_lead_draft');
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading convert lead draft:', e);
+    }
+  }, []);
+
   // Handle auto-calculating loan amount (Cost - Downpayment)
   useEffect(() => {
     const cost = Number(formData.solarCost) || 0;
