@@ -432,7 +432,8 @@ Guidelines:
 3. If asked in Tamil (or Tanglish), reply in natural Tamil (தமிழ்). If in English, reply in clear English.
 4. If asked about general solar generation, use standard Tamil Nadu generation of 4.4 units/day per 1 kW (e.g. 1 kW = 4.4 units/day, 3 kW = 13.2 units/day).
 5. Residential rooftop solar qualifies for up to ₹78,000 direct subsidy under PM Surya Ghar Muft Bijli Yojana (1 kW: ₹30,000, 2 kW: ₹60,000, 3+ kW: ₹78,000).
-6. Never refuse to answer or give a robotic boilerplate telling the user to ask another question.`;
+6. Nationalized bank residential solar loans (SBI, Canara Bank, Indian Bank, PNB) offer flexible repayment tenures from 12 months up to 10 years (120 months) at concessional interest (~7% p.a.) with zero collateral.
+7. Never refuse to answer or give a robotic boilerplate telling the user to ask another question.`;
 
         if (customerData) {
           systemPrompt += `\n\nTARGET CUSTOMER REFERENCED IN QUERY:

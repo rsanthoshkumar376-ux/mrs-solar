@@ -249,8 +249,8 @@ Please help me schedule a Free Rooftop Site Survey and Loan Consultation.`;
     {
       qEn: 'Can I get bank financing with zero downpayment?',
       qTa: 'முன்பணம் இல்லாமல் (Zero Downpayment) வங்கி கடன் பெற முடியுமா?',
-      aEn: 'Yes! Nationalized banks (SBI, Canara Bank, Indian Bank, PNB) offer dedicated PM Surya Ghar residential solar loans at low interest rates (around 7% p.a.) with zero collateral and zero downpayment for up to 10 kW. The monthly EMI is often lower than your current electricity bill savings!',
-      aTa: 'நிச்சயமாக! பாரத ஸ்டேட் வங்கி (SBI), கனரா வங்கி, இந்தியன் வங்கி போன்ற முன்னணி வங்கிகள் PM சூர்யா கர் திட்டத்தின் கீழ் குறைந்த வட்டியில், பிணை சொத்து ஏதுமின்றி (Zero Collateral) 36 முதல் 60 மாத தவணைகளில் கடன் வழங்குகின்றன. நீங்கள் செலுத்தும் மாத EMI உங்கள் மின் கட்டண சேமிப்பை விட குறைவாகவே இருக்கும்!'
+      aEn: 'Yes! Nationalized banks (SBI, Canara Bank, Indian Bank, PNB) offer dedicated PM Surya Ghar residential solar loans at low interest rates (around 7% p.a.) with zero collateral, zero downpayment, and flexible repayment tenures from 12 months up to 10 years (120 months) for up to 10 kW. The monthly EMI is often lower than your current electricity bill savings!',
+      aTa: 'நிச்சயமாக! பாரத ஸ்டேட் வங்கி (SBI), கனரா வங்கி, இந்தியன் வங்கி போன்ற முன்னணி வங்கிகள் PM சூர்யா கர் திட்டத்தின் கீழ் குறைந்த வட்டியில் (~7%), பிணை சொத்து ஏதுமின்றி (Zero Collateral) 10 ஆண்டுகள் வரை (12 முதல் 120 மாதங்கள்) தவணை வசதியுடன் கடன் வழங்குகின்றன. நீங்கள் செலுத்தும் மாத EMI உங்கள் மின் கட்டண சேமிப்பை விட குறைவாகவே இருக்கும்!'
     },
     {
       qEn: 'What is the lifespan and warranty of the equipment?',
@@ -655,7 +655,7 @@ Please help me schedule a Free Rooftop Site Survey and Loan Consultation.`;
                   </li>
                   <li className="flex items-start space-x-2">
                     <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <span>Flexible tenure: <strong>36 to 60 Months</strong> with instant pre-approval.</span>
+                    <span>{isTa ? '10 ஆண்டுகள் வரை (12 முதல் 120 மாதங்கள்) எளிய தவணை வசதி.' : 'Flexible tenure: Up to 10 Years (12 to 120 Months) with instant pre-approval.'}</span>
                   </li>
                 </ul>
               </div>
@@ -775,18 +775,43 @@ Please help me schedule a Free Rooftop Site Survey and Loan Consultation.`;
                     </button>
                   ))}
                 </div>
-                <div className="flex justify-between text-[10px] text-slate-400 pt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] text-slate-400 pt-1">
                   <span>Selected: <strong>{activeKw} kWp Plant</strong></span>
-                  <span>Tenure: 
+                  <div className="flex items-center space-x-1.5">
+                    <span>{isTa ? 'தவணை காலம்:' : 'Tenure (Up to 10 Yrs):'}</span>
                     <select
                       value={loanTenureMonths}
                       onChange={(e) => setLoanTenureMonths(Number(e.target.value))}
-                      className="ml-1 bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-teal-400 font-bold"
+                      className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-0.5 text-teal-400 font-bold outline-none"
                     >
-                      <option value={36}>36 Mo</option>
-                      <option value={60}>60 Mo</option>
+                      <option value={12}>12 Mo (1 Yr)</option>
+                      <option value={24}>24 Mo (2 Yrs)</option>
+                      <option value={36}>36 Mo (3 Yrs)</option>
+                      <option value={48}>48 Mo (4 Yrs)</option>
+                      <option value={60}>60 Mo (5 Yrs)</option>
+                      <option value={72}>72 Mo (6 Yrs)</option>
+                      <option value={84}>84 Mo (7 Yrs)</option>
+                      <option value={96}>96 Mo (8 Yrs)</option>
+                      <option value={108}>108 Mo (9 Yrs)</option>
+                      <option value={120}>120 Mo (10 Yrs - Max)</option>
                     </select>
-                  </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {[12, 24, 36, 60, 84, 120].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setLoanTenureMonths(m)}
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all ${
+                        loanTenureMonths === m
+                          ? 'bg-teal-500 text-slate-950 shadow-sm'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {m / 12}Y ({m}M)
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -816,7 +841,7 @@ Please help me schedule a Free Rooftop Site Survey and Loan Consultation.`;
               <div className="p-4 rounded-2xl bg-teal-950/40 border border-teal-500/30 text-center">
                 <span className="text-[10px] uppercase font-bold text-teal-300 block">Monthly Loan EMI</span>
                 <p className="text-xl sm:text-2xl font-black text-teal-400 mt-0.5">{formatCurrency(estimatedMonthlyEmi, false)} / mo</p>
-                <span className="text-[10px] text-teal-300">{loanTenureMonths} Months Financing</span>
+                <span className="text-[10px] text-teal-300">{loanTenureMonths} Mo ({(loanTenureMonths / 12).toFixed(1).replace('.0', '')} Yrs) Financing</span>
               </div>
 
             </div>

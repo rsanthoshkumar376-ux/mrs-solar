@@ -117,7 +117,7 @@ export default function LoanStatementModal({ customer, isOpen, onClose }) {
               <p className="text-slate-900 font-medium"><strong className="text-teal-950">{t.totalSystemCost}:</strong> <span className="font-black text-slate-950 font-mono">{formatCurrency(customer.solarCost, false)}</span></p>
               <p className="text-slate-900 font-medium"><strong className="text-teal-950">{t.downPayment}:</strong> <span className="font-black text-emerald-800 font-mono">{formatCurrency(customer.downPayment, false)}</span></p>
               <p className="text-slate-900 font-medium"><strong className="text-teal-950">{t.loanPrincipal}:</strong> <span className="font-black text-indigo-900 font-mono">{formatCurrency(customer.loanAmount, false)}</span></p>
-              <p className="text-slate-900 font-medium"><strong className="text-teal-950">{t.interestTenure}</strong> <span className="font-bold text-slate-900">{customer.interestRate}% / mo for {customer.emiDuration} {t.monthsSuffix}</span></p>
+              <p className="text-slate-900 font-medium"><strong className="text-teal-950">{t.interestTenure}</strong> <span className="font-bold text-slate-900">{customer.interestRate}% / mo for {customer.emiDuration} {t.monthsSuffix} {Number(customer.emiDuration) >= 12 ? `(${(Number(customer.emiDuration) / 12).toFixed(1).replace('.0', '')} ${lang === 'ta' ? 'ஆண்டுகள்' : 'Years'})` : ''}</span></p>
             </div>
           </div>
 

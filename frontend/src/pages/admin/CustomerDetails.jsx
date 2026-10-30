@@ -593,7 +593,7 @@ export default function CustomerDetails() {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">EMI Duration</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.emiDuration} months</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.emiDuration} months {Number(customer.emiDuration) >= 12 ? `(${(Number(customer.emiDuration) / 12).toFixed(1).replace('.0', '')} yrs)` : ''}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Accumulated Penalties</span>

@@ -13,6 +13,7 @@ export default function SolarCalculatorModal({ isOpen, onClose }) {
 
   // Calculator State
   const [monthlyEbBill, setMonthlyEbBill] = useState(2500);
+  const [loanTenureMonths, setLoanTenureMonths] = useState(60); // 12 to 120 months (up to 10 years)
   const [roofType, setRoofType] = useState('RCC Concrete');
   
   // Lead Form State
@@ -39,8 +40,11 @@ export default function SolarCalculatorModal({ isOpen, onClose }) {
   const grossCost = recommendedKw * 65000; // ~₹65k per kW turnkey installation
   const netInvestment = Math.max(0, grossCost - centralSubsidy);
   
-  // Estimated 36-month low-interest EMI (2% flat/reducing approx)
-  const estimatedEmi = Math.round(netInvestment / 32);
+  // Estimated low-interest EMI under PM Surya Ghar concessional bank loan (~7% p.a.)
+  const monthlyRate = 0.07 / 12;
+  const emiNumerator = netInvestment * monthlyRate * Math.pow(1 + monthlyRate, loanTenureMonths);
+  const emiDenominator = Math.pow(1 + monthlyRate, loanTenureMonths) - 1;
+  const estimatedEmi = emiDenominator > 0 && netInvestment > 0 ? Math.round(emiNumerator / emiDenominator) : 0;
   
   // Lifetime 25-Year Savings (assuming 3% annual EB tariff inflation)
   const annualSavings = monthlyEbBill * 12 * 0.90; // ~90% bill offset
@@ -68,7 +72,8 @@ export default function SolarCalculatorModal({ isOpen, onClose }) {
         roofType,
         monthlyEbBill,
         systemCapacity: recommendedKw,
-        estimatedSubsidy: centralSubsidy
+        estimatedSubsidy: centralSubsidy,
+        loanTenureMonths
       });
 
       setSubmittedSuccess(true);
@@ -145,6 +150,53 @@ export default function SolarCalculatorModal({ isOpen, onClose }) {
             </div>
           </div>
 
+          {/* SLIDER INPUT: LOAN REPAYMENT TENURE (UP TO 10 YEARS / 120 MONTHS) */}
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-xs font-black uppercase text-slate-700 dark:text-slate-300">
+                {isTa ? 'வங்கி கடன் தவணை காலம் (10 ஆண்டுகள் வரை)' : 'Bank Loan Tenure (Up to 10 Years)'}
+              </label>
+              <span className="font-mono font-black text-sm text-indigo-700 dark:text-indigo-400">
+                {loanTenureMonths} {isTa ? 'மாதங்கள்' : 'Mo'} ({(loanTenureMonths / 12).toFixed(1).replace('.0', '')} {isTa ? 'ஆண்டுகள்' : 'Yrs'})
+              </span>
+            </div>
+
+            <input
+              type="range"
+              min="12"
+              max="120"
+              step="12"
+              value={loanTenureMonths}
+              onChange={(e) => setLoanTenureMonths(Number(e.target.value))}
+              className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            />
+
+            <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-1">
+              <span>1 Yr (12M)</span>
+              <span>3 Yrs (36M)</span>
+              <span>5 Yrs (60M)</span>
+              <span>7 Yrs (84M)</span>
+              <span>10 Yrs (120M)</span>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {[12, 24, 36, 48, 60, 72, 84, 96, 108, 120].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setLoanTenureMonths(m)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                    loanTenureMonths === m
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  {m / 12}Y ({m}M)
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* RESULTS GRID */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
             
@@ -183,7 +235,7 @@ export default function SolarCalculatorModal({ isOpen, onClose }) {
                 {formatCurrency(estimatedEmi, false)}
               </span>
               <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">
-                36 mo financing
+                {loanTenureMonths} mo ({(loanTenureMonths / 12).toFixed(1).replace('.0', '')} yrs) @ 7%
               </span>
             </div>
 

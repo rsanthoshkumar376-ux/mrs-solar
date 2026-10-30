@@ -1182,8 +1182,23 @@ export default function CustomerManager() {
                     <input type="number" required name="interestRate" value={formData.interestRate} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-500 mb-1">{t.emiDurationMonthsLabel}</label>
-                    <input type="number" required name="emiDuration" value={formData.emiDuration} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block font-semibold text-slate-500">{t.emiDurationMonthsLabel}</label>
+                      <span className="text-xs font-bold text-teal-600 dark:text-teal-400">
+                        {formData.emiDuration ? `${formData.emiDuration} mo (${(Number(formData.emiDuration) / 12).toFixed(1).replace('.0', '')} yrs)` : ''}
+                      </span>
+                    </div>
+                    <input type="number" required min="1" max="120" name="emiDuration" value={formData.emiDuration} onChange={handleInputChange} placeholder="e.g. 36 (Up to 120 months / 10 years)" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 outline-none focus:border-teal-500 text-slate-800 dark:text-white" />
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {[12, 24, 36, 48, 60, 72, 84, 96, 108, 120].map((m) => (
+                        <button key={m} type="button" onClick={() => setFormData(prev => ({ ...prev, emiDuration: String(m), monthlyEmi: prev.loanAmount ? Math.round(Number(prev.loanAmount) / m) : prev.monthlyEmi }))} className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${Number(formData.emiDuration) === m ? 'bg-teal-600 text-white border-teal-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'}`}>
+                          {m}M ({m / 12}Y)
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {lang === 'ta' ? 'அதிகபட்சம் 120 மாதங்கள் வரை (10 ஆண்டுகள்)' : 'Supported tenure: 1 to 120 months (Up to 10 years)'}
+                    </p>
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-500 mb-1">{t.loanStartDateLabel}</label>

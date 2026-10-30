@@ -335,7 +335,7 @@ router.post('/customers', authenticateToken, authorizeRole(['admin']), upload.fi
 
     const loanAmount = Number(rawData.loanAmount);
     const monthlyRate = Number(rawData.interestRate) / 100; // Expected monthly rate (e.g. 2% = 0.02)
-    const emiDuration = Number(rawData.emiDuration);
+    const emiDuration = Math.min(120, Math.max(1, Number(rawData.emiDuration) || 12));
     const startDate = rawData.loanStartDate || new Date().toISOString().split('T')[0];
 
     // Generate EMI Schedule

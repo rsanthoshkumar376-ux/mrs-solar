@@ -289,7 +289,7 @@ export function generateWelcomeKitMessage({ customer, language = 'ta', supportPh
 • வாடிக்கையாளர் எண் (ID): *${customerId}*
 • சோலார் திறன்: ${capacity} kWp (${brand})
 • அங்கீகரிக்கப்பட்ட கடன்: ${loanAmount}
-• மாதாந்திர தவணை (EMI): *${emiAmount}* (${tenure} மாதங்கள்)
+• மாதாந்திர தவணை (EMI): *${emiAmount}* (${tenure} மாதங்கள்${Number(tenure) >= 12 ? ` / ${(Number(tenure) / 12).toFixed(1).replace('.0', '')} ஆண்டுகள்` : ''})
 
 🌐 *வாடிக்கையாளர் போர்ட்டல் (Customer Portal Login):*
 ${portalUrl}
@@ -315,7 +315,7 @@ Congratulations! Your financing and turnkey installation for a *${capacity} kWp*
 • Customer ID: *${customerId}*
 • Solar Capacity: ${capacity} kWp (${brand})
 • Sanctioned Loan Amount: ${loanAmount}
-• Monthly EMI: *${emiAmount}* (${tenure} Months)
+• Monthly EMI: *${emiAmount}* (${tenure} Months${Number(tenure) >= 12 ? ` / ${(Number(tenure) / 12).toFixed(1).replace('.0', '')} Years` : ''})
 
 🌐 *Customer Self-Service Portal:*
 ${portalUrl}

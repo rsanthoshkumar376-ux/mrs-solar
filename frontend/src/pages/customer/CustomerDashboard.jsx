@@ -883,7 +883,7 @@ export default function CustomerDashboard() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">{t.durationMonths}</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.emiDuration} {t.monthsSuffix}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{customer.emiDuration} {t.monthsSuffix} {Number(customer.emiDuration) >= 12 ? `(${(Number(customer.emiDuration) / 12).toFixed(1).replace('.0', '')} ${lang === 'ta' ? 'ஆண்டுகள்' : 'Yrs'})` : ''}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">{t.loanStartDate}</span>
@@ -950,17 +950,42 @@ export default function CustomerDashboard() {
                 <div>
                   <div className="flex justify-between items-center mb-1 text-xs">
                     <span className="text-slate-500">{t.durationLabel}</span>
-                    <span className="font-bold text-slate-800 dark:text-white">{calcMonths} {t.monthsSuffix}</span>
+                    <span className="font-bold text-slate-800 dark:text-white">
+                      {calcMonths} {t.monthsSuffix} {calcMonths >= 12 ? `(${(calcMonths / 12).toFixed(1).replace('.0', '')} ${lang === 'ta' ? 'ஆண்டுகள்' : 'Yrs'})` : ''}
+                    </span>
                   </div>
                   <input
                     type="range"
                     min="3"
-                    max="84"
+                    max="120"
                     step="3"
                     value={calcMonths}
                     onChange={(e) => setCalcMonths(Number(e.target.value))}
                     className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-600"
                   />
+                  <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-1">
+                    <span>3 Mo</span>
+                    <span>36M (3Y)</span>
+                    <span>60M (5Y)</span>
+                    <span>84M (7Y)</span>
+                    <span>120M (10Y)</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {[12, 24, 36, 48, 60, 72, 84, 96, 108, 120].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setCalcMonths(m)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                          calcMonths === m
+                            ? 'bg-teal-600 text-white shadow-sm'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {m}M ({m / 12}Y)
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl p-4 flex justify-between items-center">

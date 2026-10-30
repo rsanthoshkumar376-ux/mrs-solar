@@ -194,7 +194,7 @@ Monthly EMI: ₹${monthlyEmi}`;
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">{isTa ? 'கால அளவு' : 'Duration'}</span>
-              <p className="font-bold text-sm text-slate-200 mt-0.5">{customer.emiDuration} Months</p>
+              <p className="font-bold text-sm text-slate-200 mt-0.5">{customer.emiDuration} Months {Number(customer.emiDuration) >= 12 ? `(${(Number(customer.emiDuration) / 12).toFixed(1).replace('.0', '')} Yrs)` : ''}</p>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">{isTa ? 'அதிர்வெண்' : 'Frequency'}</span>

@@ -155,7 +155,7 @@ export default function SanctionLetterModal({ customer, isOpen, onClose }) {
               </div>
               <div className="p-3 bg-slate-100/90 rounded-2xl border-2 border-slate-300 shadow-sm">
                 <span className="text-[10px] uppercase font-extrabold text-slate-700">{t.sanctionTenure}</span>
-                <p className="text-base font-black text-slate-950 mt-1">{duration} {t.monthsSuffix || 'Months'}</p>
+                <p className="text-base font-black text-slate-950 mt-1">{duration} {t.monthsSuffix || 'Months'} {duration >= 12 ? `(${(duration / 12).toFixed(1).replace('.0', '')} Yrs)` : ''}</p>
               </div>
             </div>
 
