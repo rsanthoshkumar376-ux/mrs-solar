@@ -124,6 +124,7 @@ export default function ReferralPortal() {
         monthlyEbBill,
         systemCapacity: activeKw,
         estimatedSubsidy: centralSubsidy,
+        loanTenureMonths,
         referralCode: referralCode || 'DIRECT_PORTAL',
         notes: customNotes || `Referred Lead from Referral Portal (${referralCode || 'Direct'})`
       });
@@ -1111,9 +1112,19 @@ Please help me schedule a Free Rooftop Site Survey and Loan Consultation.`;
               <form onSubmit={handleSubmitLead} className="space-y-4 text-xs">
                 
                 {leadError && (
-                  <div className="p-3 rounded-xl bg-red-950/80 border border-red-500/50 text-red-200 text-xs flex items-center space-x-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{leadError}</span>
+                  <div className="p-3.5 rounded-xl bg-red-950/80 border border-red-500/50 text-red-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center space-x-2">
+                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      <span>{leadError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenWhatsAppConsultation}
+                      className="px-3 py-1.5 rounded-lg bg-[#00a884] hover:bg-[#009272] text-white font-bold text-[11px] flex items-center justify-center space-x-1.5 shrink-0 transition-all shadow"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>{isTa ? 'வாட்ஸ்அப் மூலம் அனுப்பவும்' : 'Submit via WhatsApp Instead'}</span>
+                    </button>
                   </div>
                 )}
 

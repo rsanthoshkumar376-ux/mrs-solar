@@ -102,9 +102,9 @@ app.get('/api/health', (req, res) => {
 });
 
 // Public Solar ROI Leads submission endpoint (Free Lead Capture & Referral Inquiries)
-app.post('/api/leads', async (req, res) => {
+app.post(['/api/leads', '/leads'], async (req, res) => {
   try {
-    const { fullName, mobileNumber, email, district, monthlyEbBill, systemCapacity, estimatedSubsidy, roofType, notes, referralCode } = req.body;
+    const { fullName, mobileNumber, email, district, monthlyEbBill, systemCapacity, estimatedSubsidy, roofType, notes, referralCode, loanTenureMonths } = req.body;
     if (!fullName || !mobileNumber) {
       return res.status(400).json({ message: 'Name and mobile number are required.' });
     }
@@ -118,6 +118,7 @@ app.post('/api/leads', async (req, res) => {
       estimatedSubsidy: Number(estimatedSubsidy) || 30000,
       roofType: roofType || 'RCC Concrete',
       referralCode: referralCode ? String(referralCode).trim() : '',
+      loanTenureMonths: Number(loanTenureMonths) || 60,
       notes: notes || '',
       status: 'New',
       createdAt: new Date().toISOString()
@@ -134,12 +135,14 @@ app.post('/api/leads', async (req, res) => {
         read: false,
         createdAt: new Date().toISOString()
       });
-    } catch (notifErr) {}
+    } catch (notifErr) {
+      console.warn('Admin notification warning:', notifErr.message);
+    }
 
     res.json({ success: true, message: 'Inquiry submitted successfully! Our solar engineer will contact you shortly.', leadId: lead._id });
   } catch (err) {
     console.error('Lead submission error:', err);
-    res.status(500).json({ message: 'Failed to submit inquiry' });
+    res.status(500).json({ message: err.message || 'Failed to submit inquiry. Please try again.' });
   }
 });
 

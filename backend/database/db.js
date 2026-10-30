@@ -25,9 +25,12 @@ const BACKUP_DIR = path.join(DATA_DIR, 'backups');
 
 // ─── Ensure Local Data Dirs ──────────────────────────────────────────────────
 async function ensureDirs() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.mkdir(BACKUP_DIR, { recursive: true });
-  await fs.mkdir(path.join(DATA_DIR, 'uploads'), { recursive: true });
+  const baseDir = process.env.VERCEL ? '/tmp' : DATA_DIR;
+  try {
+    await fs.mkdir(baseDir, { recursive: true });
+    await fs.mkdir(path.join(baseDir, 'backups'), { recursive: true });
+    await fs.mkdir(path.join(baseDir, 'uploads'), { recursive: true });
+  } catch (e) {}
 }
 
 // Write queue for local JSON file fallback
@@ -55,7 +58,8 @@ function generateId(collection) {
 // ─── Local JSON Database Engine (Fallback) ──────────────────────────────────
 class JsonDatabaseEngine {
   getFilePath(collection) {
-    return path.join(DATA_DIR, `${collection}.json`);
+    const baseDir = process.env.VERCEL ? '/tmp' : DATA_DIR;
+    return path.join(baseDir, `${collection}.json`);
   }
 
   async readCollection(collection) {
@@ -65,6 +69,12 @@ class JsonDatabaseEngine {
       const data = await fs.readFile(filePath, 'utf-8');
       return JSON.parse(data);
     } catch (error) {
+      if (process.env.VERCEL && error.code === 'ENOENT') {
+        try {
+          const originalData = await fs.readFile(path.join(DATA_DIR, `${collection}.json`), 'utf-8');
+          return JSON.parse(originalData);
+        } catch {}
+      }
       if (error.code === 'ENOENT') return [];
       console.error(`Error reading collection ${collection}:`, error);
       return [];
@@ -193,25 +203,48 @@ function isMySQLConnected() {
 
 async function initMySQLTables() {
   if (!mysqlPool) return;
-  const collections = ['users', 'customers', 'payments', 'audit_logs', 'notifications', 'settings', 'customer_documents', 'audit_runs'];
+  const collections = ['users', 'customers', 'payments', 'audit_logs', 'notifications', 'settings', 'customer_documents', 'audit_runs', 'leads', 'tickets'];
   for (const col of collections) {
-    await mysqlPool.query(`
-      CREATE TABLE IF NOT EXISTS mrs_${col} (
-        id VARCHAR(120) PRIMARY KEY,
-        data JSON NOT NULL,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    `);
+    try {
+      await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS mrs_${col} (
+          id VARCHAR(120) PRIMARY KEY,
+          data JSON NOT NULL,
+          updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+    } catch (e) {
+      console.warn(`Could not init table mrs_${col}:`, e.message);
+    }
   }
 }
 
 class MySQLDatabaseEngine {
+  async ensureTable(collection) {
+    if (!mysqlPool) return;
+    try {
+      await mysqlPool.query(`
+        CREATE TABLE IF NOT EXISTS mrs_${collection} (
+          id VARCHAR(120) PRIMARY KEY,
+          data JSON NOT NULL,
+          updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+    } catch (e) {
+      console.warn(`Could not ensure table mrs_${collection}:`, e.message);
+    }
+  }
+
   async find(collection, query = {}) {
     try {
       const [rows] = await mysqlPool.query(`SELECT data FROM mrs_${collection}`);
       const items = rows.map(r => typeof r.data === 'string' ? JSON.parse(r.data) : r.data);
       return items.filter(item => matchQuery(item, query));
     } catch (err) {
+      if (err.message && err.message.includes("doesn't exist")) {
+        await this.ensureTable(collection);
+        return [];
+      }
       console.error(`MySQL find error on ${collection}:`, err.message);
       return jsonDb.find(collection, query);
     }
@@ -238,6 +271,19 @@ class MySQLDatabaseEngine {
       await jsonDb.create(collection, newRecord).catch(() => {});
       return newRecord;
     } catch (err) {
+      if (err.message && err.message.includes("doesn't exist")) {
+        await this.ensureTable(collection);
+        try {
+          await mysqlPool.query(
+            `INSERT INTO mrs_${collection} (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = VALUES(data)`,
+            [id, JSON.stringify(newRecord)]
+          );
+          await jsonDb.create(collection, newRecord).catch(() => {});
+          return newRecord;
+        } catch (retryErr) {
+          console.error(`MySQL create retry error on ${collection}:`, retryErr.message);
+        }
+      }
       console.error(`MySQL create error on ${collection}:`, err.message);
       return jsonDb.create(collection, newRecord);
     }
