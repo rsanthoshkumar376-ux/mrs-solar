@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import api from '../../utils/api.js';
 import { formatCurrency } from '../../utils/format.js';
@@ -13,8 +13,30 @@ import {
 export default function WorkerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('tasks'); // tasks | targets | attendance | leads
+
+  // Synchronize active tab with URL path
+  const getTabFromPath = () => {
+    if (location.pathname.includes('/targets')) return 'targets';
+    if (location.pathname.includes('/attendance')) return 'attendance';
+    if (location.pathname.includes('/leads') || location.pathname.includes('/visits')) return 'leads';
+    return 'tasks';
+  };
+
+  const [activeTab, setActiveTab] = useState(getTabFromPath);
+
+  useEffect(() => {
+    setActiveTab(getTabFromPath());
+  }, [location.pathname]);
+
+  const handleTabClick = (tabId) => {
+    setActiveTab(tabId);
+    if (tabId === 'tasks') navigate('/worker/tasks');
+    else if (tabId === 'targets') navigate('/worker/targets');
+    else if (tabId === 'attendance') navigate('/worker/attendance');
+    else if (tabId === 'leads') navigate('/worker/leads');
+  };
   
   // Data state
   const [tasks, setTasks] = useState([]);
@@ -251,7 +273,7 @@ export default function WorkerDashboard() {
         </div>
       )}
 
-      {/* HEADER WITH WORKER INFO & PUNCH IN/OUT */}
+      {/* HEADER WITH WORKER INFO & STATUS */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 p-6 rounded-2xl border border-teal-800/30 shadow-xl text-white">
         <div>
           <div className="flex items-center space-x-2.5 mb-1.5">
@@ -269,117 +291,183 @@ export default function WorkerDashboard() {
           </p>
         </div>
 
-        {/* ATTENDANCE PUNCH BOX */}
-        <div className="flex items-center space-x-3 bg-slate-900/80 p-3 rounded-xl border border-teal-700/30">
-          <div className="text-right">
-            <p className="text-[10px] uppercase font-bold text-slate-400">Today's Shift Status</p>
-            <p className="text-xs font-bold">
-              {todayAttendance?.checkInTime ? (
-                <span className="text-emerald-400">Punched In: {todayAttendance.checkInTime}</span>
-              ) : (
-                <span className="text-amber-400">Not Punched In</span>
-              )}
-            </p>
+        {/* COMPACT SHIFT STATUS INDICATOR */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-slate-900/90 border border-teal-700/40">
+            <span className="text-[10px] uppercase font-bold text-slate-400">Shift Status:</span>
+            {todayAttendance?.checkInTime ? (
+              <span className="text-xs font-bold text-emerald-400 flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>On Duty ({todayAttendance.checkInTime})</span>
+              </span>
+            ) : (
+              <span className="text-xs font-bold text-amber-400">⚪ Shift Not Started</span>
+            )}
           </div>
-
-          {!todayAttendance ? (
-            <button
-              onClick={handlePunchIn}
-              disabled={punchLoading}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl text-xs font-bold shadow-lg flex items-center space-x-1.5 transition-all active:scale-95"
-            >
-              <UserCheck className="w-4 h-4" />
-              <span>{punchLoading ? 'Punching...' : 'Punch In'}</span>
-            </button>
-          ) : !todayAttendance.checkOutTime ? (
-            <button
-              onClick={handlePunchOut}
-              disabled={punchLoading}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white rounded-xl text-xs font-bold shadow-lg flex items-center space-x-1.5 transition-all active:scale-95"
-            >
-              <Clock className="w-4 h-4" />
-              <span>{punchLoading ? 'Punching...' : 'Punch Out'}</span>
-            </button>
-          ) : (
-            <div className="px-3 py-1.5 bg-slate-800 rounded-xl text-xs font-bold text-slate-300">
-              Shift Ended ({todayAttendance.checkOutTime})
-            </div>
-          )}
-
-          <button
-            onClick={() => navigate('/change-password')}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all flex items-center space-x-1 text-xs font-semibold"
-            title="Change Account Password"
-          >
-            <KeyRound className="w-4 h-4 text-teal-400" />
-            <span className="hidden sm:inline">Password</span>
-          </button>
 
           <button
             onClick={fetchWorkerData}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
-            title="Refresh"
+            title="Refresh Data"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* KPI METRIC CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-semibold">My Total Tasks</span>
-            <Clock className="w-4 h-4 text-blue-500" />
+      {/* CONTEXT-AWARE KPI METRIC CARDS (No duplicate repetition) */}
+      {activeTab === 'tasks' && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Total Assigned Tasks</span>
+              <Clock className="w-4 h-4 text-blue-500" />
+            </div>
+            <p className="text-2xl font-black text-slate-800 dark:text-white">{tasks.length}</p>
+            <span className="text-[10px] text-slate-500 font-semibold">Active workload</span>
           </div>
-          <p className="text-2xl font-black text-slate-800 dark:text-white">{tasks.length}</p>
-          <span className="text-[10px] text-slate-500 font-semibold">Assigned assignments</span>
-        </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-semibold">In Progress</span>
-            <Play className="w-4 h-4 text-teal-500" />
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">In Progress</span>
+              <Play className="w-4 h-4 text-teal-500" />
+            </div>
+            <p className="text-2xl font-black text-teal-600 dark:text-teal-400">{inProgressTasks.length}</p>
+            <span className="text-[10px] text-teal-600 font-semibold">Currently on site</span>
           </div>
-          <p className="text-2xl font-black text-teal-600 dark:text-teal-400">{inProgressTasks.length}</p>
-          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">Ongoing fieldwork</span>
-        </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-semibold">Under Review</span>
-            <AlertCircle className="w-4 h-4 text-amber-500" />
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Under Manager Review</span>
+              <AlertCircle className="w-4 h-4 text-amber-500" />
+            </div>
+            <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{pendingTasks.length}</p>
+            <span className="text-[10px] text-amber-600 font-semibold">Awaiting sign-off</span>
           </div>
-          <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{pendingTasks.length}</p>
-          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Manager approval</span>
-        </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-semibold">Approved</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Completed & Approved</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            </div>
+            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{approvedTasks.length}</p>
+            <span className="text-[10px] text-emerald-600 font-semibold">Verified assignments</span>
           </div>
-          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{approvedTasks.length}</p>
-          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Target counted</span>
         </div>
+      )}
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm col-span-2 lg:col-span-1">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
-            <span className="text-xs font-semibold">Target Progress</span>
-            <Target className="w-4 h-4 text-purple-500" />
+      {activeTab === 'targets' && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Monthly Goal</span>
+              <Target className="w-4 h-4 text-purple-500" />
+            </div>
+            <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{targetTotal} <span className="text-xs font-semibold text-slate-400">{myDirectTarget?.unit || 'units'}</span></p>
+            <span className="text-[10px] text-slate-500 font-semibold">Assigned quota</span>
           </div>
-          <p className="text-xl font-black text-purple-600 dark:text-purple-400">{targetPct}%</p>
-          <p className="text-[10px] text-slate-500">
-            {targetCompleted} / {targetTotal} {myDirectTarget?.unit || 'units'}
-          </p>
-          <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
-            <div 
-              className="bg-gradient-to-r from-purple-500 to-teal-400 h-full rounded-full transition-all"
-              style={{ width: `${targetPct}%` }}
-            />
+
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Approved Units</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            </div>
+            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{targetCompleted}</p>
+            <span className="text-[10px] text-emerald-600 font-semibold">Credited to quota</span>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Remaining to Goal</span>
+              <Clock className="w-4 h-4 text-amber-500" />
+            </div>
+            <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{Math.max(0, targetTotal - targetCompleted)}</p>
+            <span className="text-[10px] text-amber-600 font-semibold">Needed for 100%</span>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Achievement Rate</span>
+              <Award className="w-4 h-4 text-teal-500" />
+            </div>
+            <p className="text-2xl font-black text-teal-600 dark:text-teal-400">{targetPct}%</p>
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
+              <div className="bg-gradient-to-r from-purple-500 to-teal-400 h-full rounded-full" style={{ width: `${targetPct}%` }} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'attendance' && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Today's Punch</span>
+              <Clock className="w-4 h-4 text-teal-500" />
+            </div>
+            <p className="text-lg font-black text-teal-600 dark:text-teal-400">{todayAttendance?.checkInTime || 'Not In'}</p>
+            <span className="text-[10px] text-slate-500 font-semibold">{todayAttendance?.checkOutTime ? `Out: ${todayAttendance.checkOutTime}` : 'Active Shift'}</span>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Days Present</span>
+              <UserCheck className="w-4 h-4 text-emerald-500" />
+            </div>
+            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{attendanceLogs.length}</p>
+            <span className="text-[10px] text-emerald-600 font-semibold">Recorded shifts</span>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Leaves Taken</span>
+              <Calendar className="w-4 h-4 text-amber-500" />
+            </div>
+            <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{leaves.filter(l => l.status === 'Approved').length}</p>
+            <span className="text-[10px] text-amber-600 font-semibold">Approved days</span>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Leave Requests</span>
+              <AlertCircle className="w-4 h-4 text-blue-500" />
+            </div>
+            <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{leaves.filter(l => l.status === 'Pending').length} Pending</p>
+            <span className="text-[10px] text-slate-500 font-semibold">Awaiting manager</span>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'leads' && (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Assigned Customer Visits</span>
+              <MapPin className="w-4 h-4 text-teal-500" />
+            </div>
+            <p className="text-2xl font-black text-slate-800 dark:text-white">{assignedLeads.length}</p>
+            <span className="text-[10px] text-slate-500 font-semibold">Territory prospects</span>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Surveys Pending</span>
+              <Clock className="w-4 h-4 text-amber-500" />
+            </div>
+            <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{assignedLeads.filter(l => l.stage !== 'Installed').length}</p>
+            <span className="text-[10px] text-amber-600 font-semibold">Site inspections needed</span>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm col-span-2 lg:col-span-1">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">District Coverage</span>
+              <Zap className="w-4 h-4 text-purple-500" />
+            </div>
+            <p className="text-xl font-black text-purple-600 dark:text-purple-400">Thiruvallur</p>
+            <span className="text-[10px] text-purple-600 font-semibold">Active operational zone</span>
+          </div>
+        </div>
+      )}
 
       {/* REVISION ALERT BOX IF ANY */}
       {revisionTasks.length > 0 && (
@@ -409,7 +497,7 @@ export default function WorkerDashboard() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabClick(tab.id)}
               className={`flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 isActive
                   ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 shadow-sm'
@@ -655,6 +743,51 @@ export default function WorkerDashboard() {
       {/* TAB 3: ATTENDANCE & LEAVES */}
       {activeTab === 'attendance' && (
         <div className="space-y-6">
+          {/* INTERACTIVE SHIFT PUNCH CLOCK CARD */}
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 border border-teal-800/40 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[10px] font-bold uppercase tracking-wider">
+                <Clock className="w-3 h-3 text-teal-400" />
+                <span>Shift Clock & Time Tracking</span>
+              </div>
+              <h3 className="text-xl font-bold text-white">
+                {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </h3>
+              <p className="text-xs text-slate-300">
+                {todayAttendance?.checkInTime 
+                  ? `Shift Active • Punched in at ${todayAttendance.checkInTime}${todayAttendance.checkOutTime ? ` • Shift ended at ${todayAttendance.checkOutTime}` : ' (On Duty)'}`
+                  : 'You have not checked in for today’s shift. Click Punch In when starting your field duty.'}
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-3 shrink-0">
+              {!todayAttendance ? (
+                <button
+                  onClick={handlePunchIn}
+                  disabled={punchLoading}
+                  className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-2xl text-xs font-bold shadow-lg shadow-emerald-900/30 flex items-center space-x-2 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  <span>{punchLoading ? 'Punching In...' : 'Punch In (Start Shift)'}</span>
+                </button>
+              ) : !todayAttendance.checkOutTime ? (
+                <button
+                  onClick={handlePunchOut}
+                  disabled={punchLoading}
+                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white rounded-2xl text-xs font-bold shadow-lg shadow-rose-900/30 flex items-center space-x-2 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <Clock className="w-4 h-4" />
+                  <span>{punchLoading ? 'Punching Out...' : 'Punch Out (End Shift)'}</span>
+                </button>
+              ) : (
+                <div className="px-5 py-2.5 bg-slate-800/90 rounded-2xl text-xs font-bold text-slate-300 border border-slate-700 flex items-center space-x-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Shift Completed ({todayAttendance.checkOutTime})</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
               <Calendar className="w-5 h-5 text-teal-600 dark:text-teal-400" />

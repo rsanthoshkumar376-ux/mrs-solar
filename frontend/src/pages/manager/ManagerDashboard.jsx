@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import api from '../../utils/api.js';
 import { formatCurrency } from '../../utils/format.js';
@@ -13,8 +13,34 @@ import {
 export default function ManagerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('approvals'); // approvals | assign | targets | team | attendance | leads
+
+  // Synchronize active tab with URL path
+  const getTabFromPath = () => {
+    if (location.pathname.includes('/assign') || location.pathname.includes('/tasks')) return 'assign';
+    if (location.pathname.includes('/targets')) return 'targets';
+    if (location.pathname.includes('/team') || location.pathname.includes('/members')) return 'team';
+    if (location.pathname.includes('/attendance') || location.pathname.includes('/leaves')) return 'attendance';
+    if (location.pathname.includes('/leads')) return 'leads';
+    return 'approvals';
+  };
+
+  const [activeTab, setActiveTab] = useState(getTabFromPath);
+
+  useEffect(() => {
+    setActiveTab(getTabFromPath());
+  }, [location.pathname]);
+
+  const handleTabClick = (tabId) => {
+    setActiveTab(tabId);
+    if (tabId === 'approvals') navigate('/manager');
+    else if (tabId === 'assign') navigate('/manager/assign');
+    else if (tabId === 'targets') navigate('/manager/targets');
+    else if (tabId === 'team') navigate('/manager/team');
+    else if (tabId === 'attendance') navigate('/manager/attendance');
+    else if (tabId === 'leads') navigate('/manager/leads');
+  };
   
   // Data state
   const [teamMembers, setTeamMembers] = useState([]);
@@ -349,7 +375,7 @@ export default function ManagerDashboard() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabClick(tab.id)}
               className={`flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 isActive
                   ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 shadow-sm'

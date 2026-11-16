@@ -7,7 +7,8 @@ import {
   Users, DollarSign, History, Calculator, ShieldAlert,
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
   Search, Languages, Mic, CreditCard, Trash2, Settings, KanbanSquare,
-  Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench, Sparkles, KeyRound
+  Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench, Sparkles, KeyRound,
+  PlusCircle, MapPin
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -219,27 +220,24 @@ export default function Layout({ children }) {
   ];
 
   const managerLinks = [
-    { label: 'Team Dashboard', path: '/manager', icon: LayoutDashboard },
-    { label: 'Team Tasks & Approvals', path: '/manager/tasks', icon: CheckSquare },
+    { label: 'Team Approvals', path: '/manager', icon: CheckSquare },
+    { label: 'Assign Tasks', path: '/manager/assign', icon: PlusCircle },
     { label: 'Team Targets', path: '/manager/targets', icon: Target },
     { label: 'Team Attendance', path: '/manager/attendance', icon: Calendar },
     { label: 'Assigned Leads', path: '/admin/leads', icon: KanbanSquare },
-    { label: 'Solar Installations', path: '/admin/projects', icon: Wrench },
-    { label: 'Change Password', path: '/change-password', icon: KeyRound }
+    { label: 'Solar Installations', path: '/admin/projects', icon: Wrench }
   ];
 
   const workerLinks = [
-    { label: 'My Dashboard', path: '/worker', icon: LayoutDashboard },
     { label: 'My Tasks', path: '/worker/tasks', icon: CheckSquare },
     { label: 'My Targets', path: '/worker/targets', icon: Target },
     { label: 'My Attendance', path: '/worker/attendance', icon: Calendar },
-    { label: 'Change Password', path: '/change-password', icon: KeyRound }
+    { label: 'Customer Visits', path: '/worker/leads', icon: MapPin }
   ];
 
   const customerLinks = [
     { label: t.myDashboard, path: '/customer', icon: LayoutDashboard },
-    { label: t.paymentHistory, path: '/customer/payments', icon: History },
-    { label: 'Change Password', path: '/change-password', icon: KeyRound }
+    { label: t.paymentHistory, path: '/customer/payments', icon: History }
   ];
 
   const links = user?.role === 'admin' 
