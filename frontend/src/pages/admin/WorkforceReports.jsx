@@ -158,7 +158,7 @@ export default function WorkforceReports() {
               {performanceList.map((p, idx) => {
                 const ach = p.achievementPercentage || 0;
                 return (
-                  <tr key={p.employeeId} className="hover:bg-slate-50 dark:hover:bg-slate-850">
+                  <tr key={p.employeeId} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                     <td className="p-3.5">
                       <div className="flex items-center space-x-3">
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-xs ${

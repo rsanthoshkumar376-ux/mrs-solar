@@ -237,7 +237,7 @@ export default function AiDashboard() {
                 </tr>
               ) : (
                 recentAnalyses.map((item) => (
-                  <tr key={item._id} className="hover:bg-slate-50 dark:hover:bg-slate-850">
+                  <tr key={item._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                     <td className="p-3.5">
                       <span className="font-bold text-slate-800 dark:text-white text-xs">
                         {item.analysisType}

@@ -458,7 +458,7 @@ export default function EmployeeManager() {
                 </tr>
               ) : (
                 filteredEmployees.map((emp) => (
-                  <tr key={emp._id || emp.employeeId} className="hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors">
+                  <tr key={emp._id || emp.employeeId} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                     <td className="p-3.5">
                       <div className="flex items-center space-x-3">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 shadow-sm ${

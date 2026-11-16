@@ -8,6 +8,9 @@ export default {
   theme: {
     extend: {
       colors: {
+        slate: {
+          850: '#151e2e',
+        },
         solar: {
           dark: '#0f172a',
           primary: '#0d9488', // teal-600

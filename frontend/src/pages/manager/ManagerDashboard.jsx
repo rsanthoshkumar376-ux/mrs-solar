@@ -887,7 +887,7 @@ export default function ManagerDashboard() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {attendance.slice(0, 8).map((att) => (
-                    <tr key={att._id || att.id} className="hover:bg-slate-50 dark:hover:bg-slate-850">
+                    <tr key={att._id || att.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                       <td className="p-3 font-bold text-slate-800 dark:text-white">
                         {att.employeeName} ({att.employeeId})
                       </td>

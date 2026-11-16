@@ -848,7 +848,7 @@ export default function WorkerDashboard() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {attendanceLogs.slice(0, 10).map((att) => (
-                    <tr key={att._id || att.id} className="hover:bg-slate-50 dark:hover:bg-slate-850">
+                    <tr key={att._id || att.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                       <td className="p-3 font-bold text-slate-800 dark:text-white">{att.date}</td>
                       <td className="p-3 font-mono text-emerald-600">{att.checkInTime || '-'}</td>
                       <td className="p-3 font-mono text-slate-500">{att.checkOutTime || 'On Duty'}</td>

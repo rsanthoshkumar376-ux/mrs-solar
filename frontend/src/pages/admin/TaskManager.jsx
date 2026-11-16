@@ -199,7 +199,7 @@ export default function TaskManager() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredTasks.map((task) => (
-                <tr key={task._id || task.id} className="hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors">
+                <tr key={task._id || task.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                   <td className="p-3.5">
                     <p className="font-bold text-slate-800 dark:text-white text-xs">{task.title}</p>
                     <span className="text-[10px] text-slate-500 font-medium">{task.category || 'Site inspections'}</span>

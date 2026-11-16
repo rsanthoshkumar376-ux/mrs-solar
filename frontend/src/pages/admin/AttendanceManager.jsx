@@ -187,7 +187,7 @@ export default function AttendanceManager() {
                 </tr>
               ) : (
                 todayAttendance.map((att) => (
-                  <tr key={att._id || att.id} className="hover:bg-slate-50 dark:hover:bg-slate-850">
+                  <tr key={att._id || att.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                     <td className="p-3.5 font-bold text-slate-800 dark:text-white">
                       {att.employeeName} <span className="font-mono text-slate-400 font-normal">({att.employeeId})</span>
                     </td>
@@ -279,7 +279,7 @@ export default function AttendanceManager() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {attendance.map((att) => (
-                <tr key={att._id || att.id} className="hover:bg-slate-50 dark:hover:bg-slate-850">
+                <tr key={att._id || att.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                   <td className="p-3.5 font-mono text-slate-600 dark:text-slate-300">{att.date}</td>
                   <td className="p-3.5 font-bold text-slate-800 dark:text-white">
                     {att.employeeName} ({att.employeeId})
