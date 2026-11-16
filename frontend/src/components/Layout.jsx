@@ -220,12 +220,7 @@ export default function Layout({ children }) {
   ];
 
   const managerLinks = [
-    { label: 'Team Approvals', path: '/manager', icon: CheckSquare },
-    { label: 'Assign Tasks', path: '/manager/assign', icon: PlusCircle },
-    { label: 'Team Targets', path: '/manager/targets', icon: Target },
-    { label: 'Team Attendance', path: '/manager/attendance', icon: Calendar },
-    { label: 'Assigned Leads', path: '/admin/leads', icon: KanbanSquare },
-    { label: 'Solar Installations', path: '/admin/projects', icon: Wrench }
+    { label: 'Team Dashboard', path: '/manager', icon: LayoutDashboard }
   ];
 
   const workerLinks = [
