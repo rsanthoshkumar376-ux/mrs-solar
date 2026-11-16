@@ -25,6 +25,8 @@ export default function EmployeeManager() {
   const [selectedEmp, setSelectedEmp] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [copiedId, setCopiedId] = useState(null);
+  const [modalError, setModalError] = useState('');
+  const [editModalError, setEditModalError] = useState('');
 
   // Add Employee Form
   const [addForm, setAddForm] = useState({
@@ -99,6 +101,7 @@ export default function EmployeeManager() {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
+    setModalError('');
     try {
       setSaving(true);
       const manager = employees.find(e => e.employeeId === addForm.managerId);
@@ -107,6 +110,7 @@ export default function EmployeeManager() {
         managerName: manager?.fullName || ''
       });
       setShowAddModal(false);
+      setModalError('');
       setAddForm({
         fullName: '',
         username: '',
@@ -123,7 +127,9 @@ export default function EmployeeManager() {
       setTimeout(() => setSuccessMsg(''), 4000);
       fetchData();
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || err.response?.data?.error || 'Failed to create employee');
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to create employee';
+      setModalError(msg);
+      setErrorMsg(msg);
       setTimeout(() => setErrorMsg(''), 4000);
     } finally {
       setSaving(false);
@@ -131,6 +137,7 @@ export default function EmployeeManager() {
   };
 
   const openEditModal = (emp) => {
+    setEditModalError('');
     setEditForm({
       _id: emp._id || emp.id,
       employeeId: emp.employeeId,
@@ -148,6 +155,7 @@ export default function EmployeeManager() {
 
   const handleUpdateEmployee = async (e) => {
     e.preventDefault();
+    setEditModalError('');
     try {
       setSaving(true);
       const manager = employees.find(e => e.employeeId === editForm.managerId);
@@ -156,11 +164,14 @@ export default function EmployeeManager() {
         managerName: manager?.fullName || (editForm.role === 'manager' ? 'Direct to Owner' : '')
       });
       setShowEditModal(false);
+      setEditModalError('');
       setSuccessMsg(`Employee ${editForm.employeeId} updated successfully!`);
       setTimeout(() => setSuccessMsg(''), 4000);
       fetchData();
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || err.response?.data?.error || 'Failed to update employee');
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to update employee';
+      setEditModalError(msg);
+      setErrorMsg(msg);
       setTimeout(() => setErrorMsg(''), 4000);
     } finally {
       setSaving(false);
@@ -280,7 +291,7 @@ export default function EmployeeManager() {
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => { setModalError(''); setShowAddModal(true); }}
             className="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-teal-500/20 flex items-center space-x-2 transition-all active:scale-95"
           >
             <UserPlus className="w-4 h-4" />
@@ -587,6 +598,13 @@ export default function EmployeeManager() {
             </div>
 
             <form onSubmit={handleAddEmployee} className="space-y-3.5 text-xs">
+              {modalError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center space-x-2">
+                  <ShieldAlert className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{modalError}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
@@ -631,7 +649,7 @@ export default function EmployeeManager() {
                     required
                     value={addForm.mobileNumber}
                     onChange={(e) => setAddForm({ ...addForm, mobileNumber: e.target.value })}
-                    placeholder="9840123456"
+                    placeholder="Enter 10-digit mobile number"
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl"
                   />
                 </div>
@@ -745,6 +763,13 @@ export default function EmployeeManager() {
             </div>
 
             <form onSubmit={handleUpdateEmployee} className="space-y-3.5 text-xs">
+              {editModalError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center space-x-2">
+                  <ShieldAlert className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{editModalError}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>

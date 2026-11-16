@@ -124,7 +124,11 @@ export async function seedWorkforceDefaults() {
     ];
 
     for (const def of defaultEmployees) {
-      const match = existingEmployees.find(e => e.employeeId === def.employeeId || e.username === def.username);
+      const match = existingEmployees.find(e => 
+        (e.employeeId && e.employeeId.toUpperCase() === def.employeeId.toUpperCase()) || 
+        (e.username && e.username.toLowerCase() === def.username.toLowerCase()) ||
+        (e.mobileNumber && e.mobileNumber === def.mobileNumber)
+      );
       if (!match) {
         await db.create('employees', def);
       } else if (!match.department || !match.designation || !match.mobileNumber) {
@@ -315,22 +319,43 @@ router.post('/employees', authenticateToken, authorizeRole(['admin']), async (re
     const cleanEmail = email ? String(email).trim().toLowerCase() : '';
     const cleanUsername = username ? String(username).trim().toLowerCase() : '';
 
-    // Check unique email and mobile in employees collection
+    // Check unique username, email, and mobile in employees collection
     const allEmployees = await db.find('employees');
-    const existing = allEmployees.find(e => 
-      (cleanEmail && e.email && e.email.toLowerCase() === cleanEmail) ||
-      (e.mobileNumber && e.mobileNumber.replace(/^\+?91/, '').replace(/[\s-]/g, '') === cleanMobile) ||
-      (cleanUsername && e.username && e.username.toLowerCase() === cleanUsername)
-    );
+    
+    if (cleanUsername) {
+      const uMatch = allEmployees.find(e => e.username && e.username.toLowerCase() === cleanUsername);
+      if (uMatch) {
+        return res.status(400).json({ message: `Username "${cleanUsername}" is already taken by ${uMatch.fullName} (${uMatch.employeeId}). Please choose a different username.` });
+      }
+    }
 
-    if (existing) {
-      return res.status(400).json({ message: 'An employee with this username, email, or mobile number already exists' });
+    if (cleanMobile) {
+      const mMatch = allEmployees.find(e => {
+        const existingMob = String(e.mobileNumber || '').trim().replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+        return existingMob && existingMob === cleanMobile.replace(/^0+/, '');
+      });
+      if (mMatch) {
+        return res.status(400).json({ message: `Mobile number ${cleanMobile} is already registered to ${mMatch.fullName} (${mMatch.employeeId}).` });
+      }
+    }
+
+    if (cleanEmail) {
+      const eMatch = allEmployees.find(e => e.email && e.email.toLowerCase() === cleanEmail);
+      if (eMatch) {
+        return res.status(400).json({ message: `Email address "${cleanEmail}" is already registered to ${eMatch.fullName} (${eMatch.employeeId}).` });
+      }
     }
 
     // Auto-generate employee ID
-    const count = allEmployees.length + 1001;
     const prefix = role === 'manager' ? 'MGR' : 'EMP';
-    const employeeId = `${prefix}-${count}`;
+    const numbers = allEmployees
+      .map(e => {
+        const m = String(e.employeeId || '').match(/(?:EMP|MGR)-(\d+)/i);
+        return m ? parseInt(m[1], 10) : 0;
+      })
+      .filter(n => !isNaN(n) && n > 0);
+    const nextNum = (numbers.length > 0 ? Math.max(...numbers) : 1000) + 1;
+    const employeeId = `${prefix}-${nextNum}`;
 
     // Custom password or default password
     const rawPass = password && String(password).trim().length >= 4 
