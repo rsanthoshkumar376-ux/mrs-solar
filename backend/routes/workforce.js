@@ -379,9 +379,6 @@ router.post('/employees', authenticateToken, authorizeRole(['admin']), async (re
     res.status(500).json({ message: 'Failed to create employee' });
   }
 });
-    res.status(500).json({ message: 'Failed to create employee' });
-  }
-});
 
 // PUT /api/workforce/employees/:id (Owner, or Manager editing assigned worker)
 router.put('/employees/:id', authenticateToken, authorizeRole(['admin', 'manager']), async (req, res) => {
