@@ -5,7 +5,7 @@ import { formatCurrency } from '../../utils/format.js';
 import { 
   Users, Zap, DollarSign, Wallet, ShieldAlert, Clock, 
   TrendingUp, Activity, BellRing, PlayCircle, RefreshCw, CheckCircle, ChevronRight, Trash2,
-  FileSpreadsheet, ShieldCheck, AlertTriangle, Landmark, ArrowDownToLine
+  FileSpreadsheet, ShieldCheck, AlertTriangle, Landmark, ArrowDownToLine, Target, Award
 } from 'lucide-react';
 import { translations, getLanguage } from '../../utils/translations.js';
 
@@ -14,6 +14,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [leadsCount, setLeadsCount] = useState(0);
+  const [workforceStats, setWorkforceStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [schedulerRunning, setSchedulerRunning] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
@@ -40,6 +41,11 @@ export default function AdminDashboard() {
         const leadsRes = await api.get('/admin/leads');
         setLeadsCount(Array.isArray(leadsRes.data) ? leadsRes.data.filter(l => l.status !== 'Lost' && l.status !== 'Installed').length : 0);
       } catch (lErr) {}
+
+      try {
+        const wfRes = await api.get('/workforce/reports/overview');
+        setWorkforceStats(wfRes.data);
+      } catch (wfErr) {}
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
@@ -215,6 +221,75 @@ export default function AdminDashboard() {
           <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </div>
       </div>
+
+      {/* WORKFORCE & TEAM MANAGEMENT QUICK ACCESS */}
+      {workforceStats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div 
+            onClick={() => navigate('/admin/employees')}
+            className="cursor-pointer p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-teal-500 transition-all group"
+          >
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Total Workforce</span>
+              <Users className="w-4 h-4 text-teal-600 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-xl font-black text-slate-800 dark:text-white">
+              {workforceStats.workforce?.totalEmployees || 0}
+            </p>
+            <p className="text-[10px] text-teal-600 font-semibold mt-0.5">
+              {workforceStats.workforce?.activeEmployees || 0} Active Staff • Manage →
+            </p>
+          </div>
+
+          <div 
+            onClick={() => navigate('/admin/tasks')}
+            className="cursor-pointer p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-blue-500 transition-all group"
+          >
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Field Tasks</span>
+              <Clock className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-xl font-black text-blue-600 dark:text-blue-400">
+              {workforceStats.tasks?.inProgress || 0} In Progress
+            </p>
+            <p className="text-[10px] text-amber-500 font-semibold mt-0.5">
+              {workforceStats.tasks?.pendingApproval || 0} Awaiting Review • View →
+            </p>
+          </div>
+
+          <div 
+            onClick={() => navigate('/admin/projects')}
+            className="cursor-pointer p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-yellow-500 transition-all group"
+          >
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Solar Installations</span>
+              <Zap className="w-4 h-4 text-yellow-500 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-xl font-black text-yellow-600 dark:text-yellow-400">
+              {workforceStats.projects?.ongoingInstallations || 0} Ongoing
+            </p>
+            <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+              {workforceStats.projects?.completedInstallations || 0} Commissioned • Track →
+            </p>
+          </div>
+
+          <div 
+            onClick={() => navigate('/admin/targets')}
+            className="cursor-pointer p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-purple-500 transition-all group"
+          >
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-xs font-semibold">Target Achievement</span>
+              <Target className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-xl font-black text-purple-600 dark:text-purple-400">
+              {workforceStats.targets?.monthlyAchievementPercentage || 0}%
+            </p>
+            <p className="text-[10px] text-purple-600 font-semibold mt-0.5">
+              {workforceStats.targets?.approvedUnits || 0} / {workforceStats.targets?.totalTargetUnits || 0} Units • Quotas →
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* DASHBOARD STATS CARD GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">

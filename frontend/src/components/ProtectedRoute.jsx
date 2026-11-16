@@ -21,10 +21,12 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // If admin enters client route, let it slide or redirect. 
-    // If customer tries to access admin, redirect to customer dashboard.
     if (user.role === 'customer') {
       return <Navigate to="/customer" replace />;
+    } else if (user.role === 'manager') {
+      return <Navigate to="/manager" replace />;
+    } else if (user.role === 'worker') {
+      return <Navigate to="/worker" replace />;
     } else {
       return <Navigate to="/admin" replace />;
     }

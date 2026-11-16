@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Sun, Moon, Lock, User, ShieldAlert, Eye, EyeOff, Languages, Sparkles, ShieldCheck, ArrowRight, Zap, Gift } from 'lucide-react';
+import { Sun, Moon, Lock, User, ShieldAlert, Eye, EyeOff, Languages, Sparkles, ShieldCheck, ArrowRight, Zap, Gift, Users, Briefcase } from 'lucide-react';
 import InstallAppBanner from '../components/InstallAppBanner.jsx';
 import { AppUpdateModalButton } from '../components/AppUpdateModal.jsx';
 import SolarSunriseBackground from '../components/SolarSunriseBackground.jsx';
@@ -22,6 +22,8 @@ export default function Login() {
 
   const trimmedUser = username.trim().toLowerCase();
   const isAdminDetected = trimmedUser === 'mrsassociates' || trimmedUser.startsWith('admin') || trimmedUser === 'mrs';
+  const isManagerDetected = trimmedUser.startsWith('mgr') || trimmedUser.includes('manager') || trimmedUser === 'suresh_mgr';
+  const isWorkerDetected = trimmedUser.startsWith('emp') || trimmedUser.includes('worker') || trimmedUser === 'karthik_worker' || trimmedUser === 'praveen_solar';
 
   // Referral URL query param detection (?ref=MRS-SOL1001 or ?code=...)
   const [referralCode, setReferralCode] = useState(() => {
@@ -49,16 +51,19 @@ export default function Login() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
+  const redirectByRole = (role) => {
+    if (role === 'admin') navigate('/admin');
+    else if (role === 'manager') navigate('/manager');
+    else if (role === 'worker') navigate('/worker');
+    else navigate('/customer');
+  };
+
   // Handle routing if already authenticated
   useEffect(() => {
     if (user) {
-      if (user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/customer');
-      }
+      redirectByRole(user.role);
     }
-  }, [user, navigate]);
+  }, [user]);
 
   // Handle dark mode class toggling
   useEffect(() => {
@@ -76,29 +81,35 @@ export default function Login() {
     setDemoLoadingRole(role);
     setLoading(true);
 
-    const demoUser = role === 'admin' ? 'MRSassociates' : 'deepi';
-    const demoPass = role === 'admin' ? '2332' : '08072454996';
+    let demoUser = 'deepi';
+    let demoPass = '08072454996';
+    let altPass = 'customer123';
+
+    if (role === 'admin') {
+      demoUser = 'MRSassociates';
+      demoPass = '2332';
+      altPass = 'admin123';
+    } else if (role === 'manager') {
+      demoUser = 'MGR-1001';
+      demoPass = 'manager123';
+      altPass = 'manager123';
+    } else if (role === 'worker') {
+      demoUser = 'EMP-1001';
+      demoPass = 'worker123';
+      altPass = 'worker123';
+    }
 
     setUsername(demoUser);
     setPassword(demoPass);
 
     try {
       const loggedUser = await login(demoUser, demoPass);
-      if (loggedUser.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/customer');
-      }
+      redirectByRole(loggedUser.role);
     } catch (err) {
       console.warn('Initial demo login attempt, retrying with backup credentials...', err);
       try {
-        const altPass = role === 'admin' ? 'admin123' : 'customer123';
         const loggedUser = await login(demoUser, altPass);
-        if (loggedUser.role === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/customer');
-        }
+        redirectByRole(loggedUser.role);
       } catch (retryErr) {
         console.error('Demo login failed:', retryErr);
         setError(retryErr.response?.data?.message || 'Demo login failed. Please check connection.');
@@ -121,11 +132,7 @@ export default function Login() {
 
     try {
       const loggedUser = await login(username, password);
-      if (loggedUser.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/customer');
-      }
+      redirectByRole(loggedUser.role);
     } catch (err) {
       console.error(err);
       if (!err.response) {
@@ -255,61 +262,87 @@ export default function Login() {
               {t.demoSectionSubtitle || 'Explore the live portal instantly — no password required:'}
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {/* Demo Owner Button */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {/* 1. Demo Owner */}
               <button
                 type="button"
                 onClick={() => handleDemoLogin('admin')}
                 disabled={loading}
-                className="group relative flex flex-col items-start p-3 rounded-xl bg-gradient-to-br from-indigo-950/80 to-purple-950/70 hover:from-indigo-900/90 hover:to-purple-900/80 border border-purple-500/40 hover:border-purple-400 transition-all duration-200 text-left shadow-md hover:shadow-purple-500/20 active:scale-[0.98] disabled:opacity-50"
+                className="group relative flex flex-col items-start p-2.5 rounded-xl bg-gradient-to-br from-purple-950/80 to-indigo-950/70 hover:from-purple-900/90 hover:to-indigo-900/80 border border-purple-500/40 text-left transition-all active:scale-95 disabled:opacity-50 shadow-sm"
               >
-                <div className="flex items-center justify-between w-full mb-1">
-                  <div className="flex items-center space-x-1.5">
-                    <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-400/30">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-xs font-extrabold text-white group-hover:text-purple-200">
-                      {t.demoAdminBtn || 'Owner / Admin'}
-                    </span>
+                <div className="flex items-center space-x-1.5 mb-1">
+                  <div className="p-1 rounded-md bg-purple-500/20 text-purple-300">
+                    <ShieldCheck className="w-3 h-3" />
                   </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-purple-400 group-hover:translate-x-0.5 transition-transform" />
+                  <span className="text-[11px] font-black text-white group-hover:text-purple-200">Owner</span>
                 </div>
-                <span className="text-[10px] text-slate-300 leading-tight">
-                  {t.demoAdminSubtitle || 'Loans, approvals & reports'}
-                </span>
+                <span className="text-[9px] text-slate-300 leading-tight">Admin Portal</span>
                 {demoLoadingRole === 'admin' && (
-                  <div className="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center space-x-1.5 text-purple-300 text-xs font-bold backdrop-blur-sm">
-                    <div className="w-3.5 h-3.5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
-                    <span>{t.demoLoggingIn || 'Accessing Demo...'}</span>
+                  <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center text-[10px] text-purple-300 font-bold">
+                    ...
                   </div>
                 )}
               </button>
 
-              {/* Demo Customer Button */}
+              {/* 2. Demo Manager */}
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('manager')}
+                disabled={loading}
+                className="group relative flex flex-col items-start p-2.5 rounded-xl bg-gradient-to-br from-indigo-950/80 to-blue-950/70 hover:from-indigo-900/90 hover:to-blue-900/80 border border-indigo-500/40 text-left transition-all active:scale-95 disabled:opacity-50 shadow-sm"
+              >
+                <div className="flex items-center space-x-1.5 mb-1">
+                  <div className="p-1 rounded-md bg-indigo-500/20 text-indigo-300">
+                    <Users className="w-3 h-3" />
+                  </div>
+                  <span className="text-[11px] font-black text-white group-hover:text-indigo-200">Manager</span>
+                </div>
+                <span className="text-[9px] text-slate-300 leading-tight">Team Portal</span>
+                {demoLoadingRole === 'manager' && (
+                  <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center text-[10px] text-indigo-300 font-bold">
+                    ...
+                  </div>
+                )}
+              </button>
+
+              {/* 3. Demo Worker */}
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('worker')}
+                disabled={loading}
+                className="group relative flex flex-col items-start p-2.5 rounded-xl bg-gradient-to-br from-amber-950/80 to-orange-950/70 hover:from-amber-900/90 hover:to-orange-900/80 border border-amber-500/40 text-left transition-all active:scale-95 disabled:opacity-50 shadow-sm"
+              >
+                <div className="flex items-center space-x-1.5 mb-1">
+                  <div className="p-1 rounded-md bg-amber-500/20 text-amber-300">
+                    <Briefcase className="w-3 h-3" />
+                  </div>
+                  <span className="text-[11px] font-black text-white group-hover:text-amber-200">Worker</span>
+                </div>
+                <span className="text-[9px] text-slate-300 leading-tight">Tasks & Target</span>
+                {demoLoadingRole === 'worker' && (
+                  <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center text-[10px] text-amber-300 font-bold">
+                    ...
+                  </div>
+                )}
+              </button>
+
+              {/* 4. Demo Customer */}
               <button
                 type="button"
                 onClick={() => handleDemoLogin('customer')}
                 disabled={loading}
-                className="group relative flex flex-col items-start p-3 rounded-xl bg-gradient-to-br from-teal-950/80 to-emerald-950/70 hover:from-teal-900/90 hover:to-emerald-900/80 border border-teal-500/40 hover:border-teal-400 transition-all duration-200 text-left shadow-md hover:shadow-teal-500/20 active:scale-[0.98] disabled:opacity-50"
+                className="group relative flex flex-col items-start p-2.5 rounded-xl bg-gradient-to-br from-teal-950/80 to-emerald-950/70 hover:from-teal-900/90 hover:to-emerald-900/80 border border-teal-500/40 text-left transition-all active:scale-95 disabled:opacity-50 shadow-sm"
               >
-                <div className="flex items-center justify-between w-full mb-1">
-                  <div className="flex items-center space-x-1.5">
-                    <div className="p-1.5 rounded-lg bg-teal-500/20 text-teal-300 border border-teal-400/30">
-                      <Sun className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-xs font-extrabold text-white group-hover:text-teal-200">
-                      {t.demoCustomerBtn || 'Customer Portal'}
-                    </span>
+                <div className="flex items-center space-x-1.5 mb-1">
+                  <div className="p-1 rounded-md bg-teal-500/20 text-teal-300">
+                    <Sun className="w-3 h-3" />
                   </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-teal-400 group-hover:translate-x-0.5 transition-transform" />
+                  <span className="text-[11px] font-black text-white group-hover:text-teal-200">Customer</span>
                 </div>
-                <span className="text-[10px] text-slate-300 leading-tight">
-                  {t.demoCustomerSubtitle || 'Solar kW, EMIs & subsidy'}
-                </span>
+                <span className="text-[9px] text-slate-300 leading-tight">4 Folders</span>
                 {demoLoadingRole === 'customer' && (
-                  <div className="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center space-x-1.5 text-teal-300 text-xs font-bold backdrop-blur-sm">
-                    <div className="w-3.5 h-3.5 border-2 border-teal-400 border-t-transparent rounded-full animate-spin"></div>
-                    <span>{t.demoLoggingIn || 'Accessing Demo...'}</span>
+                  <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center text-[10px] text-teal-300 font-bold">
+                    ...
                   </div>
                 )}
               </button>
@@ -338,18 +371,30 @@ export default function Login() {
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
                   {isAdminDetected 
-                    ? (lang === 'ta' ? 'நிர்வாகி பயனர்பெயர்' : 'Administrator Username')
-                    : (lang === 'ta' ? 'பயனர்பெயர் / வாடிக்கையாளர் எண் / மொபைல்' : 'Customer ID / Mobile / Username')}
+                    ? (lang === 'ta' ? 'உரிமையாளர் / நிர்வாகி' : 'Owner / Administrator')
+                    : isManagerDetected
+                    ? (lang === 'ta' ? 'மேலாளர் எண் / பயனர்பெயர்' : 'Manager ID / Username')
+                    : isWorkerDetected
+                    ? (lang === 'ta' ? 'பணியாளர் எண் / பயனர்பெயர்' : 'Employee ID / Username')
+                    : (lang === 'ta' ? 'பயனர்பெயர் / வாடிக்கையாளர் எண் / பணியாளர் எண்' : 'Customer ID / Employee ID / Mobile / Username')}
                 </label>
                 <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full transition-all duration-300 ${
                   isAdminDetected
                     ? 'bg-purple-900/60 text-purple-300 border border-purple-500/40 shadow-sm'
+                    : isManagerDetected
+                    ? 'bg-indigo-900/60 text-indigo-300 border border-indigo-500/40 shadow-sm'
+                    : isWorkerDetected
+                    ? 'bg-amber-900/60 text-amber-300 border border-amber-500/40 shadow-sm'
                     : trimmedUser.length > 0
                     ? 'bg-teal-900/60 text-teal-300 border border-teal-500/40 shadow-sm'
                     : 'bg-slate-800 text-slate-400 border border-slate-700'
                 }`}>
                   {isAdminDetected 
-                    ? (lang === 'ta' ? '🛡️ நிர்வாக தளம்' : '🛡️ Owner Portal') 
+                    ? (lang === 'ta' ? '🛡️ உரிமையாளர் தளம்' : '🛡️ Owner Portal') 
+                    : isManagerDetected
+                    ? (lang === 'ta' ? '👔 மேலாளர் தளம்' : '👔 Manager Portal')
+                    : isWorkerDetected
+                    ? (lang === 'ta' ? '👷 பணியாளர் தளம்' : '👷 Worker Portal')
                     : trimmedUser.length > 0
                     ? (lang === 'ta' ? '☀️ வாடிக்கையாளர் தளம்' : '☀️ Customer Portal')
                     : (lang === 'ta' ? 'ஒற்றை உள்நுழைவு' : 'Unified Login')}
@@ -364,10 +409,14 @@ export default function Login() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder={lang === 'ta' ? 'மொபைல் எண், SOL-XXXX அல்லது பயனர்பெயர்' : 'Mobile No, Customer ID (SOL-XXXX), or Username'}
+                  placeholder={lang === 'ta' ? 'பணியாளர் எண் (EMP/MGR-...), வாடிக்கையாளர் எண் (SOL-...) அல்லது மொபைல்' : 'Employee ID (EMP/MGR-...), Customer ID (SOL-...), Mobile, or User'}
                   className={`w-full bg-slate-950/70 border rounded-xl py-3 pl-10 pr-4 outline-none transition-all text-white placeholder:text-slate-500 text-xs sm:text-sm ${
                     isAdminDetected
                       ? 'border-purple-500/60 focus:border-purple-400 focus:ring-1 focus:ring-purple-400'
+                      : isManagerDetected
+                      ? 'border-indigo-500/60 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400'
+                      : isWorkerDetected
+                      ? 'border-amber-500/60 focus:border-amber-400 focus:ring-1 focus:ring-amber-400'
                       : 'border-slate-700/80 focus:border-teal-400 focus:ring-1 focus:ring-teal-400'
                   }`}
                 />

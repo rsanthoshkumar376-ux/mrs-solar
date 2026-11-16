@@ -203,7 +203,12 @@ function isMySQLConnected() {
 
 async function initMySQLTables() {
   if (!mysqlPool) return;
-  const collections = ['users', 'customers', 'payments', 'audit_logs', 'notifications', 'settings', 'customer_documents', 'audit_runs', 'leads', 'tickets'];
+  const collections = [
+    'users', 'customers', 'payments', 'audit_logs', 'notifications', 
+    'settings', 'customer_documents', 'audit_runs', 'leads', 'tickets',
+    'employees', 'departments', 'teams', 'tasks', 'targets', 
+    'attendance', 'leave_requests', 'solar_projects'
+  ];
   for (const col of collections) {
     try {
       await mysqlPool.query(`

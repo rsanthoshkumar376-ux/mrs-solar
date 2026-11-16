@@ -6,7 +6,7 @@ import {
   Users, UserPlus, Phone, MessageCircle, FileText, Search, Filter, 
   Trash2, Edit3, ArrowRight, ArrowLeft, CheckCircle2, Clock, 
   AlertCircle, Sparkles, X, ChevronRight, RefreshCw, Eye,
-  Building, Sun, Zap, Calendar, ExternalLink, Columns, List
+  Building, Sun, Zap, Calendar, ExternalLink, Columns, List, UserCheck
 } from 'lucide-react';
 import { translations, getLanguage } from '../../utils/translations.js';
 import SolarQuotationModal from '../../components/SolarQuotationModal.jsx';
@@ -54,6 +54,13 @@ export default function LeadManager() {
   });
   const [addingLead, setAddingLead] = useState(false);
 
+  // Assign to Worker Modal State
+  const [assignLead, setAssignLead] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [selectedWorkerId, setSelectedWorkerId] = useState('');
+  const [assignNotes, setAssignNotes] = useState('');
+  const [assigning, setAssigning] = useState(false);
+
   // Language state
   const [lang, setLang] = useState(getLanguage);
   useEffect(() => {
@@ -77,7 +84,33 @@ export default function LeadManager() {
 
   useEffect(() => {
     fetchLeads();
+    api.get('/workforce/employees').then(res => {
+      setEmployees(res.data?.employees || []);
+    }).catch(() => {});
   }, []);
+
+  const handleAssignSubmit = async (e) => {
+    e.preventDefault();
+    if (!assignLead || !selectedWorkerId) return;
+    try {
+      setAssigning(true);
+      const worker = employees.find(emp => emp.employeeId === selectedWorkerId);
+      await api.post(`/workforce/leads/${assignLead._id}/assign`, {
+        employeeId: selectedWorkerId,
+        employeeName: worker?.fullName || selectedWorkerId,
+        notes: assignNotes || `Conduct site inspection and feasibility survey for ${assignLead.fullName}`
+      });
+      alert(`Lead successfully assigned to ${worker?.fullName || selectedWorkerId}! Field task created.`);
+      setAssignLead(null);
+      setSelectedWorkerId('');
+      setAssignNotes('');
+      fetchLeads();
+    } catch (err) {
+      alert('Failed to assign lead: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   // Filtered Leads
   const filteredLeads = useMemo(() => {
@@ -471,6 +504,19 @@ export default function LeadManager() {
                           <div className="flex items-center space-x-1">
                             {/* WhatsApp */}
                             <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAssignLead(lead);
+                                if (employees.length > 0 && !selectedWorkerId) {
+                                  setSelectedWorkerId(employees[0].employeeId);
+                                }
+                              }}
+                              className="p-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 hover:bg-teal-100"
+                              title="Assign to Worker"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                            </button>
+                            <button
                               onClick={(e) => handleWhatsAppContact(lead, e)}
                               className="p-1 rounded bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-600 dark:text-emerald-400 transition-colors"
                               title="Chat on WhatsApp"
@@ -501,6 +547,21 @@ export default function LeadManager() {
                               title="Edit Stage / Add Note"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Assign to Worker */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAssignLead(lead);
+                                if (employees.length > 0 && !selectedWorkerId) {
+                                  setSelectedWorkerId(employees[0].employeeId);
+                                }
+                              }}
+                              className="p-1 rounded bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 text-teal-600 dark:text-teal-400 transition-colors"
+                              title="Assign to Worker / Field Consultant"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
                             </button>
                           </div>
 
@@ -641,6 +702,19 @@ export default function LeadManager() {
                         </td>
                         <td className="p-3 text-right">
                           <div className="flex items-center justify-end space-x-1.5">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAssignLead(lead);
+                                if (employees.length > 0 && !selectedWorkerId) {
+                                  setSelectedWorkerId(employees[0].employeeId);
+                                }
+                              }}
+                              className="p-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 hover:bg-teal-100"
+                              title="Assign to Worker"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               onClick={(e) => handleWhatsAppContact(lead, e)}
                               className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100"
@@ -917,6 +991,79 @@ export default function LeadManager() {
                   className="px-5 py-2 text-xs font-bold rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow-md disabled:opacity-50"
                 >
                   {addingLead ? 'Adding...' : 'Create Lead'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ASSIGN TO WORKER MODAL */}
+      {assignLead && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center space-x-2">
+                <UserCheck className="w-5 h-5 text-teal-600" />
+                <span>Assign Lead to Field Worker</span>
+              </h3>
+              <button onClick={() => setAssignLead(null)}>
+                <X className="w-4 h-4 text-slate-500" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignSubmit} className="space-y-3.5 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                <p className="font-bold text-slate-800 dark:text-white">{assignLead.fullName}</p>
+                <p className="text-slate-500">{assignLead.district || 'Thiruvallur'} • {assignLead.systemCapacity || 3} kWp ({assignLead.roofType || 'RCC'})</p>
+                <p className="text-slate-500">Mobile: {assignLead.mobileNumber}</p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Select Field Consultant / Worker *
+                </label>
+                <select
+                  value={selectedWorkerId}
+                  onChange={(e) => setSelectedWorkerId(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl"
+                >
+                  {employees.map((emp) => (
+                    <option key={emp.employeeId} value={emp.employeeId}>
+                      {emp.fullName} ({emp.employeeId}) — {emp.designation}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Assignment Instructions / Objective
+                </label>
+                <textarea
+                  rows={3}
+                  value={assignNotes}
+                  onChange={(e) => setAssignNotes(e.target.value)}
+                  placeholder="e.g. Visit site at 10 AM, inspect roof shadow, take panel measurement and present 1-click quotation..."
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setAssignLead(null)}
+                  className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={assigning}
+                  className="px-5 py-2 rounded-xl font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-md"
+                >
+                  {assigning ? 'Dispatching...' : 'Assign & Dispatch Task'}
                 </button>
               </div>
             </form>

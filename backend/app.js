@@ -20,6 +20,7 @@ import adminRoutes from './routes/admin.js';
 import customerRoutes from './routes/customer.js';
 import cronRoutes from './routes/cron.js';
 import aiRoutes from './routes/ai.js';
+import workforceRoutes, { seedWorkforceDefaults } from './routes/workforce.js';
 import { runDailyInterestAndPenaltyCheck } from './utils/scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -48,6 +49,7 @@ app.use(async (req, res, next) => {
     try {
       await connectDB();
       isConnected = true;
+      seedWorkforceDefaults().catch(() => {});
     } catch (err) {
       console.warn('DB lazy connection note:', err.message);
     }
@@ -65,6 +67,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/cron', cronRoutes);
 app.use('/api/ai', aiRoutes);
+app.use(['/api/workforce', '/workforce'], workforceRoutes);
 
 // Serve Frontend Static Production Build
 const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');

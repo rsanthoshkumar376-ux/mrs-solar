@@ -6,7 +6,8 @@ import {
   Sun, Moon, LogOut, Menu, X, Bell, LayoutDashboard, 
   Users, DollarSign, History, Calculator, ShieldAlert,
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
-  Search, Languages, Mic, CreditCard, Trash2, Settings, KanbanSquare
+  Search, Languages, Mic, CreditCard, Trash2, Settings, KanbanSquare,
+  Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -201,10 +202,32 @@ export default function Layout({ children }) {
 
   // Define navigation links based on role
   const adminLinks = [
-    { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
+    { label: t.dashboard || 'Overview', path: '/admin', icon: LayoutDashboard },
+    { label: 'Employees & Teams', path: '/admin/employees', icon: Users },
     { label: t.leadsCrm || 'Leads & CRM', path: '/admin/leads', icon: KanbanSquare },
+    { label: 'Tasks & Approvals', path: '/admin/tasks', icon: CheckSquare },
+    { label: 'Target Management', path: '/admin/targets', icon: Target },
+    { label: 'Solar Installations', path: '/admin/projects', icon: Wrench },
     { label: t.customers, path: '/admin/customers', icon: Users },
+    { label: 'Attendance & Leaves', path: '/admin/attendance', icon: Calendar },
+    { label: 'Workforce Reports', path: '/admin/reports', icon: BarChart3 },
     { label: t.settings || 'Settings', path: '/admin/settings', icon: Settings }
+  ];
+
+  const managerLinks = [
+    { label: 'Team Dashboard', path: '/manager', icon: LayoutDashboard },
+    { label: 'Team Tasks & Approvals', path: '/manager/tasks', icon: CheckSquare },
+    { label: 'Team Targets', path: '/manager/targets', icon: Target },
+    { label: 'Team Attendance', path: '/manager/attendance', icon: Calendar },
+    { label: 'Assigned Leads', path: '/admin/leads', icon: KanbanSquare },
+    { label: 'Solar Installations', path: '/admin/projects', icon: Wrench }
+  ];
+
+  const workerLinks = [
+    { label: 'My Dashboard', path: '/worker', icon: LayoutDashboard },
+    { label: 'My Tasks', path: '/worker/tasks', icon: CheckSquare },
+    { label: 'My Targets', path: '/worker/targets', icon: Target },
+    { label: 'My Attendance', path: '/worker/attendance', icon: Calendar }
   ];
 
   const customerLinks = [
@@ -212,15 +235,35 @@ export default function Layout({ children }) {
     { label: t.paymentHistory, path: '/customer/payments', icon: History }
   ];
 
-  const links = user?.role === 'admin' ? adminLinks : customerLinks;
+  const links = user?.role === 'admin' 
+    ? adminLinks 
+    : user?.role === 'manager' 
+    ? managerLinks 
+    : user?.role === 'worker' 
+    ? workerLinks 
+    : customerLinks;
 
   const mobileLinks = user?.role === 'admin'
     ? [
         { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
-        { label: 'Leads', path: '/admin/leads', icon: KanbanSquare },
-        { label: t.customers, path: '/admin/customers', icon: Users },
-        { label: t.settings || 'Settings', path: '/admin/settings', icon: Settings },
+        { label: 'Employees', path: '/admin/employees', icon: Users },
+        { label: 'CRM', path: '/admin/leads', icon: KanbanSquare },
+        { label: 'Tasks', path: '/admin/tasks', icon: CheckSquare },
         { label: t.moreMenu || 'More', action: () => setSidebarOpen(true), icon: Menu }
+      ]
+    : user?.role === 'manager'
+    ? [
+        { label: 'Dashboard', path: '/manager', icon: LayoutDashboard },
+        { label: 'Tasks', path: '/manager/tasks', icon: CheckSquare },
+        { label: 'Targets', path: '/manager/targets', icon: Target },
+        { label: t.moreMenu || 'More', action: () => setSidebarOpen(true), icon: Menu }
+      ]
+    : user?.role === 'worker'
+    ? [
+        { label: 'Dashboard', path: '/worker', icon: LayoutDashboard },
+        { label: 'My Tasks', path: '/worker/tasks', icon: CheckSquare },
+        { label: 'Targets', path: '/worker/targets', icon: Target },
+        { label: 'Attendance', path: '/worker/attendance', icon: Calendar }
       ]
     : customerLinks;
 
@@ -243,7 +286,7 @@ export default function Layout({ children }) {
       >
         {/* Sidebar Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-slate-200 dark:border-slate-800">
-          <Link to={user?.role === 'admin' ? '/admin' : '/customer'} className="flex items-center space-x-2">
+          <Link to={user?.role === 'admin' ? '/admin' : user?.role === 'manager' ? '/manager' : user?.role === 'worker' ? '/worker' : '/customer'} className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center shadow-md">
               <Sun className="w-5 h-5 text-yellow-300" />
             </div>
@@ -293,7 +336,13 @@ export default function Layout({ children }) {
                 {user?.fullName || 'MRS Solar User'}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                {user?.role === 'admin' ? t.roleAdmin : `ID: ${user?.customerId}`}
+                {user?.role === 'admin' 
+                  ? 'Owner / Super Admin' 
+                  : user?.role === 'manager' 
+                  ? `Manager (${user?.employeeId || ''})` 
+                  : user?.role === 'worker' 
+                  ? `Worker (${user?.employeeId || ''})` 
+                  : `ID: ${user?.customerId || ''}`}
               </p>
             </div>
           </div>
@@ -327,7 +376,13 @@ export default function Layout({ children }) {
               <Menu className="w-5 h-5" />
             </button>
             <span className="hidden md:inline text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full border border-slate-200/50 dark:border-slate-700/50">
-              {user?.role === 'admin' ? t.roleAdmin : t.roleCustomer}
+              {user?.role === 'admin' 
+                ? (t.roleAdmin || 'Owner / Super Admin')
+                : user?.role === 'manager'
+                ? 'Team Manager Portal'
+                : user?.role === 'worker'
+                ? 'Workforce Portal'
+                : t.roleCustomer}
             </span>
           </div>
 
