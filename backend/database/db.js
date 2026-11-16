@@ -208,7 +208,7 @@ async function initMySQLTables() {
     'settings', 'customer_documents', 'audit_runs', 'leads', 'tickets',
     'employees', 'departments', 'teams', 'tasks', 'targets', 
     'attendance', 'leave_requests', 'solar_projects',
-    'ai_conversations', 'ai_messages', 'ai_image_analyses', 'ai_analysis_reports', 'ai_usage_logs',
+    'ai_conversations', 'ai_messages', 'ai_analyses', 'ai_reviews', 'ai_image_analyses', 'ai_analysis_reports', 'ai_usage_logs',
     'password_change_logs'
   ];
   for (const col of collections) {

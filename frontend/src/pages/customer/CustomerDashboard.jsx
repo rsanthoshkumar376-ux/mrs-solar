@@ -7,7 +7,7 @@ import {
   QrCode, Landmark, User, FileText, Info, Calculator, MessageCircle,
   Copy, Check, Leaf, Printer, Phone, Download, AlertCircle, Send,
   ChevronDown, ChevronUp, Award, Wrench, Folder, CreditCard, ChevronRight,
-  ExternalLink, CheckCircle2, History, KeyRound, Lock
+  ExternalLink, CheckCircle2, History, KeyRound, Lock, Camera, Sparkles
 } from 'lucide-react';
 import { 
   openCustomerSupportChat,
@@ -29,6 +29,7 @@ import ReferralShareCard from '../../components/ReferralShareCard.jsx';
 import ServiceTicketModal from '../../components/ServiceTicketModal.jsx';
 import SolarCalculatorModal from '../../components/SolarCalculatorModal.jsx';
 import AutoPayModal from '../../components/AutoPayModal.jsx';
+import AiImageUploadModal from '../../components/AiImageUploadModal.jsx';
 
 export default function CustomerDashboard() {
   const navigate = useNavigate();
@@ -44,6 +45,8 @@ export default function CustomerDashboard() {
   const [showServiceTicketModal, setShowServiceTicketModal] = useState(false);
   const [showCalculatorModal, setShowCalculatorModal] = useState(false);
   const [showAutoPayModal, setShowAutoPayModal] = useState(false);
+  const [showAiUploadModal, setShowAiUploadModal] = useState(false);
+  const [aiModalModule, setAiModalModule] = useState('panel_defect');
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedPaymentLink, setCopiedPaymentLink] = useState(false);
   const [launchingApp, setLaunchingApp] = useState(null);
@@ -421,6 +424,17 @@ export default function CustomerDashboard() {
                 <h3 className="font-bold text-slate-800 dark:text-white">{t.solarProjectDetails}</h3>
               </div>
               <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiModalModule('panel_defect');
+                    setShowAiUploadModal(true);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 hover:bg-purple-100 text-xs font-bold flex items-center space-x-1.5 transition-all shadow-xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{lang === 'ta' ? 'AI சோலார் ஆய்வு' : 'AI Inspection'}</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowServiceTicketModal(true)}
@@ -1030,7 +1044,7 @@ export default function CustomerDashboard() {
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <button
                 type="button"
                 onClick={() => setShowStatementModal(true)}
@@ -1070,6 +1084,27 @@ export default function CustomerDashboard() {
                 <div>
                   <h4 className="font-bold text-slate-800 dark:text-white text-xs sm:text-sm">{t.sanctionLetterBtn}</h4>
                   <p className="text-[11px] text-slate-400 mt-0.5">Solar loan sanction & 25-yr performance warranty</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAiModalModule('eb_bill');
+                  setShowAiUploadModal(true);
+                }}
+                className="p-4 bg-gradient-to-br from-teal-500/10 via-emerald-500/10 to-transparent hover:from-teal-500/20 rounded-2xl border border-teal-500/30 text-left transition-all group flex items-start space-x-3"
+              >
+                <div className="p-2.5 rounded-xl bg-teal-600 text-white shadow-sm shadow-teal-500/20 group-hover:scale-105 transition-transform">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-white text-xs sm:text-sm">
+                    {lang === 'ta' ? 'AI ஆவண & EB ஸ்கேனர்' : 'AI EB & Doc Scanner'}
+                  </h4>
+                  <p className="text-[11px] text-teal-600 dark:text-teal-400 font-semibold mt-0.5">
+                    {lang === 'ta' ? 'மின் ரசீது & உதிரிபாகங்கள்' : 'TNEB Bill, Warranty & Inverter'}
+                  </p>
                 </div>
               </button>
             </div>
@@ -1332,6 +1367,16 @@ export default function CustomerDashboard() {
         onClose={() => setShowAutoPayModal(false)}
         customer={customer}
         onSuccess={() => fetchDashboardData()}
+      />
+
+      {/* AI IMAGE & DOCUMENT RECOGNITION SCANNER MODAL */}
+      <AiImageUploadModal
+        isOpen={showAiUploadModal}
+        onClose={() => setShowAiUploadModal(false)}
+        initialModule={aiModalModule}
+        customerId={customer?.customerId || ''}
+        customerName={customer?.fullName || ''}
+        onAnalysisSaved={() => {}}
       />
 
       {/* FLOATING WHATSAPP SUPPORT BUTTON */}

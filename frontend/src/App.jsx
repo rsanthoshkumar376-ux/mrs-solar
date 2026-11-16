@@ -26,6 +26,7 @@ const SolarProjectManager = React.lazy(() => import('./pages/admin/SolarProjectM
 const AttendanceManager = React.lazy(() => import('./pages/admin/AttendanceManager.jsx'));
 const WorkforceReports = React.lazy(() => import('./pages/admin/WorkforceReports.jsx'));
 const AiDashboard = React.lazy(() => import('./pages/admin/AiDashboard.jsx'));
+const AiVisionDashboard = React.lazy(() => import('./pages/admin/AiVisionDashboard.jsx'));
 const SecurityPasswords = React.lazy(() => import('./pages/admin/SecurityPasswords.jsx'));
 
 // Universal Change Password Page (All Authenticated Roles)
@@ -222,6 +223,16 @@ export default function App() {
               <ProtectedRoute allowedRoles={['admin']}>
                 <Layout>
                   <AiDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/ai-vision"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                <Layout>
+                  <AiVisionDashboard />
                 </Layout>
               </ProtectedRoute>
             }

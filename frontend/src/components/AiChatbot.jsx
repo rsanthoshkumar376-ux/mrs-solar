@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { 
   Sparkles, Bot, X, Send, Mic, MicOff, Volume2, 
   RotateCcw, CheckCircle, ArrowRight, Zap, Award, HelpCircle,
-  Phone, MessageSquare, ExternalLink, CreditCard, ShieldCheck,
-  AlertTriangle, Copy, Check, Camera, Image, Paperclip
+  Phone, MessageSquare, ExternalLink, CreditCard, ShieldCheck, AlertTriangle, Copy, Check,
+  Camera, Image as ImageIcon, Paperclip
 } from 'lucide-react';
 import { translations, getLanguage } from '../utils/translations.js';
 import SolarCalculatorModal from './SolarCalculatorModal.jsx';
@@ -21,11 +21,29 @@ export default function AiChatbot() {
   const [chatLang, setChatLang] = useState(() => getLanguage() || 'en');
   const [showCalculator, setShowCalculator] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
-
-  // Multimodal Attachment State
-  const [selectedImage, setSelectedImage] = useState(null);
-  const fileInputRef = useRef(null);
+  const [attachedImage, setAttachedImage] = useState(null); // { base64, previewUrl, mimeType, name }
   const messagesEndRef = useRef(null);
+  const chatFileInputRef = useRef(null);
+
+  const handleChatImagePick = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Attachment exceeds 10MB limit.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachedImage({
+        base64: reader.result,
+        previewUrl: reader.result,
+        mimeType: file.type || 'image/jpeg',
+        name: file.name
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const t = translations[chatLang] || translations.en;
 
@@ -37,28 +55,27 @@ export default function AiChatbot() {
     const role = user?.role;
     if (lang === 'ta') {
       if (role === 'admin') {
-        return 'வணக்கம் தலைவர் அவர்களே! நான் MRS SOLAR AI. நிறுவனத்தின் மொத்த வருவாய், களப்பணிகள், சோலார் திட்டங்கள் அல்லது பணியாளர் இலக்கு நிலவரம் குறித்து கேட்கலாம்.';
+        return 'வணக்கம் தலைவர் அவர்களே! நான் MRS SOLAR AI. நிறுவனத்தின் மொத்த வருவாய், கள ஆய்வு புகைப்படங்கள் அல்லது பணியாளர் இலக்கு நிலவரம் குறித்து கேட்கலாம்.';
       }
       if (role === 'manager') {
-        return 'வணக்கம் குழு மேலாளரே! உங்கள் களப்பணியாளர்களின் ஆய்வு புகைப்படங்கள், பணி ஒப்புதல்கள் மற்றும் இலக்கு விநியோகம் குறித்து கேட்கலாம்.';
+        return 'வணக்கம் குழு மேலாளரே! உங்கள் களப்பணியாளர்களின் ஆய்வு புகைப்படங்கள், பணி ஒப்புதல்கள் மற்றும் சாதன சரிபார்ப்பு குறித்து கேட்கலாம்.';
       }
       if (role === 'worker') {
-        return 'வணக்கம்! உங்கள் இன்றைய சோலார் ஆய்வு பணிகள், இன்வெர்ட்டர் வயரிங் முறைகள் அல்லது கூரை புகைப்படங்களை பதிவேற்றி சரிபார்க்கலாம்.';
+        return 'வணக்கம் களப்பணியாளரே! உங்கள் சோலார் கூரை புகைப்படங்கள், இன்வெர்ட்டர் பழுது குறியீடுகள் அல்லது வயரிங் முறைகளை பதிவேற்றி சரிபார்க்கலாம்.';
       }
-      return 'வணக்கம்! நான் MRS SOLAR-ன் Gemini 2.5 Flash AI உதவியாளர். உங்கள் சோலார் கடன் தவணை (EMI), மின் உற்பத்தி, PM சூர்யா கர் மானியம் (₹78,000) அல்லது இன்வெர்ட்டர் பழுது பற்றி என்னிடம் கேட்கலாம்.';
+      return 'வணக்கம்! நான் MRS SOLAR-ன் நேரடி AI உதவியாளர். உங்கள் சோலார் கடன் தவணை (EMI), மின் உற்பத்தி, PM சூர்யா கர் மானியம் (₹78,000) அல்லது இன்வெர்ட்டர் பழுது பற்றி என்னிடம் கேட்கலாம்.';
     }
-    
-    // English
+
     if (role === 'admin') {
-      return 'Welcome Super Admin! I am MRS SOLAR AI (Gemini 2.5 Flash). Inquire about financial collections, lead conversion, project milestones, or employee target audits.';
+      return 'Welcome Owner/Admin! I am MRS SOLAR AI. Inquire about collections, review AI inspection reports, or upload photos for instant diagnostics.';
     }
     if (role === 'manager') {
-      return 'Welcome Team Manager! Ask about team task allocations, pending worker inspection reviews, or quota distribution.';
+      return 'Welcome Team Manager! Ask about team task allocations, pending field inspection reviews, or check equipment specifications.';
     }
     if (role === 'worker') {
-      return 'Hello! Ask about your assigned rooftop surveys, battery-free on-grid wiring guidelines, or upload site photos for instant AI inspection.';
+      return 'Hello Field Engineer! Upload rooftop installation photos, inverter error codes, or ask wiring and structural questions.';
     }
-    return 'Hello! I am your 24/7 MRS SOLAR AI Copilot powered by Google Gemini 2.5 Flash. Ask about EMI payments, solar generation, PM Surya Ghar ₹78,000 subsidies, or upload an EB bill / panel photo.';
+    return 'Hello! I am your 24/7 MRS SOLAR AI Copilot. Ask me about your upcoming EMI installment, solar power generation, PM Surya Ghar subsidies (up to ₹78,000), or upload photos for technical diagnosis.';
   };
 
   useEffect(() => {
@@ -69,11 +86,11 @@ export default function AiChatbot() {
           role: 'assistant',
           text: getWelcomeText(chatLang),
           time: new Date(),
-          source: 'Google Gemini 2.5 Flash'
+          source: 'MRS Solar Smart Engine'
         }]);
       }
     }
-  }, [isOpen, user]);
+  }, [isOpen]);
 
   useEffect(() => {
     scrollToBottom();
@@ -84,100 +101,79 @@ export default function AiChatbot() {
       window.speechSynthesis.cancel();
     }
     setSpeakingIdx(null);
-    setSelectedImage(null);
     setMessages([{
       role: 'assistant',
       text: getWelcomeText(chatLang),
       time: new Date(),
-      source: 'Google Gemini 2.5 Flash'
+      source: 'MRS Solar Smart Engine'
     }]);
   };
 
-  const handleImageSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 8 * 1024 * 1024) {
-      alert('Photo size exceeds 8MB. Please choose a smaller photo.');
-      return;
+  const quickPrompts = [
+    {
+      en: 'What is my PM Surya Ghar subsidy status?',
+      ta: 'என் PM சூர்யா கர் மானியம் நிலை என்ன?'
+    },
+    {
+      en: 'When is my next EMI due and amount?',
+      ta: 'எனக்கு அடுத்த தவணை (EMI) எப்போது?'
+    },
+    {
+      en: 'Inverter red light is showing / not working',
+      ta: 'இன்வெர்ட்டர் சிவப்பு விளக்கு எரிகிறது / பழுது'
+    },
+    {
+      en: 'How much solar electricity does 3kW generate?',
+      ta: '3kW சோலார் எவ்வளவு கரண்ட் உற்பத்தி செய்யும்?'
+    },
+    {
+      en: 'How to pay my EMI via Google Pay / UPI?',
+      ta: 'Google Pay / UPI மூலம் தவணை செலுத்துவது எப்படி?'
+    },
+    {
+      en: 'Check my service complaints & tickets',
+      ta: 'என் சேவை புகார்கள் & டிக்கெட்டுகள் நிலை'
+    },
+    {
+      en: 'PM Surya Ghar subsidy status (₹78,000)',
+      ta: 'PM சூர்யா கர் மானியம் நிலை (₹78,000)'
+    },
+    {
+      en: 'Customer care helpline number & office',
+      ta: 'வாடிக்கையாளர் உதவி மையம் தொடர்பு எண்'
     }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setSelectedImage({
-        file,
-        preview: reader.result,
-        base64: reader.result,
-        mimeType: file.type || 'image/jpeg'
-      });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Dynamic role-specific prompts
-  const getRolePrompts = () => {
-    const role = user?.role;
-    if (role === 'admin') {
-      return [
-        { en: 'Summarize today business collections & overdue EMIs', ta: 'இன்றைய கடன் வசூல் & நிலுவை சுருக்கம்' },
-        { en: 'What is our ongoing solar projects milestone status?', ta: 'சோலார் திட்டங்களின் தற்போதைய நிலை' },
-        { en: 'How is worker target achievement performing this month?', ta: 'பணியாளர்களின் மாத இலக்கு சாதனை நிலவரம்' },
-        { en: 'Check pending task approval count', ta: 'நிலுவையில் உள்ள பணி ஒப்புதல்கள்' }
-      ];
-    }
-    if (role === 'manager') {
-      return [
-        { en: 'Show my team tasks awaiting approval', ta: 'ஒப்புதலுக்கு காத்திருக்கும் பணிகளை காட்டு' },
-        { en: 'How to verify rooftop shadow inspection photos?', ta: 'கூரை நிழல் புகைப்படங்களை எவ்வாறு தணிக்கை செய்வது?' },
-        { en: 'Team target distribution guidelines', ta: 'குழு இலக்கு பகிர்வு வழிகாட்டுதல்கள்' }
-      ];
-    }
-    if (role === 'worker') {
-      return [
-        { en: 'What are my assigned field tasks today?', ta: 'இன்று எனக்கு ஒதுக்கப்பட்டுள்ள பணிகள் என்ன?' },
-        { en: 'What is the required rooftop structure slope for Tamil Nadu?', ta: 'தமிழ்நாட்டில் கூரை சோலார் கோணம் எவ்வளவு?' },
-        { en: 'How to submit site survey completion with photo proof?', ta: 'புகைப்பட ஆதாரத்துடன் ஆய்வை முடிப்பது எப்படி?' }
-      ];
-    }
-    // Customer & Visitor prompts
-    return [
-      { en: 'What is my PM Surya Ghar subsidy status (₹78,000)?', ta: 'என் PM சூர்யா கர் மானியம் நிலை என்ன (₹78,000)?' },
-      { en: 'When is my next EMI due and amount?', ta: 'எனக்கு அடுத்த தவணை (EMI) எப்போது?' },
-      { en: 'Inverter red light is showing / not working', ta: 'இன்வெர்ட்டர் சிவப்பு விளக்கு எரிகிறது / பழுது' },
-      { en: 'How much solar electricity does 3kW generate in Tamil Nadu?', ta: '3kW சோலார் எவ்வளவு கரண்ட் உற்பத்தி செய்யும்?' },
-      { en: 'How to pay my EMI via Google Pay / UPI?', ta: 'Google Pay / UPI மூலம் தவணை செலுத்துவது எப்படி?' },
-      { en: 'Why does MRS SOLAR use battery-free on-grid system?', ta: 'ஏன் பேட்டரி இல்லாத ஆன்-கிரிட் அமைப்பை பயன்படுத்துகிறோம்?' }
-    ];
-  };
+  ];
 
   const handleSend = async (textToSend = input) => {
-    const query = (textToSend || '').trim();
-    if ((!query && !selectedImage) || loading) return;
+    const query = textToSend.trim();
+    if ((!query && !attachedImage) || loading) return;
 
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
     setSpeakingIdx(null);
 
-    const userMsg = {
-      role: 'user',
-      text: query || (selectedImage ? 'Attached visual photograph for AI inspection' : ''),
-      imagePreview: selectedImage?.preview || null,
-      time: new Date()
+    const imageToUpload = attachedImage;
+    const displayText = query || (imageToUpload ? (chatLang === 'ta' ? '📷 இந்த புகைப்படத்தை ஆய்வு செய்யவும்' : '📷 Inspect this solar photo') : '');
+
+    const userMsg = { 
+      role: 'user', 
+      text: displayText, 
+      imagePreview: imageToUpload?.previewUrl || null,
+      time: new Date() 
     };
 
     setMessages(prev => [...prev, userMsg]);
-    const imageToSend = selectedImage ? { base64: selectedImage.base64, mimeType: selectedImage.mimeType } : null;
     setInput('');
-    setSelectedImage(null);
+    setAttachedImage(null);
     setLoading(true);
 
     try {
       const res = await api.post('/ai/chat', {
-        message: query || 'Please analyze this uploaded solar inspection image.',
+        message: query || 'Inspect this uploaded solar equipment, electricity bill, or rooftop photo and explain what is visible, any defects, errors, or next actions.',
         language: chatLang,
-        imageBase64: imageToSend?.base64,
-        mimeType: imageToSend?.mimeType
+        imageBase64: imageToUpload?.base64 || null,
+        mimeType: imageToUpload?.mimeType || 'image/jpeg'
       });
 
       const botReply = res.data?.reply || (chatLang === 'ta' 
@@ -187,18 +183,19 @@ export default function AiChatbot() {
       setMessages(prev => [...prev, {
         role: 'assistant',
         text: botReply,
-        source: res.data?.source || 'Google Gemini 2.5 Flash',
-        isQuotaError: res.data?.isQuotaError || false,
+        source: res.data?.source,
+        ticket: res.data?.ticket,
+        action: res.data?.action,
+        escalated: res.data?.escalated,
         time: new Date()
       }]);
     } catch (err) {
       console.error('AI chat request error:', err);
-      const isQuota = err.response?.data?.error?.includes('429') || err.message?.includes('429');
       setMessages(prev => [...prev, {
         role: 'assistant',
-        text: isQuota
-          ? (chatLang === 'ta' ? 'இலவச API வரம்பு எட்டப்பட்டுள்ளது. சில நொடிகள் கழித்து முயற்சிக்கவும்.' : 'Gemini 2.5 Flash Free Tier limit reached. Please retry in a few seconds.')
-          : (chatLang === 'ta' ? 'இணைப்பில் தாமதம் ஏற்பட்டுள்ளது. எங்களை +91 80724 54996 என்ற எண்ணில் அழைக்கலாம்.' : 'Connection timeout. For immediate support, contact our helpline at +91 80724 54996.'),
+        text: chatLang === 'ta'
+          ? 'இணைப்பில் தாமதம் ஏற்பட்டுள்ளது. நேரடி உதவிக்கு எங்களை +91 80724 54996 என்ற எண்ணில் அழைக்கலாம்.'
+          : 'Connection timeout. For immediate support, please contact our helpline directly at +91 80724 54996.',
         time: new Date()
       }]);
     } finally {
@@ -211,7 +208,7 @@ export default function AiChatbot() {
     if (!SpeechRecognition) {
       alert(chatLang === 'ta'
         ? 'உங்கள் பிரவுசரில் குரல் அறிதல் ஆதரிக்கப்படவில்லை. தயவுசெய்து Google Chrome அல்லது Microsoft Edge பயன்படுத்தவும்.'
-        : 'Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+        : 'Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
       return;
     }
 
@@ -224,26 +221,34 @@ export default function AiChatbot() {
       const recognition = new SpeechRecognition();
       recognition.lang = chatLang === 'ta' ? 'ta-IN' : 'en-IN';
       recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => setIsListening(true);
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(transcript);
-        setIsListening(false);
-        handleSend(transcript);
-      };
-      recognition.onerror = () => setIsListening(false);
       recognition.onend = () => setIsListening(false);
+      recognition.onerror = (e) => {
+        setIsListening(false);
+        if (e.error === 'not-allowed') {
+          alert(chatLang === 'ta'
+            ? 'மைக்ரோஃபோன் அனுமதி மறுக்கப்பட்டுள்ளது. பிரவுசரின் முகவரிப் பட்டியில் மைக் அனுமதியை இயக்கவும்.'
+            : 'Microphone permission was denied. Please allow microphone access in your browser address bar.');
+        }
+      };
+
+      recognition.onresult = (e) => {
+        const spokenText = e.results[0][0].transcript;
+        setInput(spokenText);
+        handleSend(spokenText);
+      };
 
       recognition.start();
-    } catch (e) {
+    } catch (err) {
+      console.error('Speech recognition error:', err);
       setIsListening(false);
     }
   };
 
   const handleSpeakText = (text, idx) => {
     if (!('speechSynthesis' in window)) return;
+
     if (speakingIdx === idx) {
       window.speechSynthesis.cancel();
       setSpeakingIdx(null);
@@ -251,10 +256,12 @@ export default function AiChatbot() {
     }
 
     window.speechSynthesis.cancel();
-    const cleanText = text.replace(/[*#_`]/g, '');
-    const utterance = new SpeechSynthesisUtterance(cleanText);
+    // Clean text of markdown asterisks for smooth speech
+    const cleanSpeech = text.replace(/[*#`_~]/g, ' ').replace(/\n+/g, '. ');
+    const utterance = new SpeechSynthesisUtterance(cleanSpeech);
     utterance.lang = chatLang === 'ta' ? 'ta-IN' : 'en-IN';
     utterance.rate = 1.0;
+
     utterance.onend = () => setSpeakingIdx(null);
     utterance.onerror = () => setSpeakingIdx(null);
 
@@ -262,75 +269,85 @@ export default function AiChatbot() {
     window.speechSynthesis.speak(utterance);
   };
 
-  const quickPrompts = getRolePrompts();
+  const copyToClipboard = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   return (
     <>
-      {/* FLOATING ACTION LAUNCHER BUTTON */}
+      {/* FLOATING TRIGGER BUTTON */}
       {!isOpen && (
         <button
+          type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-40 bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white p-3.5 sm:p-4 rounded-full shadow-2xl hover:shadow-teal-500/40 flex items-center space-x-2.5 transition-all duration-300 hover:scale-105 active:scale-95 group border-2 border-white/20"
-          aria-label="Open MRS SOLAR AI Chat"
+          className="fixed bottom-20 lg:bottom-6 right-5 z-40 p-3 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 text-white shadow-2xl shadow-teal-500/30 hover:scale-105 active:scale-95 transition-all flex items-center space-x-2.5 border border-white/20 group"
+          title="Ask MRS SOLAR AI Copilot"
         >
           <div className="relative">
-            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300 animate-pulse" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full animate-ping" />
+            <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full animate-ping"></span>
           </div>
-          <span className="font-extrabold text-xs sm:text-sm tracking-wide pr-1">
-            {chatLang === 'ta' ? 'MRS சோலார் AI' : 'MRS SOLAR AI'}
+          <span className="text-xs sm:text-sm font-black hidden sm:inline tracking-wide">
+            {chatLang === 'ta' ? 'சோலார் AI உதவியாளர்' : 'AI Solar Copilot'}
           </span>
         </button>
       )}
 
-      {/* CHATBOT WINDOW CONTAINER */}
+      {/* CHAT WINDOW DRAWER */}
       {isOpen && (
-        <div className="fixed bottom-2 lg:bottom-6 right-2 sm:right-6 z-50 w-[95vw] sm:w-[420px] max-h-[88vh] h-[640px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-20 lg:bottom-6 right-3 sm:right-6 z-50 w-[94vw] sm:w-[440px] max-h-[85vh] sm:h-[620px] flex flex-col bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-scale-up">
           
           {/* HEADER */}
-          <div className="p-4 bg-gradient-to-r from-slate-950 via-teal-950 to-slate-950 text-white flex items-center justify-between border-b border-teal-800/40">
+          <div className="px-4 py-3.5 bg-gradient-to-r from-teal-600 via-teal-700 to-emerald-700 text-white flex items-center justify-between shrink-0 shadow-md">
             <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-300 shadow-inner">
-                <Sparkles className="w-4 h-4 text-yellow-400" />
+              <div className="w-9 h-9 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20 shadow-inner">
+                <Bot className="w-5 h-5 text-yellow-300" />
               </div>
               <div>
-                <div className="flex items-center space-x-1.5">
-                  <h3 className="font-black text-sm tracking-tight text-white">MRS SOLAR AI</h3>
-                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                    2.5 Flash
+                <h3 className="text-sm font-black flex items-center space-x-1.5">
+                  <span>{chatLang === 'ta' ? 'சோலார் AI உதவியாளர்' : 'MRS SOLAR AI Copilot'}</span>
+                  <span className="text-[9px] uppercase font-extrabold tracking-wider px-2 py-0.5 bg-yellow-400 text-slate-900 rounded-full font-mono shadow-xs">
+                    Live
                   </span>
-                </div>
-                <p className="text-[10px] text-emerald-400 font-semibold flex items-center space-x-1">
+                </h3>
+                <p className="text-[10px] text-teal-100 flex items-center space-x-1 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span>{user?.role ? `${user.role.toUpperCase()} Context Active` : 'Free Tier Copilot'}</span>
+                  <span>{chatLang === 'ta' ? 'தமிழ் & ஆங்கில குரல் ஆதரவு' : 'Tamil & English Voice AI'}</span>
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-1">
-              {/* Language Switcher */}
-              <button
-                type="button"
-                onClick={() => setChatLang(chatLang === 'en' ? 'ta' : 'en')}
-                className="px-2 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[10px] font-black text-teal-300 border border-slate-700 transition-colors"
-                title="Switch Language"
-              >
-                {chatLang === 'en' ? 'தமிழ்' : 'English'}
-              </button>
-
+            <div className="flex items-center space-x-1.5">
+              {/* Reset Conversation */}
               <button
                 type="button"
                 onClick={handleResetChat}
-                className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                title="Reset conversation"
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                title="Restart chat"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
 
+              {/* Language Switcher */}
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                onClick={() => setChatLang(prev => prev === 'en' ? 'ta' : 'en')}
+                className="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-xs font-black transition-colors border border-white/20"
+                title="Toggle Tamil / English"
+              >
+                {chatLang === 'ta' ? 'EN' : 'தமிழ்'}
+              </button>
+
+              {/* Close */}
+              <button
+                type="button"
+                onClick={() => {
+                  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                  setIsOpen(false);
+                }}
+                className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -338,45 +355,163 @@ export default function AiChatbot() {
           </div>
 
           {/* MESSAGES LIST */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50 dark:bg-slate-950/40">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs leading-relaxed">
             {messages.map((m, idx) => (
               <div
                 key={idx}
-                className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} animate-fadeIn`}
+                className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
               >
-                {/* Attached Image Thumbnail */}
-                {m.imagePreview && (
-                  <div className="mb-1 rounded-xl overflow-hidden border border-teal-500 max-w-[160px] shadow-sm">
-                    <img src={m.imagePreview} alt="Attached" className="w-full h-24 object-cover" />
-                  </div>
-                )}
-
                 <div
-                  className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed shadow-xs ${
+                  className={`p-3.5 rounded-2xl max-w-[88%] whitespace-pre-line ${
                     m.role === 'user'
-                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white rounded-br-xs font-medium'
-                      : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-xs'
+                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white rounded-br-none shadow-md'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-none border border-slate-200/70 dark:border-slate-700/70 shadow-sm'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{m.text}</p>
+                  {m.imagePreview && (
+                    <div className="mb-2 rounded-xl overflow-hidden max-h-48 border border-white/20 bg-black/40">
+                      <img src={m.imagePreview} alt="Attached photo" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <p>{m.text}</p>
+                  
+                  {/* SERVICE TICKET CREATED BADGE */}
+                  {m.ticket && (
+                    <div className="mt-3 p-3 rounded-2xl bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-rose-500/10 border border-rose-400/40 dark:border-rose-500/40">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500 text-white font-mono shadow-xs">
+                          {m.ticket.ticketNumber}
+                        </span>
+                        <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center space-x-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
+                          <span>{m.ticket.priority || 'High'} Priority</span>
+                        </span>
+                      </div>
+                      <div className="mt-2 text-[11px] font-semibold text-slate-700 dark:text-slate-300 space-y-0.5">
+                        <p className="flex items-center space-x-1 text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>{chatLang === 'ta' ? 'அதிகாரப்பூர்வ டிக்கெட் பதிவு செய்யப்பட்டது' : 'Official Service Ticket Logged'}</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          {chatLang === 'ta' ? 'நிர்வாகி கட்டுப்பாட்டு மையம் மற்றும் களப் பொறியாளருக்கு அனுப்பப்பட்டது.' : 'Dispatched to Owner Portal & Field Technician.'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(m.ticket.ticketNumber, `tkt-${idx}`)}
+                        className="mt-2 w-full py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center space-x-1 hover:bg-slate-50 transition-colors"
+                      >
+                        {copiedId === `tkt-${idx}` ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedId === `tkt-${idx}` ? 'Copied!' : `Copy Ticket ID (${m.ticket.ticketNumber})`}</span>
+                      </button>
+                    </div>
+                  )}
 
-                  {/* ASSISTANT FOOTER */}
+                  {/* ACTION CARD: PM SURYA GHAR SUBSIDY STATUS */}
+                  {m.action?.type === 'SUBSIDY_STATUS' && (
+                    <div className="mt-3 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-1 text-amber-700 dark:text-amber-400 font-extrabold text-[11px]">
+                          <Award className="w-3.5 h-3.5 text-amber-500" />
+                          <span>PM Surya Ghar: Stage {m.action.stage} of 5</span>
+                        </div>
+                        <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                          ₹{Number(m.action.eligibleAmount || 30000).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      {/* Mini 5-stage progress bar */}
+                      <div className="grid grid-cols-5 gap-1 my-1.5">
+                        {[1, 2, 3, 4, 5].map((stg) => (
+                          <div
+                            key={stg}
+                            className={`h-1.5 rounded-full ${
+                              stg <= (m.action.stage || 1)
+                                ? 'bg-emerald-500'
+                                : 'bg-slate-300 dark:bg-slate-700'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-1">
+                        Ref: <code className="font-mono text-slate-900 dark:text-white">{m.action.applicationNumber}</code> • Direct DBT to Aadhaar Bank
+                      </p>
+                    </div>
+                  )}
+
+                  {/* ACTION CARD: EMI PAYMENT BUTTON */}
+                  {m.action?.type === 'EMI_PAY' && (
+                    <div className="mt-3 p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
+                          {chatLang === 'ta' ? `தவணை #${m.action.emiNumber || ''} தொகை:` : `Upcoming Due #${m.action.emiNumber || ''}:`}
+                        </p>
+                        <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                          ₹{Number(m.action.amount).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                      <a
+                        href={`upi://pay?pa=${encodeURIComponent(m.action.upiId || 'rsanthoshkumar376@oksbi')}&pn=MRSSOLAR&am=${encodeURIComponent(m.action.amount)}&cu=INR`}
+                        className="py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-[10px] shadow-sm flex items-center space-x-1.5 active:scale-95 transition-all"
+                      >
+                        <CreditCard className="w-3.5 h-3.5" />
+                        <span>{chatLang === 'ta' ? 'UPI மூலம் செலுத்து' : 'Pay via UPI'}</span>
+                      </a>
+                    </div>
+                  )}
+
+                  {/* ACTION CARD: OPEN SOLAR CALCULATOR */}
+                  {m.action?.type === 'OPEN_CALCULATOR' && (
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowCalculator(true)}
+                        className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-[11px] shadow-sm flex items-center justify-center space-x-1.5 transition-all active:scale-98"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>{chatLang === 'ta' ? '📊 சோலார் சேமிப்பு கணக்கீட்டை திறக்கவும்' : '📊 Launch Solar Savings Calculator'}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* ACTION CARD: CONTACT HELPLINE */}
+                  {m.action?.type === 'CONTACT_INFO' && (
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <a
+                        href="tel:+918072454996"
+                        className="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] flex items-center justify-center space-x-1.5 transition-colors shadow-xs"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>{chatLang === 'ta' ? 'அழைக்க (+91 80724)' : 'Call Helpline'}</span>
+                      </a>
+                      <a
+                        href="https://wa.me/918072454996?text=Hello%20MRS%20Solar"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-[10px] flex items-center justify-center space-x-1.5 transition-colors shadow-xs"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>WhatsApp</span>
+                      </a>
+                    </div>
+                  )}
+
+                  {/* ASSISTANT FOOTER (SOURCE & TTS VOICE) */}
                   {m.role === 'assistant' && (
-                    <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400">
+                    <div className="flex items-center justify-between mt-2.5 pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50 text-[10px] text-slate-400">
                       <span className="flex items-center space-x-1">
                         <Sparkles className="w-3 h-3 text-teal-500" />
-                        <span>{m.source || 'Google Gemini 2.5 Flash'}</span>
+                        <span>{m.source || 'MRS Solar AI Engine'}</span>
                       </span>
                       <button
                         type="button"
                         onClick={() => handleSpeakText(m.text, idx)}
-                        className={`p-1 rounded hover:text-teal-600 transition-colors flex items-center space-x-1 ${
-                          speakingIdx === idx ? 'text-teal-600 font-bold' : ''
+                        className={`p-1 rounded-md hover:text-teal-600 transition-colors flex items-center space-x-1 ${
+                          speakingIdx === idx ? 'text-teal-600 dark:text-teal-400 font-bold bg-teal-50 dark:bg-teal-950/50' : ''
                         }`}
-                        title="Voice output"
+                        title="Read aloud (Voice output)"
                       >
                         <Volume2 className="w-3.5 h-3.5" />
-                        <span>{speakingIdx === idx ? 'Stop' : 'Listen'}</span>
+                        <span className="text-[9px]">{speakingIdx === idx ? 'Stop' : 'Listen'}</span>
                       </button>
                     </div>
                   )}
@@ -390,44 +525,60 @@ export default function AiChatbot() {
                 <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce [animation-delay:0.2s]"></div>
                 <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce [animation-delay:0.4s]"></div>
                 <span className="text-[11px] font-medium italic">
-                  {chatLang === 'ta' ? 'Gemini 2.5 Flash சிந்திக்கிறது...' : 'Gemini 2.5 Flash is analyzing...'}
+                  {chatLang === 'ta' ? 'சோலார் AI பதிலளிக்கிறது...' : 'MRS SOLAR AI is analyzing...'}
                 </span>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* QUICK PROMPT SUGGESTIONS */}
-          <div className="px-3 py-2 bg-slate-100 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800 overflow-x-auto whitespace-nowrap flex space-x-1.5 scrollbar-none">
+          {/* ACTIVE VOICE LISTENING ANIMATION BANNER */}
+          {isListening && (
+            <div className="px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 text-white flex items-center justify-between text-xs shadow-inner">
+              <div className="flex items-center space-x-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+                <span className="font-black tracking-wide">
+                  {chatLang === 'ta' ? '🎙️ உங்கள் குரலைக் கேட்கிறது... பேசவும்' : '🎙️ Listening... Speak now'}
+                </span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span className="w-1 h-3 bg-white rounded-full animate-bounce"></span>
+                <span className="w-1 h-5 bg-white rounded-full animate-bounce [animation-delay:0.15s]"></span>
+                <span className="w-1 h-2 bg-white rounded-full animate-bounce [animation-delay:0.3s]"></span>
+                <span className="w-1 h-4 bg-white rounded-full animate-bounce [animation-delay:0.45s]"></span>
+              </div>
+            </div>
+          )}
+
+          {/* QUICK SUGGESTION PROMPTS */}
+          <div className="px-3 py-2 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200/50 dark:border-slate-800/50 overflow-x-auto whitespace-nowrap flex space-x-1.5 scrollbar-none">
             {quickPrompts.map((qp, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => handleSend(chatLang === 'ta' ? qp.ta : qp.en)}
-                className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white dark:bg-slate-900 hover:bg-teal-50 dark:hover:bg-teal-950 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 transition-colors shrink-0 shadow-2xs active:scale-95"
+                className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors shrink-0 shadow-2xs active:scale-95"
               >
                 {chatLang === 'ta' ? qp.ta : qp.en}
               </button>
             ))}
           </div>
 
-          {/* IMAGE ATTACHMENT PREVIEW STRIP */}
-          {selectedImage && (
-            <div className="px-3 py-2 bg-teal-50 dark:bg-teal-950/40 border-t border-teal-200 dark:border-teal-800 flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <img
-                  src={selectedImage.preview}
-                  alt="Attachment preview"
-                  className="w-8 h-8 rounded-lg object-cover border border-teal-400"
-                />
-                <span className="text-[11px] font-bold text-teal-800 dark:text-teal-200">
-                  Visual photo attached for Gemini inspection
-                </span>
+          {/* ATTACHED IMAGE PREVIEW STRIP */}
+          {attachedImage && (
+            <div className="px-3.5 py-2 bg-slate-100 dark:bg-slate-800/90 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs animate-fade-in">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <img src={attachedImage.previewUrl} alt="Thumb" className="w-9 h-9 rounded-lg object-cover border border-slate-300 dark:border-slate-700 shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-800 dark:text-white truncate text-[11px]">{attachedImage.name || 'Image Attached'}</p>
+                  <p className="text-[10px] text-teal-600 dark:text-teal-400">Ready for Multimodal Gemini Vision</p>
+                </div>
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedImage(null)}
-                className="p-1 rounded-full text-slate-400 hover:text-red-500"
+                onClick={() => setAttachedImage(null)}
+                className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-red-500 transition-colors"
+                title="Remove attachment"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -440,35 +591,34 @@ export default function AiChatbot() {
               e.preventDefault();
               handleSend();
             }}
-            className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center space-x-1.5"
+            className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center space-x-2"
           >
-            {/* Attachment Button */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950 text-slate-600 dark:text-slate-300 hover:text-teal-600 transition-colors"
-              title="Attach Photograph (Bill, Inverter, Panel, Document)"
-            >
-              <Paperclip className="w-4 h-4" />
-            </button>
             <input
-              ref={fileInputRef}
               type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
+              ref={chatFileInputRef}
+              onChange={handleChatImagePick}
+              accept="image/jpeg,image/png,image/webp,application/pdf"
               className="hidden"
             />
 
-            {/* Mic Voice Input */}
+            <button
+              type="button"
+              onClick={() => chatFileInputRef.current?.click()}
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all"
+              title="Attach solar panel, inverter, or EB bill photo"
+            >
+              <Camera className="w-4 h-4 text-teal-500" />
+            </button>
+
             <button
               type="button"
               onClick={handleSpeechInput}
               className={`p-2 rounded-xl transition-all ${
                 isListening
-                  ? 'bg-red-500 text-white animate-pulse'
+                  ? 'bg-red-500 text-white animate-pulse shadow-md shadow-red-500/30'
                   : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
               }`}
-              title="Voice Input"
+              title={isListening ? 'Stop Listening' : 'Voice Input (Mic)'}
             >
               {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
@@ -477,14 +627,14 @@ export default function AiChatbot() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={chatLang === 'ta' ? 'கேள்வியை கேட்கவும் அல்லது புகைப்படம் இணைக்கவும்...' : 'Ask question or attach image...'}
-              className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white px-3 py-2 rounded-xl text-xs outline-none focus:ring-2 focus:ring-teal-500 transition-all placeholder:text-slate-400"
+              placeholder={chatLang === 'ta' ? 'கேள்வியை கேட்கவும் அல்லது புகைப்படம் இணைக்கவும்...' : 'Ask question or attach photo to inspect...'}
+              className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white px-3.5 py-2.5 rounded-xl text-xs outline-none focus:ring-2 focus:ring-teal-500 transition-all placeholder:text-slate-400"
             />
 
             <button
               type="submit"
-              disabled={(!input.trim() && !selectedImage) || loading}
-              className="p-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-40 text-white transition-all shadow-md active:scale-95"
+              disabled={(!input.trim() && !attachedImage) || loading}
+              className="p-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-40 text-white transition-all shadow-md shadow-teal-500/20 active:scale-95"
             >
               <Send className="w-4 h-4" />
             </button>
@@ -493,7 +643,7 @@ export default function AiChatbot() {
         </div>
       )}
 
-      {/* EMBEDDED CALCULATOR MODAL */}
+      {/* EMBEDDED SOLAR SAVINGS & PM SURYA GHAR CALCULATOR MODAL */}
       <SolarCalculatorModal 
         isOpen={showCalculator} 
         onClose={() => setShowCalculator(false)} 

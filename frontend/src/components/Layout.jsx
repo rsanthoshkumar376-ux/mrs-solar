@@ -8,7 +8,7 @@ import {
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
   Search, Languages, Mic, CreditCard, Trash2, Settings, KanbanSquare,
   Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench, Sparkles, KeyRound,
-  PlusCircle, MapPin
+  PlusCircle, MapPin, Eye
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -214,13 +214,15 @@ export default function Layout({ children }) {
     { label: t.customers, path: '/admin/customers', icon: Users },
     { label: 'Attendance & Leaves', path: '/admin/attendance', icon: Calendar },
     { label: 'Workforce Reports', path: '/admin/reports', icon: BarChart3 },
+    { label: t.aiVisionHub || 'AI Recognition Hub', path: '/admin/ai-vision', icon: Eye },
     { label: 'AI Vision Analytics', path: '/admin/ai-dashboard', icon: Sparkles },
     { label: 'Security & Passwords', path: '/admin/security-passwords', icon: KeyRound },
     { label: t.settings || 'Settings', path: '/admin/settings', icon: Settings }
   ];
 
   const managerLinks = [
-    { label: 'Team Dashboard', path: '/manager', icon: LayoutDashboard }
+    { label: 'Team Dashboard', path: '/manager', icon: LayoutDashboard },
+    { label: t.aiVisionHub || 'AI Recognition Hub', path: '/admin/ai-vision', icon: Eye }
   ];
 
   const workerLinks = [
