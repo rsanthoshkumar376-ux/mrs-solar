@@ -7,11 +7,12 @@ import {
   Users, DollarSign, History, Calculator, ShieldAlert,
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
   Search, Languages, Mic, CreditCard, Trash2, Settings, KanbanSquare,
-  Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench
+  Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench, Sparkles
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
 import AiChatbot from './AiChatbot.jsx';
+import AiImageAnalyzerModal from './AiImageAnalyzerModal.jsx';
 import { translations, getLanguage, setLanguage } from '../utils/translations.js';
 
 export default function Layout({ children }) {
@@ -35,6 +36,7 @@ export default function Layout({ children }) {
   const [searchResults, setSearchResults] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [showAiScanner, setShowAiScanner] = useState(false);
 
   useEffect(() => {
     const handleLangChange = () => setLang(getLanguage());
@@ -211,6 +213,7 @@ export default function Layout({ children }) {
     { label: t.customers, path: '/admin/customers', icon: Users },
     { label: 'Attendance & Leaves', path: '/admin/attendance', icon: Calendar },
     { label: 'Workforce Reports', path: '/admin/reports', icon: BarChart3 },
+    { label: 'AI Vision Analytics', path: '/admin/ai-dashboard', icon: Sparkles },
     { label: t.settings || 'Settings', path: '/admin/settings', icon: Settings }
   ];
 
@@ -467,6 +470,17 @@ export default function Layout({ children }) {
               <span>{lang === 'en' ? 'தமிழ்' : 'English'}</span>
             </button>
 
+            {/* AI Multimodal Vision Scanner Launcher */}
+            <button
+              type="button"
+              onClick={() => setShowAiScanner(true)}
+              className="inline-flex items-center space-x-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-teal-500/10 to-emerald-500/10 hover:from-teal-500/20 hover:to-emerald-500/20 border border-teal-500/30 text-[11px] sm:text-xs font-black text-teal-700 dark:text-teal-300 transition-all active:scale-95 shrink-0"
+              title="Launch Gemini 2.5 Flash Vision Inspector (EB Bill, Inverter, Panels)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-500 animate-pulse" />
+              <span className="hidden sm:inline">AI Scanner</span>
+            </button>
+
             {/* Install Mobile/Desktop App Button */}
             <InstallAppBanner compact={true} />
 
@@ -597,6 +611,12 @@ export default function Layout({ children }) {
 
         {/* 24/7 BILINGUAL AI SOLAR COPILOT */}
         <AiChatbot />
+
+        {/* MULTIMODAL GEMINI 2.5 FLASH VISION SCANNER MODAL */}
+        <AiImageAnalyzerModal 
+          isOpen={showAiScanner} 
+          onClose={() => setShowAiScanner(false)} 
+        />
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}

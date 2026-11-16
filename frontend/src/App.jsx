@@ -25,6 +25,7 @@ const TaskManager = React.lazy(() => import('./pages/admin/TaskManager.jsx'));
 const SolarProjectManager = React.lazy(() => import('./pages/admin/SolarProjectManager.jsx'));
 const AttendanceManager = React.lazy(() => import('./pages/admin/AttendanceManager.jsx'));
 const WorkforceReports = React.lazy(() => import('./pages/admin/WorkforceReports.jsx'));
+const AiDashboard = React.lazy(() => import('./pages/admin/AiDashboard.jsx'));
 
 // Manager & Worker Dedicated Portals
 const ManagerDashboard = React.lazy(() => import('./pages/manager/ManagerDashboard.jsx'));
@@ -207,6 +208,16 @@ export default function App() {
               <ProtectedRoute allowedRoles={['admin']}>
                 <Layout>
                   <WorkforceReports />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/ai-dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <AiDashboard />
                 </Layout>
               </ProtectedRoute>
             }

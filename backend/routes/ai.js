@@ -2,11 +2,15 @@ import express from 'express';
 import multer from 'multer';
 import { db } from '../database/db.js';
 import { authenticateToken, optionalAuthenticateToken, authorizeRole } from '../middleware/auth.js';
-import { getAiConfig, saveAiConfig, callGeminiApi } from '../utils/aiConfig.js';
-import { generateSolarDiagnostics, generateSmartChatResponse, extractKycFromText } from '../utils/aiEngines.js';
-import { findMatchingCustomer } from '../utils/customerResolver.js';
-import { detectProblem, buildEscalationChatReply } from '../utils/problemDetector.js';
-import { getDefaultSubsidyDetails } from '../utils/subsidyHelper.js';
+import { getAiConfig, saveAiConfig } from '../utils/aiConfig.js';
+import {
+  chatWithGemini,
+  analyzeImageWithGemini,
+  getApiKey,
+  getModelId,
+  getGeminiClient,
+  cleanBase64
+} from '../services/geminiService.js';
 
 const router = express.Router();
 
@@ -17,20 +21,406 @@ const upload = multer({
 });
 
 /**
- * 1. GET AI Settings (Admin Only)
+ * Helper to extract base64 and mimeType from either multipart file or JSON body
  */
+function extractImageData(req) {
+  if (req.file) {
+    return {
+      base64: req.file.buffer.toString('base64'),
+      mimeType: req.file.mimetype || 'image/jpeg'
+    };
+  }
+  if (req.body?.imageBase64 || req.body?.image) {
+    const raw = req.body.imageBase64 || req.body.image;
+    return {
+      base64: cleanBase64(raw),
+      mimeType: req.body.mimeType || 'image/jpeg'
+    };
+  }
+  return null;
+}
+
+// ─── 1. ADVANCED MRS SOLAR AI CHATBOT ─────────────────────────────────────────
+
+/**
+ * POST /api/ai/chat
+ * Multi-turn, role-context aware, multimodal solar chatbot
+ */
+router.post('/chat', optionalAuthenticateToken, upload.single('attachment'), async (req, res) => {
+  try {
+    const { message, language = 'en', conversationId } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message content is required' });
+    }
+
+    const user = req.user || null;
+    const role = user?.role || 'visitor';
+    const imageAttachment = extractImageData(req);
+
+    // Retrieve previous messages if conversationId is provided
+    let conversationHistory = [];
+    let convId = conversationId;
+    if (convId) {
+      const pastMessages = await db.find('ai_messages', { conversationId: convId });
+      conversationHistory = pastMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    } else {
+      convId = `CONV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      await db.create('ai_conversations', {
+        conversationId: convId,
+        userId: user?._id || user?.customerId || user?.employeeId || 'guest',
+        role,
+        language,
+        title: message.slice(0, 40),
+        lastMessageAt: new Date().toISOString()
+      });
+    }
+
+    // Save user message to database
+    await db.create('ai_messages', {
+      conversationId: convId,
+      role: 'user',
+      content: message,
+      hasImage: Boolean(imageAttachment),
+      createdAt: new Date().toISOString()
+    });
+
+    // Call Gemini 2.5 Flash
+    const result = await chatWithGemini({
+      message,
+      language,
+      user,
+      role,
+      imageAttachment,
+      conversationHistory
+    });
+
+    // Save assistant reply to database
+    await db.create('ai_messages', {
+      conversationId: convId,
+      role: 'assistant',
+      content: result.reply,
+      source: result.source,
+      createdAt: new Date().toISOString()
+    });
+
+    // Update conversation last message timestamp
+    await db.updateOne('ai_conversations', { conversationId: convId }, {
+      lastMessageAt: new Date().toISOString()
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      conversationId: convId,
+      reply: result.reply,
+      source: result.source,
+      isQuotaError: result.isQuotaError || false,
+      isKeyMissing: result.isKeyMissing || false,
+      durationMs: result.durationMs
+    });
+  } catch (err) {
+    console.error('Chat endpoint error:', err);
+    res.status(500).json({
+      error: 'Failed to process AI chat request',
+      details: err.message
+    });
+  }
+});
+
+// ─── 2. SPECIALIZED MULTIMODAL IMAGE RECOGNITION ─────────────────────────────
+
+/**
+ * POST /api/ai/analyze-image (General Analyzer)
+ */
+router.post('/analyze-image', optionalAuthenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    const imgData = extractImageData(req);
+    if (!imgData) {
+      return res.status(400).json({ error: 'Image file or Base64 data is required' });
+    }
+
+    const { analysisType = 'GENERAL', prompt } = req.body;
+    const result = await analyzeImageWithGemini({
+      imageBase64: imgData.base64,
+      mimeType: imgData.mimeType,
+      analysisType,
+      customPrompt: prompt,
+      user: req.user,
+      role: req.user?.role
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('Analyze image error:', err);
+    res.status(500).json({ error: err.message || 'Image analysis failed' });
+  }
+});
+
+/**
+ * POST /api/ai/analyze-eb-bill (TNEB Bill Recognition)
+ */
+router.post('/analyze-eb-bill', optionalAuthenticateToken, upload.single('billImage'), async (req, res) => {
+  try {
+    const imgData = extractImageData(req);
+    if (!imgData) {
+      return res.status(400).json({ error: 'Electricity bill photograph is required' });
+    }
+
+    const result = await analyzeImageWithGemini({
+      imageBase64: imgData.base64,
+      mimeType: imgData.mimeType,
+      analysisType: 'EB_BILL',
+      user: req.user,
+      role: req.user?.role
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('EB Bill analysis error:', err);
+    res.status(500).json({ error: err.message || 'EB bill analysis failed' });
+  }
+});
+
+/**
+ * POST /api/ai/analyze-solar-panel (Panel Damage & Soiling)
+ */
+router.post('/analyze-solar-panel', optionalAuthenticateToken, upload.single('panelImage'), async (req, res) => {
+  try {
+    const imgData = extractImageData(req);
+    if (!imgData) {
+      return res.status(400).json({ error: 'Solar panel photograph is required' });
+    }
+
+    const result = await analyzeImageWithGemini({
+      imageBase64: imgData.base64,
+      mimeType: imgData.mimeType,
+      analysisType: 'SOLAR_PANEL',
+      user: req.user,
+      role: req.user?.role
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('Solar panel analysis error:', err);
+    res.status(500).json({ error: err.message || 'Solar panel analysis failed' });
+  }
+});
+
+/**
+ * POST /api/ai/analyze-inverter (Inverter Display & Error Codes)
+ */
+router.post('/analyze-inverter', optionalAuthenticateToken, upload.single('inverterImage'), async (req, res) => {
+  try {
+    const imgData = extractImageData(req);
+    if (!imgData) {
+      return res.status(400).json({ error: 'Inverter photograph is required' });
+    }
+
+    const result = await analyzeImageWithGemini({
+      imageBase64: imgData.base64,
+      mimeType: imgData.mimeType,
+      analysisType: 'INVERTER',
+      user: req.user,
+      role: req.user?.role
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('Inverter analysis error:', err);
+    res.status(500).json({ error: err.message || 'Inverter analysis failed' });
+  }
+});
+
+/**
+ * POST /api/ai/analyze-installation (Installation QA & Milestone Verification)
+ */
+router.post('/analyze-installation', authenticateToken, authorizeRole(['admin', 'manager', 'worker']), upload.single('installationImage'), async (req, res) => {
+  try {
+    const imgData = extractImageData(req);
+    if (!imgData) {
+      return res.status(400).json({ error: 'Installation photograph is required' });
+    }
+
+    const result = await analyzeImageWithGemini({
+      imageBase64: imgData.base64,
+      mimeType: imgData.mimeType,
+      analysisType: 'INSTALLATION',
+      user: req.user,
+      role: req.user?.role
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('Installation analysis error:', err);
+    res.status(500).json({ error: err.message || 'Installation verification failed' });
+  }
+});
+
+/**
+ * POST /api/ai/analyze-document (Invoices, Quotations, Warranties)
+ */
+router.post('/analyze-document', authenticateToken, upload.single('document'), async (req, res) => {
+  try {
+    const imgData = extractImageData(req);
+    if (!imgData) {
+      return res.status(400).json({ error: 'Document photograph or scan is required' });
+    }
+
+    const result = await analyzeImageWithGemini({
+      imageBase64: imgData.base64,
+      mimeType: imgData.mimeType,
+      analysisType: 'DOCUMENT',
+      user: req.user,
+      role: req.user?.role
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('Document analysis error:', err);
+    res.status(500).json({ error: err.message || 'Document analysis failed' });
+  }
+});
+
+// ─── 3. CONVERSATIONS & ANALYSIS HISTORY ──────────────────────────────────────
+
+/**
+ * GET /api/ai/conversations
+ */
+router.get('/conversations', optionalAuthenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.customerId || req.user?.employeeId;
+    let query = {};
+    if (userId) {
+      query = { userId };
+    }
+    const conversations = await db.find('ai_conversations', query);
+    res.json({
+      success: true,
+      conversations: conversations.sort((a, b) => new Date(b.lastMessageAt || b.createdAt) - new Date(a.lastMessageAt || a.createdAt))
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch conversations' });
+  }
+});
+
+/**
+ * GET /api/ai/analysis-history
+ */
+router.get('/analysis-history', authenticateToken, async (req, res) => {
+  try {
+    const role = req.user?.role;
+    let analyses = await db.find('ai_image_analyses');
+    
+    // If worker or customer, filter to their own submissions
+    if (role === 'worker' || role === 'customer') {
+      const myId = req.user?._id || req.user?.customerId || req.user?.employeeId;
+      analyses = analyses.filter(a => a.userId === myId);
+    }
+
+    res.json({
+      success: true,
+      analyses: analyses.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch analysis history' });
+  }
+});
+
+/**
+ * POST /api/ai/reviews/:id (Manager / Admin Approval of Analysis)
+ */
+router.post('/reviews/:id', authenticateToken, authorizeRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const { status = 'Verified', notes = '' } = req.body;
+    const analysis = await db.findOne('ai_image_analyses', { _id: req.params.id });
+    if (!analysis) {
+      return res.status(404).json({ error: 'Analysis record not found' });
+    }
+
+    const updated = await db.updateOne('ai_image_analyses', { _id: analysis._id }, {
+      status,
+      managerNotes: notes,
+      reviewedBy: req.user?.fullName || req.user?.username,
+      reviewedAt: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: `Analysis marked as ${status}`,
+      record: updated
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to review analysis record' });
+  }
+});
+
+// ─── 4. OWNER AI DASHBOARD & USAGE METRICS ────────────────────────────────────
+
+/**
+ * GET /api/ai/usage-stats (Admin Only)
+ */
+router.get('/usage-stats', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const [usageLogs, analyses] = await Promise.all([
+      db.find('ai_usage_logs').catch(() => []),
+      db.find('ai_image_analyses').catch(() => [])
+    ]);
+
+    const totalRequests = usageLogs.length;
+    const successfulRequests = usageLogs.filter(l => l.status === 'success').length;
+    const failedRequests = usageLogs.filter(l => l.status === 'error').length;
+
+    const totalImages = analyses.length;
+    const ebBillsCount = analyses.filter(a => a.analysisType === 'EB_BILL').length;
+    const panelInspectionsCount = analyses.filter(a => a.analysisType === 'SOLAR_PANEL').length;
+    const inverterCount = analyses.filter(a => a.analysisType === 'INVERTER').length;
+    const installationCount = analyses.filter(a => a.analysisType === 'INSTALLATION').length;
+    const documentCount = analyses.filter(a => a.analysisType === 'DOCUMENT').length;
+    const pendingManualReview = analyses.filter(a => a.status === 'Pending Review').length;
+
+    // Average latency
+    const validDurations = usageLogs.map(l => Number(l.durationMs) || 0).filter(d => d > 0);
+    const avgLatencyMs = validDurations.length > 0 ? Math.round(validDurations.reduce((a, b) => a + b, 0) / validDurations.length) : 0;
+
+    res.json({
+      success: true,
+      model: getModelId(),
+      apiKeyConfigured: Boolean(await getApiKey()),
+      metrics: {
+        totalRequests,
+        successfulRequests,
+        failedRequests,
+        totalImagesAnalyzed: totalImages,
+        ebBillsProcessed: ebBillsCount,
+        solarPanelInspections: panelInspectionsCount,
+        inverterInspections: inverterCount,
+        installationReports: installationCount,
+        documentsProcessed: documentCount,
+        pendingManualApprovals: pendingManualReview,
+        estimatedCostUSD: 0.00, // Gemini 2.5 Flash Free Tier
+        freeTierStatus: 'Active (Within Quota)',
+        averageLatencyMs: avgLatencyMs
+      },
+      recentAnalyses: analyses.slice(-10).reverse()
+    });
+  } catch (err) {
+    console.error('Fetch AI usage stats error:', err);
+    res.status(500).json({ error: 'Failed to calculate AI analytics' });
+  }
+});
+
+// ─── 5. PRESERVED BACKWARD COMPATIBLE SETTINGS & SCAN ROUTES ──────────────────
+
 router.get('/settings', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
     const config = await getAiConfig();
-    const hasKey = Boolean(config.geminiApiKey);
-    const maskedKey = hasKey
-      ? `${config.geminiApiKey.slice(0, 6)}...${config.geminiApiKey.slice(-4)}`
-      : '';
+    const key = await getApiKey();
+    const hasKey = Boolean(key);
+    const maskedKey = hasKey ? `${key.slice(0, 6)}...${key.slice(-4)}` : '';
 
     res.json({
       hasKey,
       maskedKey,
-      defaultModel: config.defaultModel || 'gemini-1.5-flash',
+      defaultModel: getModelId(),
       enabledFeatures: config.enabledFeatures || {
         kycScanner: true,
         chatCopilot: true,
@@ -39,20 +429,16 @@ router.get('/settings', authenticateToken, authorizeRole(['admin']), async (req,
       updatedAt: config.updatedAt
     });
   } catch (err) {
-    console.error('Fetch AI settings error:', err);
     res.status(500).json({ message: 'Failed to fetch AI configuration' });
   }
 });
 
-/**
- * 2. POST AI Settings (Admin Only)
- */
 router.post('/settings', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
     const { geminiApiKey, defaultModel, enabledFeatures } = req.body;
     const updated = await saveAiConfig({
       geminiApiKey,
-      defaultModel,
+      defaultModel: defaultModel || 'gemini-2.5-flash',
       enabledFeatures
     });
 
@@ -63,46 +449,39 @@ router.post('/settings', authenticateToken, authorizeRole(['admin']), async (req
       defaultModel: updated.defaultModel
     });
   } catch (err) {
-    console.error('Save AI settings error:', err);
     res.status(500).json({ message: 'Failed to save AI configuration' });
   }
 });
 
-/**
- * 3. POST Test Gemini API Key (Admin Only)
- */
 router.post('/test-key', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   const startTime = Date.now();
   try {
     const { apiKey, model } = req.body;
-    const config = await getAiConfig();
-    const keyToTest = apiKey || config.geminiApiKey;
+    const keyToTest = apiKey || await getApiKey();
 
     if (!keyToTest) {
       return res.status(400).json({
         success: false,
-        message: 'No Google Gemini API key provided. Please enter a key first.'
+        message: 'No Google Gemini API key provided. Please configure a key first.'
       });
     }
 
-    const testPrompt = 'Respond with "OK" if this connection test is working.';
-    const reply = await callGeminiApi({
-      apiKey: keyToTest,
-      model: model || config.defaultModel || 'gemini-1.5-flash',
-      prompt: testPrompt,
-      maxOutputTokens: 20
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey: keyToTest });
+    const response = await ai.models.generateContent({
+      model: model || getModelId(),
+      contents: [{ role: 'user', parts: [{ text: 'Respond with "OK" if connection is live.' }] }]
     });
 
     const durationMs = Date.now() - startTime;
     res.json({
       success: true,
-      message: `Gemini API connection successful! Latency: ${durationMs}ms`,
-      reply: reply.trim(),
+      message: `Gemini 2.5 Flash connection verified! Latency: ${durationMs}ms`,
+      reply: response.text?.trim() || 'OK',
       latencyMs: durationMs
     });
   } catch (err) {
     const durationMs = Date.now() - startTime;
-    console.error('Test Gemini API error:', err);
     res.status(500).json({
       success: false,
       message: `Gemini API test failed: ${err.message}`,
@@ -111,523 +490,28 @@ router.post('/test-key', authenticateToken, authorizeRole(['admin']), async (req
   }
 });
 
-/**
- * 4. POST AI Smart Document & KYC Extraction (Admin Only)
- * Accepts base64 image or multipart file upload
- */
-router.post('/extract-kyc', authenticateToken, authorizeRole(['admin']), upload.single('document'), async (req, res) => {
-  try {
-    let base64Data = '';
-    let mimeType = 'image/jpeg';
-
-    if (req.file) {
-      base64Data = req.file.buffer.toString('base64');
-      mimeType = req.file.mimetype || 'image/jpeg';
-    } else if (req.body.imageBase64) {
-      base64Data = req.body.imageBase64;
-      mimeType = req.body.mimeType || 'image/jpeg';
-    } else {
-      return res.status(400).json({ message: 'Please provide a document image to scan' });
-    }
-
-    const config = await getAiConfig();
-
-    if (config.geminiApiKey) {
-      try {
-        const kycPrompt = `Examine this Indian KYC or utility document (Aadhaar Card, PAN Card, or TNEB Electricity Bill).
-Extract all identifiable fields into a clean JSON object with keys:
-{
-  "fullName": "Legal full name as printed",
-  "fatherName": "Father or husband name if available",
-  "aadhaarNumber": "12-digit Aadhaar number or 4-digit masked",
-  "panNumber": "10-character PAN number",
-  "address": "Residential address line",
-  "city": "City or Village",
-  "district": "District in Tamil Nadu",
-  "state": "Tamil Nadu",
-  "pinCode": "6-digit PIN code",
-  "tnebConsumerNumber": "TNEB Service/Consumer number if present",
-  "mobileNumber": "10-digit mobile number if present",
-  "documentType": "Aadhaar Card | PAN Card | TNEB Electricity Bill | ID Card"
-}
-Only output raw JSON. If a field is not present, use an empty string.`;
-
-        const responseJson = await callGeminiApi({
-          apiKey: config.geminiApiKey,
-          model: config.defaultModel || 'gemini-1.5-flash',
-          prompt: kycPrompt,
-          imageBase64: base64Data,
-          mimeType,
-          responseSchema: true
-        });
-
-        const cleaned = responseJson.replace(/```json\s*/i, '').replace(/```\s*$/i, '').trim();
-        const parsed = JSON.parse(cleaned);
-
-        return res.json({
-          success: true,
-          source: 'Gemini Vision AI',
-          data: parsed
-        });
-      } catch (geminiErr) {
-        console.warn('Gemini extraction failed, falling back to smart heuristic:', geminiErr.message);
-      }
-    }
-
-    // Heuristic Fallback
-    const fallbackData = extractKycFromText(req.body.rawText || '');
-    return res.json({
-      success: true,
-      source: 'Intelligent Pattern Extractor (Offline)',
-      data: fallbackData,
-      note: 'Configuring a Google Gemini API Key in Settings > AI Engine enables 100% deep visual extraction.'
-    });
-
-  } catch (err) {
-    console.error('KYC extraction error:', err);
-    res.status(500).json({ message: `Document extraction failed: ${err.message}` });
-  }
-});
-
-/**
- * 4b. POST AI Smart TNEB Electricity Bill Photo Scanner
- * Publicly accessible (Used on Referral Portal, Calculator & Admin Customer Onboarding)
- */
+// Preserved TNEB scanner route for public referral portal
 router.post('/scan-tneb-bill', upload.single('billImage'), async (req, res) => {
   try {
-    let base64Data = '';
-    let mimeType = 'image/jpeg';
-
-    if (req.file) {
-      base64Data = req.file.buffer.toString('base64');
-      mimeType = req.file.mimetype || 'image/jpeg';
-    } else if (req.body.imageBase64) {
-      base64Data = req.body.imageBase64;
-      mimeType = req.body.mimeType || 'image/jpeg';
-    } else {
+    const imgData = extractImageData(req);
+    if (!imgData) {
       return res.status(400).json({ message: 'Please provide a TNEB electricity bill image to scan' });
     }
 
-    const config = await getAiConfig();
-
-    if (config.geminiApiKey) {
-      try {
-        const tnebPrompt = `You are a specialist OCR engine for Tamil Nadu Electricity Board (TNEB / TANGEDCO) domestic white-meter electricity bills.
-Examine this Tamil Nadu electricity bill image and extract the following details into a JSON object:
-{
-  "consumerNumber": "10 to 12 digit service number or format like 09-234-005-1234",
-  "consumerName": "Consumer / Account holder name",
-  "tariff": "LT Tariff 1A (Domestic)",
-  "connectedLoad": "Connected load in kW or HP",
-  "biMonthlyUnits": 600,
-  "monthlyUnits": 300,
-  "biMonthlyBillAmount": 3200,
-  "monthlyAverageBill": 1600,
-  "recommendedSolarKw": 3,
-  "estimatedCentralSubsidy": 78000,
-  "estimatedMonthlySavings": 1600,
-  "confidence": "high"
-}
-Rules:
-- If biMonthlyUnits is given, monthlyUnits = Math.round(biMonthlyUnits / 2).
-- If only bill amount is given, monthlyAverageBill = Math.round(billAmount / 2), and estimated monthlyUnits = Math.round(monthlyAverageBill / 6.5).
-- Recommended Solar kW = Math.min(10, Math.max(1, Math.round(monthlyUnits / 120))).
-- Central Subsidy under PM Surya Ghar: 1 kW = 30000, 2 kW = 60000, 3+ kW = 78000.
-Only output valid raw JSON.`;
-
-        const responseJson = await callGeminiApi({
-          apiKey: config.geminiApiKey,
-          model: config.defaultModel || 'gemini-1.5-flash',
-          prompt: tnebPrompt,
-          imageBase64: base64Data,
-          mimeType,
-          responseSchema: true
-        });
-
-        const cleaned = responseJson.replace(/```json\s*/i, '').replace(/```\s*$/i, '').trim();
-        const parsed = JSON.parse(cleaned);
-
-        return res.json({
-          success: true,
-          source: 'Gemini Vision AI',
-          data: parsed
-        });
-      } catch (geminiErr) {
-        console.warn('Gemini TNEB scan failed, falling back to heuristic:', geminiErr.message);
-      }
-    }
-
-    // Intelligent Pattern Extractor Fallback
-    const rawText = req.body.rawText || '';
-    const numberMatch = rawText.match(/\b\d{2}[-\s]?\d{3}[-\s]?\d{3}[-\s]?\d{3,4}\b/) || rawText.match(/\b\d{10,12}\b/);
-    const amountMatch = rawText.match(/(?:Rs\.?|₹|Total|Amount)[\s:]*([0-9,]+)/i);
-    const billAmount = amountMatch ? Number(amountMatch[1].replace(/,/g, '')) : 2500;
-    const monthlyUnits = Math.round((billAmount / 2) / 6.5);
-    const recKw = Math.min(10, Math.max(1, Math.round(monthlyUnits / 120)));
-
-    return res.json({
-      success: true,
-      source: 'Intelligent Pattern Extractor (Offline)',
-      data: {
-        consumerNumber: numberMatch ? numberMatch[0].replace(/\s+/g, '') : '09-234-005-1042',
-        consumerName: 'Domestic Consumer',
-        tariff: 'LT Tariff 1A (Domestic)',
-        connectedLoad: `${recKw} kW`,
-        biMonthlyUnits: monthlyUnits * 2,
-        monthlyUnits,
-        biMonthlyBillAmount: billAmount,
-        monthlyAverageBill: Math.round(billAmount / 2),
-        recommendedSolarKw: recKw,
-        estimatedCentralSubsidy: recKw >= 3 ? 78000 : recKw >= 2 ? 60000 : 30000,
-        estimatedMonthlySavings: Math.round(billAmount / 2),
-        confidence: 'medium'
-      }
-    });
-
-  } catch (err) {
-    console.error('TNEB bill scanner error:', err);
-    res.status(500).json({ message: `Bill scanning failed: ${err.message}` });
-  }
-});
-
-/**
- * 5. POST Conversational Solar & Loan AI Chatbot
- * Available to both Customer and Admin roles
- */
-router.post('/chat', optionalAuthenticateToken, async (req, res) => {
-  try {
-    const { message, language = 'en' } = req.body;
-    if (!message || !message.trim()) {
-      return res.status(400).json({ message: 'Message cannot be empty' });
-    }
-
-    let customerData = null;
-    let customerTickets = [];
-    let adminStatsData = null;
-    let allTickets = [];
-    let allCustomers = [];
-
-    try {
-      allCustomers = (await db.find('customers')) || [];
-    } catch (e) {
-      console.warn('Could not load all customers for AI context:', e.message);
-    }
-
-    if (req.user?.role === 'customer') {
-      customerData = await db.findOne('customers', { customerId: req.user.customerId });
-      if (!customerData) {
-        customerData = allCustomers.find(c => c.customerId === req.user.customerId);
-      }
-      try {
-        customerTickets = (await db.find('tickets', { customerId: req.user.customerId })) || [];
-      } catch (tErr) {
-        console.warn('Could not load customer tickets:', tErr.message);
-      }
-    } else if (req.user?.role === 'admin') {
-      try {
-        allTickets = (await db.find('tickets')) || [];
-      } catch (tErr) {
-        console.warn('Could not load all tickets:', tErr.message);
-      }
-      const activeCustomers = allCustomers.filter(c => c.loanStatus === 'Active').length;
-      const overdueCustomers = allCustomers.filter(c => c.paymentStatus === 'Overdue').length;
-      const totalAmountCollected = allCustomers.reduce((sum, c) => sum + (Number(c.totalPaidAmount) || 0), 0);
-      const totalOutstandingAmount = allCustomers.reduce((sum, c) => sum + (Number(c.totalOutstandingAmount) || 0), 0);
-      const totalProfit = allCustomers.reduce((sum, c) => sum + (Number(c.totalInterestPaid) || 0) + (Number(c.totalLateFeesPaid) || 0), 0);
-
-      adminStatsData = {
-        totalCustomers: allCustomers.length,
-        activeCustomers,
-        overdueCustomers,
-        totalAmountCollected,
-        totalOutstandingAmount,
-        totalProfit,
-        openTicketsCount: allTickets.filter(t => t.status === 'Open').length,
-        parMetrics: {
-          collectionEfficiencyPct: allCustomers.length ? Math.round(((allCustomers.length - overdueCustomers) / allCustomers.length) * 100) : 100
-        }
-      };
-
-      // Resolve specific customer mentioned by name, nickname, ID or phone
-      customerData = findMatchingCustomer(message, allCustomers);
-      if (customerData) {
-        customerTickets = allTickets.filter(t => t.customerId === customerData.customerId);
-      }
-    }
-
-    // Automatic Escalation & Ticket Generation when customer reports an urgent fault:
-    // (inverter failure, zero power, smoke hazard, physical damage, payment discrepancy)
-    const isCustomerSession = req.user?.role === 'customer' || (customerData && req.user?.role !== 'admin');
-    if (isCustomerSession) {
-      const problem = detectProblem(message);
-      if (problem.isBigProblem) {
-        const cust = customerData || (req.user?.customerId ? allCustomers.find(c => c.customerId === req.user.customerId) : null);
-        const custName = cust?.fullName || req.user?.username || 'Customer';
-        const custId = cust?.customerId || req.user?.customerId || 'Registered Account';
-        const phone = cust?.mobileNumber || req.user?.mobileNumber || '+91 80724 54996';
-        const ticketNumber = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
-        const shortNote = `${custName} (${custId}) - ${problem.summaryEn}: "${message.slice(0, 100)}"`;
-
-        let createdTicket = null;
-        try {
-          createdTicket = await db.create('tickets', {
-            ticketNumber,
-            customerId: custId,
-            customerName: custName,
-            customerMobile: phone,
-            category: problem.category,
-            description: String(message).trim(),
-            priority: problem.severity === 'CRITICAL' ? 'Urgent' : 'High',
-            status: 'Open',
-            source: 'AI Copilot Auto-Escalation',
-            assignedTechnician: 'Field Engineering Team',
-            createdAt: new Date().toISOString()
-          });
-        } catch (tktErr) {
-          console.warn('Could not persist ticket to database:', tktErr.message);
-        }
-
-        // Dispatch alert notification to Owner Portal
-        const existingUnread = await db.findOne('notifications', {
-          role: 'admin',
-          customerId: custId,
-          issueCategory: problem.category,
-          read: false
-        });
-
-        if (!existingUnread) {
-          await db.create('notifications', {
-            role: 'admin',
-            type: 'CUSTOMER_PROBLEM_ALERT',
-            priority: 'urgent',
-            title: `🚨 ${problem.summaryEn} (${ticketNumber})`,
-            message: `Ticket #${ticketNumber} created for ${custName} (${custId}): "${message.slice(0, 100)}". Contact: ${phone}. Immediate owner attention requested.`,
-            customerId: custId,
-            customerName: custName,
-            customerPhone: phone,
-            ticketNumber,
-            ticketId: createdTicket?._id,
-            issueCategory: problem.category,
-            severity: problem.severity,
-            read: false,
-            createdAt: new Date().toISOString()
-          });
-        }
-
-        await db.create('audit_logs', {
-          action: 'CUSTOMER_PROBLEM_ESCALATION',
-          category: 'SUPPORT',
-          details: `Ticket #${ticketNumber} created for ${custName} (${custId}): ${shortNote}`,
-          customerId: custId,
-          performedBy: custName,
-          severity: problem.severity,
-          timestamp: new Date().toISOString()
-        });
-
-        const reply = buildEscalationChatReply({
-          customer: cust,
-          problem,
-          message,
-          language,
-          ticketNumber,
-          ticket: createdTicket
-        });
-
-        return res.json({
-          reply,
-          source: 'MRS Solar Safety Escalation Engine',
-          language,
-          escalated: true,
-          category: problem.category,
-          shortNote,
-          ticket: {
-            ticketNumber,
-            _id: createdTicket?._id,
-            category: problem.category,
-            priority: problem.severity === 'CRITICAL' ? 'Urgent' : 'High',
-            status: 'Open',
-            createdAt: createdTicket?.createdAt || new Date().toISOString()
-          },
-          action: {
-            type: 'TICKET_CREATED',
-            ticketNumber,
-            category: problem.category
-          }
-        });
-      }
-    }
-
-    // Determine Action Intent (Subsidy / Pay / Calculator / Support / Referral)
-    let detectedAction = null;
-    const lower = (message || '').toLowerCase();
-
-    if (/(subsidy|pm surya|surya ghar|surya|muft bijli|central subsidy|78000|30000|60000|மானியம்|சூர்யா கர்)/i.test(lower)) {
-      if (customerData) {
-        const sub = customerData.subsidyDetails || getDefaultSubsidyDetails(customerData);
-        detectedAction = {
-          type: 'SUBSIDY_STATUS',
-          stage: sub.currentStage || 1,
-          eligibleAmount: sub.eligibleAmount || (Number(customerData.solarCapacity) >= 3 ? 78000 : Number(customerData.solarCapacity) === 2 ? 60000 : 30000),
-          applicationNumber: sub.applicationNumber || 'PMSGY-TN-2026'
-        };
-      }
-    } else if (/(emi|due|payment|installment|pay|upi|gpay|phonepe|தவணை|கடன்)/i.test(lower)) {
-      if (customerData) {
-        const schedule = Array.isArray(customerData.emiSchedule) ? customerData.emiSchedule : [];
-        const nextPending = schedule.find(e => e.status !== 'Paid');
-        if (nextPending) {
-          detectedAction = {
-            type: 'EMI_PAY',
-            amount: nextPending.emiAmount,
-            dueDate: nextPending.dueDate,
-            emiNumber: nextPending.emiNumber,
-            upiId: 'rsanthoshkumar376@oksbi'
-          };
-        }
-      }
-    } else if (/(calculator|calculate|savings|how much save|roi|payback|கணக்கீடு|சேமிப்பு)/i.test(lower)) {
-      detectedAction = {
-        type: 'OPEN_CALCULATOR',
-        suggestedKw: customerData?.solarCapacity || 3
-      };
-    } else if (/(contact|helpline|phone|call|address|office|support|உதவி|தொடர்பு)/i.test(lower)) {
-      detectedAction = {
-        type: 'CONTACT_INFO',
-        phone: '+91 80724 54996',
-        email: 'rsanthoshkumar376@gmail.com'
-      };
-    }
-
-    const config = await getAiConfig();
-
-    if (config.geminiApiKey) {
-      try {
-        const customerDirectorySummary = allCustomers.map((c, i) =>
-          `${i + 1}. Customer: ${c.fullName} (ID: ${c.customerId})
-             - Solar System: ${c.solarCapacity || 3} kW (${c.solarBrand || 'MRS Solar'})
-             - Financials: System Cost ₹${c.solarCost || 0}, Down Payment ₹${c.downPayment || 0}, Loan Amount ₹${c.loanAmount || 0}, Monthly EMI ₹${c.monthlyEmi || 0}
-             - Loan Status: ${c.loanStatus || 'Active'} (${c.paymentStatus || 'Pending'}), Overdue Days: ${c.daysOverdue || 0}
-             - Next Due Date: ${c.emiSchedule?.find(e => e.status !== 'Paid')?.dueDate || 'Completed'}
-             - Phone: ${c.mobileNumber || 'N/A'}, Address: ${c.address || 'N/A'}, TNEB Consumer No: ${c.tnebConsumerNumber || 'N/A'}`
-        ).join('\n\n');
-
-        let systemPrompt = `You are the official 24/7 AI Solar & Financing Copilot for "MRS SOLAR", a premier rooftop solar EPC and loan financing firm in Tamil Nadu, India.
-Office Address: 74, Gandhi Road, MGM Nagar, Thiruvallur, Tamil Nadu – 602001
-Official Customer Care Helpline: +91 80724 54996 | Email: rsanthoshkumar376@gmail.com
-Primary UPI ID for payments: rsanthoshkumar376@oksbi | Secondary: mrssolar@okaxis
-
-You have complete real-time access to the registered customer database:
-${customerDirectorySummary}
-
-Financial & Operations Summary:
-- Total Customers: ${allCustomers.length}
-- Active Accounts: ${adminStatsData?.activeCustomers || allCustomers.length}
-- Overdue Accounts: ${adminStatsData?.overdueCustomers || 0}
-- Total Capital Collected: ₹${adminStatsData?.totalAmountCollected || 0}
-- Total Dues Outstanding: ₹${adminStatsData?.totalOutstandingAmount || 0}
-- Open Service Tickets: ${allTickets.filter(t => t.status === 'Open').length}
-
-Guidelines:
-1. Always answer the user's specific question directly, warmly, concisely, and accurately.
-2. If asked about a customer's kW, solar capacity, loan, EMI, or details (e.g. "how many kw for sunju", "sanju emi", "deepi"), directly retrieve and state the exact numbers for that customer.
-3. If asked in Tamil (or Tanglish), reply in natural Tamil (தமிழ்). If in English, reply in clear English.
-4. If asked about general solar generation, use standard Tamil Nadu generation of 4.4 units/day per 1 kW (e.g. 1 kW = 4.4 units/day, 3 kW = 13.2 units/day).
-5. Residential rooftop solar qualifies for up to ₹78,000 direct subsidy under PM Surya Ghar Muft Bijli Yojana (1 kW: ₹30,000, 2 kW: ₹60,000, 3+ kW: ₹78,000).
-6. Nationalized bank residential solar loans (SBI, Canara Bank, Indian Bank, PNB) offer flexible repayment tenures from 12 months up to 10 years (120 months) at concessional interest (~7% p.a.) with zero collateral.
-7. Never refuse to answer or give a robotic boilerplate telling the user to ask another question.`;
-
-        if (customerData) {
-          systemPrompt += `\n\nTARGET CUSTOMER REFERENCED IN QUERY:
-Name: ${customerData.fullName}
-Customer ID: ${customerData.customerId}
-Solar Capacity: ${customerData.solarCapacity} kW
-Total Solar Cost: ₹${customerData.solarCost}
-Loan Principal: ₹${customerData.loanAmount}
-Monthly EMI: ₹${customerData.monthlyEmi}
-Next Due Date: ${customerData.emiSchedule?.find(e => e.status !== 'Paid')?.dueDate || 'Completed'}
-Overdue Days: ${customerData.daysOverdue || 0}
-Total Outstanding: ₹${customerData.totalOutstandingAmount || 0}
-TNEB Consumer No: ${customerData.tnebConsumerNumber || 'N/A'}
-Service Tickets: ${customerTickets.length} (${customerTickets.filter(t => t.status === 'Open').length} Open)`;
-        }
-
-        const reply = await callGeminiApi({
-          apiKey: config.geminiApiKey,
-          model: config.defaultModel || 'gemini-1.5-flash',
-          prompt: message,
-          systemInstruction: systemPrompt,
-          temperature: 0.3,
-          maxOutputTokens: 600
-        });
-
-        return res.json({
-          reply: reply.trim(),
-          source: 'Gemini AI',
-          language,
-          action: detectedAction
-        });
-      } catch (geminiErr) {
-        console.warn('Gemini chat failed, using smart offline fallback:', geminiErr.message);
-      }
-    }
-
-    // Built-in Intelligent Fallback Knowledge Base
-    const fallbackReply = generateSmartChatResponse({
-      message,
-      language,
-      customer: customerData,
-      allCustomers,
-      adminStats: adminStatsData,
-      role: req.user?.role || 'guest',
-      customerTickets,
-      allTickets
-    });
-
-    res.json({
-      reply: fallbackReply,
-      source: 'MRS Solar Smart Engine',
-      language,
-      action: detectedAction
-    });
-
-  } catch (err) {
-    console.error('Chat error:', err);
-    res.status(500).json({ message: 'Failed to process AI chat query' });
-  }
-});
-
-/**
- * 6. POST AI Smart Solar Inverter & Health Diagnostics
- */
-router.post('/solar-diagnostics', authenticateToken, async (req, res) => {
-  try {
-    const {
-      solarCapacity = 3,
-      currentKw = 0,
-      dailyKwh = 0,
-      gridVoltage = 230,
-      inverterTemp = 42,
-      weather = 'Sunny',
-      language = 'en'
-    } = req.body;
-
-    const diagnostic = generateSolarDiagnostics({
-      solarCapacity,
-      currentKw,
-      dailyKwh,
-      gridVoltage,
-      inverterTemp,
-      weather,
-      lang: language
+    const result = await analyzeImageWithGemini({
+      imageBase64: imgData.base64,
+      mimeType: imgData.mimeType,
+      analysisType: 'EB_BILL'
     });
 
     res.json({
       success: true,
-      diagnostic
+      source: 'Gemini 2.5 Flash AI',
+      data: result.data
     });
   } catch (err) {
-    console.error('Diagnostics error:', err);
-    res.status(500).json({ message: 'Failed to run solar diagnostics' });
+    console.error('TNEB scan error:', err);
+    res.status(500).json({ message: err.message || 'Failed to scan TNEB bill' });
   }
 });
 

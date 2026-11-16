@@ -5,7 +5,7 @@ import { formatCurrency } from '../../utils/format.js';
 import { 
   Users, Zap, DollarSign, Wallet, ShieldAlert, Clock, 
   TrendingUp, Activity, BellRing, PlayCircle, RefreshCw, CheckCircle, ChevronRight, Trash2,
-  FileSpreadsheet, ShieldCheck, AlertTriangle, Landmark, ArrowDownToLine, Target, Award
+  FileSpreadsheet, ShieldCheck, AlertTriangle, Landmark, ArrowDownToLine, Target, Award, Sparkles
 } from 'lucide-react';
 import { translations, getLanguage } from '../../utils/translations.js';
 
@@ -218,6 +218,36 @@ export default function AdminDashboard() {
 
         <div className="flex items-center space-x-1.5 text-xs font-bold text-teal-400 group-hover:text-teal-300 shrink-0">
           <span>Open CRM Board</span>
+          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </div>
+      </div>
+
+      {/* GOOGLE GEMINI 2.5 FLASH AI VISION & ANALYTICS BANNER */}
+      <div 
+        onClick={() => navigate('/admin/ai-dashboard')}
+        className="cursor-pointer p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border border-teal-500/30 hover:border-teal-500/60 shadow-md transition-all hover:scale-[1.01] flex flex-col sm:flex-row sm:items-center justify-between gap-3 group text-white"
+      >
+        <div className="flex items-center space-x-3.5">
+          <div className="w-10 h-10 rounded-2xl bg-teal-500/20 text-teal-300 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Sparkles className="w-5 h-5 text-yellow-400 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h4 className="text-sm font-bold text-white group-hover:text-teal-300 transition-colors">
+                MRS SOLAR AI — Multimodal Vision & Diagnostics
+              </h4>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                Gemini 2.5 Flash Free Tier
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Automated TNEB white-meter OCR, rooftop solar panel soiling/crack detection, inverter fault diagnostics, and installation audits.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-1.5 text-xs font-bold text-teal-400 group-hover:text-teal-300 shrink-0">
+          <span>AI Vision Dashboard</span>
           <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </div>
       </div>

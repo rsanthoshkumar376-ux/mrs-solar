@@ -3,7 +3,7 @@ import { db } from '../database/db.js';
 export const DEFAULT_AI_CONFIG = {
   key: 'ai',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
-  defaultModel: 'gemini-1.5-flash',
+  defaultModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   enabledFeatures: {
     kycScanner: true,
     chatCopilot: true,
