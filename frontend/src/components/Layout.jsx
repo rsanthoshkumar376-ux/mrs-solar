@@ -7,7 +7,7 @@ import {
   Users, DollarSign, History, Calculator, ShieldAlert,
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
   Search, Languages, Mic, CreditCard, Trash2, Settings, KanbanSquare,
-  Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench, Sparkles
+  Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench, Sparkles, KeyRound
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -214,6 +214,7 @@ export default function Layout({ children }) {
     { label: 'Attendance & Leaves', path: '/admin/attendance', icon: Calendar },
     { label: 'Workforce Reports', path: '/admin/reports', icon: BarChart3 },
     { label: 'AI Vision Analytics', path: '/admin/ai-dashboard', icon: Sparkles },
+    { label: 'Security & Passwords', path: '/admin/security-passwords', icon: KeyRound },
     { label: t.settings || 'Settings', path: '/admin/settings', icon: Settings }
   ];
 
@@ -223,19 +224,22 @@ export default function Layout({ children }) {
     { label: 'Team Targets', path: '/manager/targets', icon: Target },
     { label: 'Team Attendance', path: '/manager/attendance', icon: Calendar },
     { label: 'Assigned Leads', path: '/admin/leads', icon: KanbanSquare },
-    { label: 'Solar Installations', path: '/admin/projects', icon: Wrench }
+    { label: 'Solar Installations', path: '/admin/projects', icon: Wrench },
+    { label: 'Change Password', path: '/change-password', icon: KeyRound }
   ];
 
   const workerLinks = [
     { label: 'My Dashboard', path: '/worker', icon: LayoutDashboard },
     { label: 'My Tasks', path: '/worker/tasks', icon: CheckSquare },
     { label: 'My Targets', path: '/worker/targets', icon: Target },
-    { label: 'My Attendance', path: '/worker/attendance', icon: Calendar }
+    { label: 'My Attendance', path: '/worker/attendance', icon: Calendar },
+    { label: 'Change Password', path: '/change-password', icon: KeyRound }
   ];
 
   const customerLinks = [
     { label: t.myDashboard, path: '/customer', icon: LayoutDashboard },
-    { label: t.paymentHistory, path: '/customer/payments', icon: History }
+    { label: t.paymentHistory, path: '/customer/payments', icon: History },
+    { label: 'Change Password', path: '/change-password', icon: KeyRound }
   ];
 
   const links = user?.role === 'admin' 
@@ -353,6 +357,14 @@ export default function Layout({ children }) {
           <div className="mt-3 flex justify-center">
             <AppUpdateModalButton />
           </div>
+
+          <Link
+            to="/change-password"
+            className="flex items-center justify-center space-x-2 w-full mt-2.5 px-4 py-2 bg-slate-100 hover:bg-teal-50 dark:bg-slate-800/80 dark:hover:bg-teal-950/40 text-slate-700 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 rounded-xl text-xs font-semibold transition-colors outline-none border border-transparent hover:border-teal-500/20"
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            <span>Change Password</span>
+          </Link>
 
           <button
             onClick={handleLogout}

@@ -26,6 +26,10 @@ const SolarProjectManager = React.lazy(() => import('./pages/admin/SolarProjectM
 const AttendanceManager = React.lazy(() => import('./pages/admin/AttendanceManager.jsx'));
 const WorkforceReports = React.lazy(() => import('./pages/admin/WorkforceReports.jsx'));
 const AiDashboard = React.lazy(() => import('./pages/admin/AiDashboard.jsx'));
+const SecurityPasswords = React.lazy(() => import('./pages/admin/SecurityPasswords.jsx'));
+
+// Universal Change Password Page (All Authenticated Roles)
+const ChangePassword = React.lazy(() => import('./pages/ChangePassword.jsx'));
 
 // Manager & Worker Dedicated Portals
 const ManagerDashboard = React.lazy(() => import('./pages/manager/ManagerDashboard.jsx'));
@@ -222,6 +226,16 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/security-passwords"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Layout>
+                  <SecurityPasswords />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
 
           {/* Team Manager Dedicated Portal Routes */}
           <Route
@@ -284,6 +298,18 @@ export default function App() {
               <ProtectedRoute allowedRoles={['customer']}>
                 <Layout>
                   <EmiHistory />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Universal Change Password Route (All 4 Authenticated Roles) */}
+          <Route
+            path="/change-password"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager', 'worker', 'customer']}>
+                <Layout>
+                  <ChangePassword />
                 </Layout>
               </ProtectedRoute>
             }

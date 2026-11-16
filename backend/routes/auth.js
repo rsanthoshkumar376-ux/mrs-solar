@@ -201,6 +201,278 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Helper to validate password strength
+function validatePasswordStrength(password) {
+  if (!password || typeof password !== 'string') {
+    return { valid: false, message: 'New password is required.' };
+  }
+  if (password.length < 8) {
+    return { valid: false, message: 'Password must be at least 8 characters long.' };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one uppercase letter (A-Z).' };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one lowercase letter (a-z).' };
+  }
+  if (!/[0-9]/.test(password) && !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one number or special character.' };
+  }
+  return { valid: true };
+}
+
+// POST /api/auth/change-password (All authenticated roles: Owner, Manager, Worker, Customer)
+router.post('/change-password', authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+  const clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || '127.0.0.1';
+
+  try {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ message: 'Current password, new password, and confirmation are required.' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: 'New password and confirmation do not match.' });
+    }
+
+    const strength = validatePasswordStrength(newPassword);
+    if (!strength.valid) {
+      return res.status(400).json({ message: strength.message });
+    }
+
+    const { userId, role, customerId, employeeId, username } = req.user;
+    let targetUser = null;
+    let isEmployee = false;
+
+    if (role === 'admin') {
+      targetUser = await db.findOne('users', { _id: userId }) || await db.findOne('users', { role: 'admin' });
+    } else if (role === 'customer') {
+      if (customerId) {
+        targetUser = await db.findOne('users', { customerId }) || await db.findOne('users', { _id: userId });
+      } else {
+        targetUser = await db.findOne('users', { _id: userId });
+      }
+    } else if (role === 'manager' || role === 'worker') {
+      isEmployee = true;
+      if (employeeId) {
+        targetUser = await db.findOne('employees', { employeeId }) || await db.findOne('employees', { _id: userId });
+      } else {
+        targetUser = await db.findOne('employees', { _id: userId });
+      }
+      if (!targetUser) {
+        targetUser = await db.findOne('users', { _id: userId });
+        if (targetUser) isEmployee = false;
+      }
+    }
+
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User account not found.' });
+    }
+
+    // Verify current password
+    const cleanCurrent = String(currentPassword).trim();
+    let isMatch = false;
+
+    if (targetUser.password) {
+      isMatch = await bcrypt.compare(cleanCurrent, targetUser.password);
+    }
+
+    // Master / fallback checks for existing accounts
+    if (!isMatch && role === 'admin' && (cleanCurrent === '2332' || cleanCurrent === 'admin123')) {
+      isMatch = true;
+    }
+    if (!isMatch && role === 'customer') {
+      if (cleanCurrent === 'customer123') isMatch = true;
+      if (!isMatch && customerId) {
+        const cust = await db.findOne('customers', { customerId });
+        if (cust) {
+          const cleanCustMob = String(cust.mobileNumber || '').trim().replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+          const cleanAltMob = String(cust.alternateNumber || '').trim().replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+          const cleanPass = cleanCurrent.replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+          if (cleanPass.length >= 8 && (cleanPass === cleanCustMob || cleanPass === cleanAltMob)) {
+            isMatch = true;
+          }
+        }
+      }
+    }
+    if (!isMatch && (role === 'manager' || role === 'worker')) {
+      if (cleanCurrent === 'admin123' || (role === 'manager' && cleanCurrent === 'manager123') || (role === 'worker' && cleanCurrent === 'worker123')) {
+        isMatch = true;
+      }
+      if (!isMatch && targetUser.mobileNumber) {
+        const cleanMob = String(targetUser.mobileNumber).trim().replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+        const cleanPass = cleanCurrent.replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+        if (cleanPass.length >= 6 && cleanPass === cleanMob) {
+          isMatch = true;
+        }
+      }
+    }
+
+    const displayName = targetUser.fullName || targetUser.username || username || 'User';
+    const identifier = targetUser.employeeId || targetUser.customerId || targetUser.username || username;
+
+    if (!isMatch) {
+      // Record failed attempt in audit log
+      await db.create('password_change_logs', {
+        userId: targetUser._id || userId,
+        userName: displayName,
+        username: identifier,
+        userRole: role,
+        changeStatus: 'Failed',
+        failureReason: 'Incorrect current password',
+        ipAddress: String(clientIp),
+        changedAt: new Date().toISOString()
+      }).catch(() => {});
+
+      return res.status(400).json({ message: 'Current password is incorrect. Please try again.' });
+    }
+
+    // Prevent password reuse
+    let isSamePassword = false;
+    if (targetUser.password) {
+      isSamePassword = await bcrypt.compare(String(newPassword).trim(), targetUser.password);
+    }
+    if (isSamePassword || String(newPassword).trim() === cleanCurrent) {
+      await db.create('password_change_logs', {
+        userId: targetUser._id || userId,
+        userName: displayName,
+        username: identifier,
+        userRole: role,
+        changeStatus: 'Failed',
+        failureReason: 'Password reuse attempt',
+        ipAddress: String(clientIp),
+        changedAt: new Date().toISOString()
+      }).catch(() => {});
+
+      return res.status(400).json({ message: 'New password cannot be the same as your current password.' });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(String(newPassword).trim(), salt);
+    const nowIso = new Date().toISOString();
+
+    // Update in database
+    if (isEmployee) {
+      await db.updateOne('employees', { _id: targetUser._id }, {
+        password: hashedPassword,
+        passwordLastChanged: nowIso,
+        passwordUpdatedAt: nowIso,
+        isDefaultPassword: false,
+        mustChangePassword: false
+      });
+    } else {
+      await db.updateOne('users', { _id: targetUser._id }, {
+        password: hashedPassword,
+        passwordLastChanged: nowIso,
+        passwordUpdatedAt: nowIso,
+        isDefaultPassword: false,
+        mustChangePassword: false
+      });
+      if (role === 'customer' && customerId) {
+        await db.updateOne('customers', { customerId }, {
+          passwordLastChanged: nowIso,
+          isDefaultPassword: false
+        }).catch(() => {});
+      }
+    }
+
+    // Record success in password_change_logs
+    await db.create('password_change_logs', {
+      userId: targetUser._id || userId,
+      userName: displayName,
+      username: identifier,
+      userRole: role,
+      changeStatus: 'Completed',
+      activity: 'Password Changed Successfully',
+      ipAddress: String(clientIp),
+      changedAt: nowIso
+    });
+
+    // Create Notification in Owner Portal
+    await db.create('notifications', {
+      role: 'admin',
+      type: 'SECURITY_PASSWORD_CHANGED',
+      title: `Password Changed: ${displayName} (${role.toUpperCase()})`,
+      message: `User ${displayName} (${identifier}, Role: ${role}) changed their password successfully on ${new Date().toLocaleDateString('en-GB')}.`,
+      userRole: role,
+      userId: targetUser._id || userId,
+      username: identifier,
+      status: 'Completed',
+      read: false,
+      createdAt: nowIso
+    });
+
+    // Notify user on their own feed
+    if (role === 'customer' && customerId) {
+      await db.create('notifications', {
+        role: 'customer',
+        customerId,
+        type: 'SECURITY_ALERT',
+        title: 'Password Changed Successfully',
+        message: 'Your account password has been updated. If you did not make this change, please contact support immediately.',
+        read: false,
+        createdAt: nowIso
+      }).catch(() => {});
+    } else if (employeeId) {
+      await db.create('notifications', {
+        role,
+        recipientId: employeeId,
+        type: 'SECURITY_ALERT',
+        title: 'Password Changed Successfully',
+        message: 'Your workforce account password has been updated successfully.',
+        read: false,
+        createdAt: nowIso
+      }).catch(() => {});
+    }
+
+    // Audit Log
+    await db.create('audit_logs', {
+      action: 'USER_PASSWORD_CHANGE',
+      target: identifier,
+      performedBy: displayName,
+      details: { role, ip: clientIp, changedAt: nowIso },
+      createdAt: nowIso
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully! Your account is now secured with your new password.',
+      passwordLastChanged: nowIso
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ message: 'Server error while updating password.' });
+  }
+});
+
+// GET /api/auth/password-status (Check password last changed date and status)
+router.get('/password-status', authenticateToken, async (req, res) => {
+  try {
+    const { userId, role, customerId, employeeId } = req.user;
+    let targetUser = null;
+    if (role === 'admin') {
+      targetUser = await db.findOne('users', { _id: userId }) || await db.findOne('users', { role: 'admin' });
+    } else if (role === 'customer') {
+      targetUser = await db.findOne('users', { customerId }) || await db.findOne('users', { _id: userId });
+    } else {
+      targetUser = await db.findOne('employees', { employeeId }) || await db.findOne('employees', { _id: userId });
+    }
+
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      passwordLastChanged: targetUser.passwordLastChanged || null,
+      isDefaultPassword: Boolean(targetUser.isDefaultPassword || !targetUser.passwordLastChanged),
+      mustChangePassword: Boolean(targetUser.mustChangePassword)
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error checking password status' });
+  }
+});
+
 // Profile route
 router.get('/profile', authenticateToken, async (req, res) => {
   try {

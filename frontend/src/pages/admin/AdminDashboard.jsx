@@ -5,7 +5,7 @@ import { formatCurrency } from '../../utils/format.js';
 import { 
   Users, Zap, DollarSign, Wallet, ShieldAlert, Clock, 
   TrendingUp, Activity, BellRing, PlayCircle, RefreshCw, CheckCircle, ChevronRight, Trash2,
-  FileSpreadsheet, ShieldCheck, AlertTriangle, Landmark, ArrowDownToLine, Target, Award, Sparkles
+  FileSpreadsheet, ShieldCheck, AlertTriangle, Landmark, ArrowDownToLine, Target, Award, Sparkles, KeyRound
 } from 'lucide-react';
 import { translations, getLanguage } from '../../utils/translations.js';
 
@@ -248,6 +248,36 @@ export default function AdminDashboard() {
 
         <div className="flex items-center space-x-1.5 text-xs font-bold text-teal-400 group-hover:text-teal-300 shrink-0">
           <span>AI Vision Dashboard</span>
+          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </div>
+      </div>
+
+      {/* SECURITY & PASSWORD MANAGEMENT QUICK ACCESS BANNER */}
+      <div 
+        onClick={() => navigate('/admin/security-passwords')}
+        className="cursor-pointer p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 hover:border-indigo-500/60 shadow-md transition-all hover:scale-[1.01] flex flex-col sm:flex-row sm:items-center justify-between gap-3 group text-white"
+      >
+        <div className="flex items-center space-x-3.5">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <KeyRound className="w-5 h-5 text-indigo-400" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">
+                Security & Password Management Center
+              </h4>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                Credential Audit
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Inspect password last-changed timestamps, track daily credential activity, and execute administrative password resets.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-1.5 text-xs font-bold text-indigo-400 group-hover:text-indigo-300 shrink-0">
+          <span>Manage Passwords</span>
           <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import api from '../../utils/api.js';
 import { formatCurrency } from '../../utils/format.js';
@@ -6,11 +7,12 @@ import {
   CheckCircle2, Clock, AlertCircle, Award, Target,
   FileCheck, Play, Send, Camera, Upload, Calendar,
   UserCheck, Phone, MessageCircle, MapPin, Sun, Zap,
-  ChevronRight, RefreshCw, X, ShieldAlert, Sparkles, AlertTriangle
+  ChevronRight, RefreshCw, X, ShieldAlert, Sparkles, AlertTriangle, KeyRound
 } from 'lucide-react';
 
 export default function WorkerDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('tasks'); // tasks | targets | attendance | leads
   
@@ -303,6 +305,15 @@ export default function WorkerDashboard() {
               Shift Ended ({todayAttendance.checkOutTime})
             </div>
           )}
+
+          <button
+            onClick={() => navigate('/change-password')}
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all flex items-center space-x-1 text-xs font-semibold"
+            title="Change Account Password"
+          >
+            <KeyRound className="w-4 h-4 text-teal-400" />
+            <span className="hidden sm:inline">Password</span>
+          </button>
 
           <button
             onClick={fetchWorkerData}

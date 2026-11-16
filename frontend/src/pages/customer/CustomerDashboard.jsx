@@ -7,7 +7,7 @@ import {
   QrCode, Landmark, User, FileText, Info, Calculator, MessageCircle,
   Copy, Check, Leaf, Printer, Phone, Download, AlertCircle, Send,
   ChevronDown, ChevronUp, Award, Wrench, Folder, CreditCard, ChevronRight,
-  ExternalLink, CheckCircle2, History
+  ExternalLink, CheckCircle2, History, KeyRound, Lock
 } from 'lucide-react';
 import { 
   openCustomerSupportChat,
@@ -1106,6 +1106,21 @@ export default function CustomerDashboard() {
                   <span className="font-semibold text-slate-800 dark:text-slate-200 text-right truncate max-w-[200px]" title={customer.installationAddress}>
                     {customer.installationAddress || 'N/A'}
                   </span>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Account Security</span>
+                    <span className="text-[11px] text-slate-400">Manage your login password</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/change-password')}
+                    className="px-3.5 py-1.5 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center space-x-1.5 border border-teal-200 dark:border-teal-800/60 transition-colors"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                    <span>Change Password</span>
+                  </button>
                 </div>
               </div>
             </div>
