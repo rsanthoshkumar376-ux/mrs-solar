@@ -17,7 +17,8 @@ export default function WorkforceReports() {
     try {
       setLoading(true);
       const res = await api.get('/workforce/reports/performance');
-      setReports(res.data);
+      const perfList = Array.isArray(res.data) ? res.data : (res.data?.performance || []);
+      setReports({ performance: perfList });
     } catch (err) {
       console.error('Failed to load performance reports:', err);
     } finally {

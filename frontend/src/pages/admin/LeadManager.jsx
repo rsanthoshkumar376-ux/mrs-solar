@@ -85,7 +85,8 @@ export default function LeadManager() {
   useEffect(() => {
     fetchLeads();
     api.get('/workforce/employees').then(res => {
-      setEmployees(res.data?.employees || []);
+      const empList = Array.isArray(res.data) ? res.data : (res.data?.employees || []);
+      setEmployees(empList);
     }).catch(() => {});
   }, []);
 

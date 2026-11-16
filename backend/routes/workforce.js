@@ -10,28 +10,28 @@ export async function seedWorkforceDefaults() {
   try {
     // 1. Departments
     const existingDeps = await db.find('departments');
-    if (existingDeps.length === 0) {
-      const defaultDepartments = [
-        { departmentId: 'DEP-101', name: 'Sales & Customer Outreach', description: 'Lead conversion, site visits, and solar proposals' },
-        { departmentId: 'DEP-102', name: 'Site Survey & Engineering', description: 'Rooftop shadow analysis, measurements, and CAD designs' },
-        { departmentId: 'DEP-103', name: 'Rooftop Solar Installation', description: 'Tier-1 panel mounting, inverter wiring, and grounding' },
-        { departmentId: 'DEP-104', name: 'Net-Metering & EB Liaison', description: 'TANGEDCO approvals, bi-directional meters, and commissioning' },
-        { departmentId: 'DEP-105', name: 'Customer Support & Service', description: 'Preventive maintenance, generation checks, and complaints' }
-      ];
-      for (const d of defaultDepartments) {
+    const defaultDepartments = [
+      { departmentId: 'DEP-101', name: 'Sales & Customer Outreach', description: 'Lead conversion, site visits, and solar proposals' },
+      { departmentId: 'DEP-102', name: 'Site Survey & Engineering', description: 'Rooftop shadow analysis, measurements, and CAD designs' },
+      { departmentId: 'DEP-103', name: 'Rooftop Solar Installation', description: 'Tier-1 panel mounting, inverter wiring, and grounding' },
+      { departmentId: 'DEP-104', name: 'Net-Metering & EB Liaison', description: 'TANGEDCO approvals, bi-directional meters, and commissioning' },
+      { departmentId: 'DEP-105', name: 'Customer Support & Service', description: 'Preventive maintenance, generation checks, and complaints' }
+    ];
+    for (const d of defaultDepartments) {
+      const exists = existingDeps.find(ed => ed.departmentId === d.departmentId || ed.name === d.name);
+      if (!exists) {
         await db.create('departments', d);
       }
-      console.log('[Workforce] Seeded default departments');
     }
 
     // 2. Employees & Teams
     const existingEmployees = await db.find('employees');
-    if (existingEmployees.length === 0) {
-      const salt = await bcrypt.genSalt(10);
-      const managerPass = await bcrypt.hash('manager123', salt);
-      const workerPass = await bcrypt.hash('worker123', salt);
+    const salt = await bcrypt.genSalt(10);
+    const managerPass = await bcrypt.hash('manager123', salt);
+    const workerPass = await bcrypt.hash('worker123', salt);
 
-      const manager = await db.create('employees', {
+    const defaultEmployees = [
+      {
         employeeId: 'MGR-1001',
         username: 'suresh_mgr',
         fullName: 'Suresh Kumar',
@@ -39,13 +39,14 @@ export async function seedWorkforceDefaults() {
         mobileNumber: '9840123456',
         role: 'manager',
         department: 'Sales & Customer Outreach',
-        designation: 'Senior Sales Manager',
+        designation: 'Senior Sales & Operations Manager',
         joiningDate: '2025-01-10',
+        managerId: '',
+        managerName: 'Direct to Owner',
         status: 'active',
         password: managerPass
-      });
-
-      const worker1 = await db.create('employees', {
+      },
+      {
         employeeId: 'EMP-1001',
         username: 'karthik_worker',
         fullName: 'Karthik Raja',
@@ -59,9 +60,8 @@ export async function seedWorkforceDefaults() {
         joiningDate: '2025-02-01',
         status: 'active',
         password: workerPass
-      });
-
-      const worker2 = await db.create('employees', {
+      },
+      {
         employeeId: 'EMP-1002',
         username: 'praveen_solar',
         fullName: 'Praveen Raj',
@@ -75,19 +75,111 @@ export async function seedWorkforceDefaults() {
         joiningDate: '2025-02-15',
         status: 'active',
         password: workerPass
-      });
+      },
+      {
+        employeeId: 'EMP-1003',
+        username: 'ramesh_survey',
+        fullName: 'Ramesh V',
+        email: 'ramesh.survey@mrssolar.com',
+        mobileNumber: '9840223344',
+        role: 'worker',
+        department: 'Site Survey & Engineering',
+        designation: 'Solar CAD & Shadow Survey Engineer',
+        managerId: 'MGR-1001',
+        managerName: 'Suresh Kumar',
+        joiningDate: '2025-03-01',
+        status: 'active',
+        password: workerPass
+      },
+      {
+        employeeId: 'EMP-1004',
+        username: 'anitha_eb',
+        fullName: 'Anitha S',
+        email: 'anitha.liaison@mrssolar.com',
+        mobileNumber: '9840778899',
+        role: 'worker',
+        department: 'Net-Metering & EB Liaison',
+        designation: 'TANGEDCO Net-Metering Liaison Officer',
+        managerId: 'MGR-1001',
+        managerName: 'Suresh Kumar',
+        joiningDate: '2025-03-15',
+        status: 'active',
+        password: workerPass
+      },
+      {
+        employeeId: 'EMP-1005',
+        username: 'vignesh_service',
+        fullName: 'Vignesh M',
+        email: 'vignesh.service@mrssolar.com',
+        mobileNumber: '9840332211',
+        role: 'worker',
+        department: 'Customer Support & Service',
+        designation: 'Preventive Maintenance & Support Engineer',
+        managerId: 'MGR-1001',
+        managerName: 'Suresh Kumar',
+        joiningDate: '2025-04-01',
+        status: 'active',
+        password: workerPass
+      }
+    ];
 
+    for (const def of defaultEmployees) {
+      const match = existingEmployees.find(e => e.employeeId === def.employeeId || e.username === def.username);
+      if (!match) {
+        await db.create('employees', def);
+      } else if (!match.department || !match.designation || !match.mobileNumber) {
+        await db.updateOne('employees', { _id: match._id }, {
+          department: match.department || def.department,
+          designation: match.designation || def.designation,
+          mobileNumber: match.mobileNumber || def.mobileNumber,
+          email: match.email || def.email,
+          managerId: match.managerId || def.managerId,
+          managerName: match.managerName || def.managerName,
+          joiningDate: match.joiningDate || def.joiningDate
+        });
+      }
+    }
+
+    // Backfill any test employees if needed
+    for (const emp of existingEmployees) {
+      if (emp.employeeId === 'MGR-TEST-01' && (!emp.department || !emp.designation)) {
+        await db.updateOne('employees', { _id: emp._id }, {
+          department: 'Sales & Customer Outreach',
+          designation: 'Regional Team Supervisor',
+          mobileNumber: emp.mobileNumber || '9840000001',
+          email: emp.email || 'testmanager@mrssolar.com',
+          managerName: 'Direct to Owner'
+        });
+      }
+      if (emp.employeeId === 'WRK-TEST-01' && (!emp.department || !emp.designation)) {
+        await db.updateOne('employees', { _id: emp._id }, {
+          department: 'Rooftop Solar Installation',
+          designation: 'Junior Site Technician',
+          mobileNumber: emp.mobileNumber || '9840000002',
+          email: emp.email || 'testworker@mrssolar.com',
+          managerId: 'MGR-TEST-01',
+          managerName: 'Test Manager User'
+        });
+      }
+    }
+
+    // Ensure TEAM-101 exists
+    const existingTeams = await db.find('teams');
+    if (existingTeams.length === 0) {
       await db.create('teams', {
         teamId: 'TEAM-101',
         teamName: 'Thiruvallur Solar Champions',
         department: 'Sales & Customer Outreach',
         managerId: 'MGR-1001',
         managerName: 'Suresh Kumar',
-        memberIds: ['EMP-1001', 'EMP-1002'],
+        memberIds: ['EMP-1001', 'EMP-1002', 'EMP-1003', 'EMP-1004', 'EMP-1005'],
         description: 'Primary customer survey & rooftop commissioning squad'
       });
+    }
 
-      // Sample Targets
+    // Ensure targets exist
+    const existingTargets = await db.find('targets');
+    if (existingTargets.length === 0) {
       await db.create('targets', {
         targetId: 'TGT-1001',
         title: 'Monthly Customer Rooftop Feasibility Surveys',
@@ -123,8 +215,11 @@ export async function seedWorkforceDefaults() {
         startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
         endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString()
       });
+    }
 
-      // Sample Tasks
+    // Ensure tasks exist
+    const existingTasks = await db.find('tasks');
+    if (existingTasks.length === 0) {
       await db.create('tasks', {
         taskId: 'TSK-1001',
         title: 'Conduct Rooftop Shadow Survey for Customer SOL-1001',
@@ -166,9 +261,9 @@ export async function seedWorkforceDefaults() {
         evidenceUrl: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?w=600&auto=format&fit=crop&q=80',
         submittedAt: new Date().toISOString()
       });
-
-      console.log('[Workforce] Seeded default manager, workers, teams, tasks, and targets');
     }
+
+    console.log('[Workforce] Workforce defaults checked & verified');
   } catch (err) {
     console.warn('[Workforce Seed Warning]:', err.message);
   }
@@ -196,7 +291,11 @@ router.get('/employees', authenticateToken, authorizeRole(['admin', 'manager']),
 
     // Remove hashed password from list
     const safeList = employees.map(({ password, ...emp }) => emp);
-    res.json(safeList);
+    res.json({
+      success: true,
+      employees: safeList,
+      total: safeList.length
+    });
   } catch (err) {
     console.error('Fetch employees error:', err);
     res.status(500).json({ message: 'Failed to fetch employees' });
@@ -206,7 +305,7 @@ router.get('/employees', authenticateToken, authorizeRole(['admin', 'manager']),
 // POST /api/workforce/employees (Owner only)
 router.post('/employees', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
-    const { fullName, email, mobileNumber, role, department, designation, managerId, joiningDate, address } = req.body;
+    const { fullName, email, mobileNumber, role, department, designation, managerId, joiningDate, address, username, password } = req.body;
 
     if (!fullName || !mobileNumber || !role) {
       return res.status(400).json({ message: 'Full name, mobile number, and role are required' });
@@ -214,16 +313,18 @@ router.post('/employees', authenticateToken, authorizeRole(['admin']), async (re
 
     const cleanMobile = String(mobileNumber).trim().replace(/^\+?91/, '').replace(/[\s-]/g, '');
     const cleanEmail = email ? String(email).trim().toLowerCase() : '';
+    const cleanUsername = username ? String(username).trim().toLowerCase() : '';
 
     // Check unique email and mobile in employees collection
     const allEmployees = await db.find('employees');
     const existing = allEmployees.find(e => 
       (cleanEmail && e.email && e.email.toLowerCase() === cleanEmail) ||
-      (e.mobileNumber && e.mobileNumber.replace(/^\+?91/, '').replace(/[\s-]/g, '') === cleanMobile)
+      (e.mobileNumber && e.mobileNumber.replace(/^\+?91/, '').replace(/[\s-]/g, '') === cleanMobile) ||
+      (cleanUsername && e.username && e.username.toLowerCase() === cleanUsername)
     );
 
     if (existing) {
-      return res.status(400).json({ message: 'An employee with this email or mobile number already exists' });
+      return res.status(400).json({ message: 'An employee with this username, email, or mobile number already exists' });
     }
 
     // Auto-generate employee ID
@@ -231,10 +332,12 @@ router.post('/employees', authenticateToken, authorizeRole(['admin']), async (re
     const prefix = role === 'manager' ? 'MGR' : 'EMP';
     const employeeId = `${prefix}-${count}`;
 
-    // Default password is set to mobile or 'mrs123'
-    const defaultPass = cleanMobile.length >= 6 ? cleanMobile : 'mrs123';
+    // Custom password or default password
+    const rawPass = password && String(password).trim().length >= 4 
+      ? String(password).trim() 
+      : (role === 'manager' ? 'manager123' : 'worker123');
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(defaultPass, salt);
+    const hashedPassword = await bcrypt.hash(rawPass, salt);
 
     // Look up manager name if managerId is assigned
     let managerName = '';
@@ -245,15 +348,15 @@ router.post('/employees', authenticateToken, authorizeRole(['admin']), async (re
 
     const newEmp = await db.create('employees', {
       employeeId,
-      username: employeeId.toLowerCase(),
+      username: cleanUsername || employeeId.toLowerCase(),
       fullName: String(fullName).trim(),
       email: cleanEmail,
       mobileNumber: cleanMobile,
       role: role === 'manager' ? 'manager' : 'worker',
       department: department || 'Sales & Customer Outreach',
-      designation: designation || (role === 'manager' ? 'Team Manager' : 'Solar Executive'),
+      designation: designation || (role === 'manager' ? 'Team Manager' : 'Solar Technical Consultant'),
       managerId: managerId || '',
-      managerName: managerName || '',
+      managerName: managerName || (role === 'manager' ? 'Direct to Owner' : ''),
       joiningDate: joiningDate || new Date().toISOString().split('T')[0],
       address: address || '',
       status: 'active',
@@ -269,10 +372,13 @@ router.post('/employees', authenticateToken, authorizeRole(['admin']), async (re
       timestamp: new Date().toISOString()
     }).catch(() => {});
 
-    const { password, ...safeEmp } = newEmp;
-    res.status(201).json({ success: true, message: `Employee ${employeeId} created successfully`, employee: safeEmp });
+    const { password: _, ...safeEmp } = newEmp;
+    res.status(201).json({ success: true, message: `Employee ${employeeId} (${newEmp.fullName}) created successfully`, employee: safeEmp });
   } catch (err) {
     console.error('Create employee error:', err);
+    res.status(500).json({ message: 'Failed to create employee' });
+  }
+});
     res.status(500).json({ message: 'Failed to create employee' });
   }
 });
@@ -373,7 +479,11 @@ router.get('/departments', authenticateToken, async (req, res) => {
       };
     });
 
-    res.json(enriched);
+    res.json({
+      success: true,
+      departments: enriched,
+      total: enriched.length
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch departments' });
   }
@@ -418,7 +528,11 @@ router.get('/teams', authenticateToken, authorizeRole(['admin', 'manager']), asy
       };
     });
 
-    res.json(enriched);
+    res.json({
+      success: true,
+      teams: enriched,
+      total: enriched.length
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch teams' });
   }
@@ -526,7 +640,11 @@ router.get('/tasks', authenticateToken, authorizeRole(['admin', 'manager', 'work
     // Sort: Overdue & urgent first, then deadline
     tasks.sort((a, b) => new Date(a.deadline || 0) - new Date(b.deadline || 0));
 
-    res.json(tasks);
+    res.json({
+      success: true,
+      tasks,
+      total: tasks.length
+    });
   } catch (err) {
     console.error('Fetch tasks error:', err);
     res.status(500).json({ message: 'Failed to fetch tasks' });
@@ -809,7 +927,11 @@ router.get('/targets', authenticateToken, authorizeRole(['admin', 'manager', 'wo
       };
     });
 
-    res.json(enriched);
+    res.json({
+      success: true,
+      targets: enriched,
+      total: enriched.length
+    });
   } catch (err) {
     console.error('Fetch targets error:', err);
     res.status(500).json({ message: 'Failed to fetch targets' });
@@ -928,7 +1050,11 @@ router.get('/attendance', authenticateToken, authorizeRole(['admin', 'manager', 
     }
 
     records.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    res.json(records);
+    res.json({
+      success: true,
+      attendance: records,
+      total: records.length
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch attendance' });
   }
@@ -1014,7 +1140,11 @@ router.get('/leaves', authenticateToken, authorizeRole(['admin', 'manager', 'wor
     }
 
     leaves.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    res.json(leaves);
+    res.json({
+      success: true,
+      leaves,
+      total: leaves.length
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch leave requests' });
   }
@@ -1101,7 +1231,11 @@ router.get('/projects', authenticateToken, authorizeRole(['admin', 'manager', 'w
     }
 
     projects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    res.json(projects);
+    res.json({
+      success: true,
+      projects,
+      total: projects.length
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch solar projects' });
   }
@@ -1315,7 +1449,11 @@ router.get('/reports/performance', authenticateToken, authorizeRole(['admin', 'm
       };
     });
 
-    res.json(performanceTable);
+    res.json({
+      success: true,
+      performance: performanceTable,
+      total: performanceTable.length
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to generate performance reports' });
   }

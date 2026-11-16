@@ -46,12 +46,16 @@ export default function TargetManager() {
         api.get('/workforce/teams').catch(() => ({ data: { teams: [] } }))
       ]);
 
-      setTargets(tgtRes.data.targets || []);
-      setEmployees(empRes.data.employees || []);
-      setTeams(teamRes.data.teams || []);
+      const tgtList = Array.isArray(tgtRes.data) ? tgtRes.data : (tgtRes.data?.targets || []);
+      const empList = Array.isArray(empRes.data) ? empRes.data : (empRes.data?.employees || []);
+      const teamList = Array.isArray(teamRes.data) ? teamRes.data : (teamRes.data?.teams || []);
+
+      setTargets(tgtList);
+      setEmployees(empList);
+      setTeams(teamList);
       
-      if (teamRes.data.teams?.length > 0 && !createForm.assignedTo) {
-        setCreateForm(prev => ({ ...prev, assignedTo: teamRes.data.teams[0].teamId }));
+      if (teamList?.length > 0 && !createForm.assignedTo) {
+        setCreateForm(prev => ({ ...prev, assignedTo: teamList[0].teamId }));
       }
     } catch (err) {
       console.error('Failed to load targets:', err);

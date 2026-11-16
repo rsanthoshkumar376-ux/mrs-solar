@@ -54,9 +54,13 @@ export default function SolarProjectManager() {
         api.get('/customers').catch(() => ({ data: { customers: [] } }))
       ]);
 
-      setProjects(projRes.data.projects || []);
-      setTeams(teamRes.data.teams || []);
-      setCustomers(custRes.data.customers || custRes.data || []);
+      const projList = Array.isArray(projRes.data) ? projRes.data : (projRes.data?.projects || []);
+      const teamList = Array.isArray(teamRes.data) ? teamRes.data : (teamRes.data?.teams || []);
+      const custList = Array.isArray(custRes.data) ? custRes.data : (custRes.data?.customers || []);
+
+      setProjects(projList);
+      setTeams(teamList);
+      setCustomers(custList);
     } catch (err) {
       console.error('Failed to load solar projects:', err);
     } finally {

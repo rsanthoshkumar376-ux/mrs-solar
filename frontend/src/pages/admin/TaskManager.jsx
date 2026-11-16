@@ -29,7 +29,8 @@ export default function TaskManager() {
     try {
       setLoading(true);
       const res = await api.get('/workforce/tasks');
-      setTasks(res.data.tasks || []);
+      const taskList = Array.isArray(res.data) ? res.data : (res.data?.tasks || []);
+      setTasks(taskList);
     } catch (err) {
       console.error('Failed to load tasks:', err);
     } finally {

@@ -92,13 +92,20 @@ export default function ManagerDashboard() {
         api.get('/leads').catch(() => ({ data: [] }))
       ]);
 
-      const myWorkers = (empRes.data.employees || []).filter(e => e.role === 'worker');
+      const empList = Array.isArray(empRes.data) ? empRes.data : (empRes.data?.employees || []);
+      const taskList = Array.isArray(taskRes.data) ? taskRes.data : (taskRes.data?.tasks || []);
+      const tgtList = Array.isArray(tgtRes.data) ? tgtRes.data : (tgtRes.data?.targets || []);
+      const attList = Array.isArray(attRes.data) ? attRes.data : (attRes.data?.attendance || []);
+      const leaveList = Array.isArray(leaveRes.data) ? leaveRes.data : (leaveRes.data?.leaves || []);
+      const leadList = Array.isArray(leadRes.data) ? leadRes.data : (leadRes.data?.leads || []);
+
+      const myWorkers = empList.filter(e => e.role === 'worker');
       setTeamMembers(myWorkers);
-      setTasks(taskRes.data.tasks || []);
-      setTargets(tgtRes.data.targets || []);
-      setAttendance(attRes.data.attendance || []);
-      setLeaves(leaveRes.data.leaves || []);
-      setLeads(leadRes.data || []);
+      setTasks(taskList);
+      setTargets(tgtList);
+      setAttendance(attList);
+      setLeaves(leaveList);
+      setLeads(leadList);
       
       if (myWorkers.length > 0 && !newTaskForm.assigneeId) {
         setNewTaskForm(prev => ({ ...prev, assigneeId: myWorkers[0].employeeId }));

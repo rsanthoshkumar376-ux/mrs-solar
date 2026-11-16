@@ -30,9 +30,13 @@ export default function AttendanceManager() {
         api.get('/workforce/employees').catch(() => ({ data: { employees: [] } }))
       ]);
 
-      setAttendance(attRes.data.attendance || []);
-      setLeaves(leaveRes.data.leaves || []);
-      setEmployees(empRes.data.employees || []);
+      const attList = Array.isArray(attRes.data) ? attRes.data : (attRes.data?.attendance || []);
+      const leaveList = Array.isArray(leaveRes.data) ? leaveRes.data : (leaveRes.data?.leaves || []);
+      const empList = Array.isArray(empRes.data) ? empRes.data : (empRes.data?.employees || []);
+
+      setAttendance(attList);
+      setLeaves(leaveList);
+      setEmployees(empList);
     } catch (err) {
       console.error('Failed to load attendance:', err);
     } finally {

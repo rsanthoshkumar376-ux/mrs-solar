@@ -85,11 +85,16 @@ export default function WorkerDashboard() {
         api.get('/leads').catch(() => ({ data: [] }))
       ]);
 
+      const taskList = Array.isArray(taskRes.data) ? taskRes.data : (taskRes.data?.tasks || []);
+      const tgtList = Array.isArray(tgtRes.data) ? tgtRes.data : (tgtRes.data?.targets || []);
+      const attList = Array.isArray(attRes.data) ? attRes.data : (attRes.data?.attendance || []);
+      const leaveList = Array.isArray(leaveRes.data) ? leaveRes.data : (leaveRes.data?.leaves || []);
+
       const myId = user?.employeeId || 'EMP-1001';
-      const myTasks = (taskRes.data.tasks || []).filter(t => t.assigneeId === myId);
-      const myTargets = (tgtRes.data.targets || []).filter(t => t.assignedTo === myId || t.assignedType === 'Team');
-      const myAtt = (attRes.data.attendance || []).filter(a => a.employeeId === myId);
-      const myLeaves = (leaveRes.data.leaves || []).filter(l => l.employeeId === myId);
+      const myTasks = taskList.filter(t => t.assignedToId === myId || t.assigneeId === myId);
+      const myTargets = tgtList.filter(t => t.assignedToId === myId || t.assignedTo === myId || t.assignedType === 'Team');
+      const myAtt = attList.filter(a => a.employeeId === myId);
+      const myLeaves = leaveList.filter(l => l.employeeId === myId);
       
       setTasks(myTasks);
       setTargets(myTargets);
