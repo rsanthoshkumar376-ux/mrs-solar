@@ -5,7 +5,7 @@ import { formatCurrency } from '../../utils/format.js';
 import { 
   Users, Zap, DollarSign, Wallet, ShieldAlert, Clock, 
   TrendingUp, Activity, BellRing, PlayCircle, RefreshCw, CheckCircle, ChevronRight, Trash2,
-  FileSpreadsheet, ShieldCheck, AlertTriangle, Landmark, ArrowDownToLine, Target, Award, Sparkles, KeyRound
+  FileSpreadsheet, ShieldCheck, AlertTriangle, Landmark, ArrowDownToLine, Target, Award, Sparkles
 } from 'lucide-react';
 import { translations, getLanguage } from '../../utils/translations.js';
 
@@ -190,96 +190,6 @@ export default function AdminDashboard() {
           )}
           <span>{schedulerRunning ? t.runningMidnightAudit : t.runMidnightAuditCheck}</span>
         </button>
-      </div>
-
-      {/* OWNER LEAD CRM PIPELINE ACTION BANNER */}
-      <div 
-        onClick={() => navigate('/admin/leads')}
-        className="cursor-pointer p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-900/60 via-slate-900 to-indigo-950/60 border border-teal-500/30 hover:border-teal-500/60 shadow-md transition-all hover:scale-[1.01] flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
-      >
-        <div className="flex items-center space-x-3.5">
-          <div className="w-10 h-10 rounded-2xl bg-teal-500/20 text-teal-300 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-            <Zap className="w-5 h-5 text-amber-400" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h4 className="text-sm font-bold text-white group-hover:text-teal-300 transition-colors">
-                Lead CRM & Inquiries Pipeline
-              </h4>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                {leadsCount} Active
-              </span>
-            </div>
-            <p className="text-xs text-slate-300 mt-0.5">
-              Review new prospects from Referral Portal, book site surveys, send 1-click quotations, and advance stages in Kanban view.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-1.5 text-xs font-bold text-teal-400 group-hover:text-teal-300 shrink-0">
-          <span>Open CRM Board</span>
-          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-        </div>
-      </div>
-
-      {/* GOOGLE GEMINI AI RECOGNITION & DOCUMENT INTELLIGENCE HUB BANNER */}
-      <div 
-        onClick={() => navigate('/admin/ai-vision')}
-        className="cursor-pointer p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border border-teal-500/30 hover:border-teal-500/60 shadow-md transition-all hover:scale-[1.01] flex flex-col sm:flex-row sm:items-center justify-between gap-3 group text-white"
-      >
-        <div className="flex items-center space-x-3.5">
-          <div className="w-10 h-10 rounded-2xl bg-teal-500/20 text-teal-300 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-            <Sparkles className="w-5 h-5 text-yellow-400 animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h4 className="text-sm font-bold text-white group-hover:text-teal-300 transition-colors">
-                MRS SOLAR AI — Recognition & Document Intelligence Hub
-              </h4>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                Gemini 2.5 Flash + Vision OCR
-              </span>
-            </div>
-            <p className="text-xs text-slate-300 mt-0.5">
-              6 Modules: Solar Panel Damage, TNEB Bill OCR, Inverter Diagnostics, Installation Audits, Warranty Docs, and Equipment Catalog.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-1.5 text-xs font-bold text-teal-400 group-hover:text-teal-300 shrink-0">
-          <span>AI Recognition Hub</span>
-          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-        </div>
-      </div>
-
-      {/* SECURITY & PASSWORD MANAGEMENT QUICK ACCESS BANNER */}
-      <div 
-        onClick={() => navigate('/admin/security-passwords')}
-        className="cursor-pointer p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 hover:border-indigo-500/60 shadow-md transition-all hover:scale-[1.01] flex flex-col sm:flex-row sm:items-center justify-between gap-3 group text-white"
-      >
-        <div className="flex items-center space-x-3.5">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-            <KeyRound className="w-5 h-5 text-indigo-400" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">
-                Security & Password Management Center
-              </h4>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                Credential Audit
-              </span>
-            </div>
-            <p className="text-xs text-slate-300 mt-0.5">
-              Inspect password last-changed timestamps, track daily credential activity, and execute administrative password resets.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-1.5 text-xs font-bold text-indigo-400 group-hover:text-indigo-300 shrink-0">
-          <span>Manage Passwords</span>
-          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-        </div>
       </div>
 
       {/* WORKFORCE & TEAM MANAGEMENT QUICK ACCESS */}
