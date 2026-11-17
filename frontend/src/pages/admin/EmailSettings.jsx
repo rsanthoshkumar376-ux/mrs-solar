@@ -1,15 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../utils/api.js';
+import { translations, getLanguage } from '../../utils/translations.js';
 import { 
   Mail, CheckCircle, AlertTriangle, Send, ShieldCheck, 
   ExternalLink, Copy, Check, RefreshCw, Zap, Server, CreditCard
 } from 'lucide-react';
 
 export default function EmailSettings() {
+  const [lang, setLang] = useState(getLanguage);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
   
   const [config, setConfig] = useState({
     activeMethod: 'Direct Gmail SMTP',
@@ -143,10 +154,10 @@ export default function EmailSettings() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white flex items-center space-x-3">
             <Mail className="w-8 h-8 text-teal-600" />
-            <span>Email Delivery &amp; Receipt Settings</span>
+            <span>{isTa ? 'மின்னஞ்சல் அனுப்புதல் & ரசீது அமைப்புகள்' : 'Email Delivery & Receipt Settings'}</span>
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Configure automated payment bill receipts, due-date reminder emails, and cloud mail transport.
+            {isTa ? 'கட்டண ரசீதுகள், தவணை நினைவூட்டல் மின்னஞ்சல்கள் மற்றும் கிளவுட் மெயில் அமைப்புகளை நிர்வகிக்கவும்.' : 'Configure automated payment bill receipts, due-date reminder emails, and cloud mail transport.'}
           </p>
         </div>
 
@@ -155,7 +166,7 @@ export default function EmailSettings() {
           className="inline-flex items-center space-x-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-200 text-xs font-semibold self-start md:self-auto transition"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          <span>Refresh Status</span>
+          <span>{isTa ? 'புதுப்பிக்க' : 'Refresh Status'}</span>
         </button>
       </div>
 

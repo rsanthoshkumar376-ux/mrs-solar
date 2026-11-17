@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
+import { translations, getLanguage } from '../../utils/translations.js';
 import {
   Target, PlusCircle, CheckCircle2, Clock, AlertCircle,
   TrendingUp, Users, Building, ChevronRight, X, RefreshCw,
@@ -7,10 +8,20 @@ import {
 } from 'lucide-react';
 
 export default function TargetManager() {
+  const [lang, setLang] = useState(getLanguage);
   const [targets, setTargets] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
 
   // Filter
   const [periodFilter, setPeriodFilter] = useState('all');
@@ -136,10 +147,10 @@ export default function TargetManager() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center space-x-2.5">
             <Target className="w-7 h-7 text-purple-600 dark:text-purple-400" />
-            <span>Target & Quota Management</span>
+            <span>{isTa ? 'இலக்குகள் & ஒதுக்கீடு மேலாண்மை' : 'Target & Quota Management'}</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Define daily, weekly and monthly business targets for teams and employees. All calculations update automatically upon manager approval.
+            {isTa ? 'குழுக்கள் மற்றும் பணியாளர்களுக்கான தினசரி, வாராந்திர மற்றும் மாதாந்திர சோலார் நிறுவல் இலக்குகள் மேலாண்மை.' : 'Define daily, weekly and monthly business targets for teams and employees. All calculations update automatically upon manager approval.'}
           </p>
         </div>
 
@@ -149,12 +160,12 @@ export default function TargetManager() {
             className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-lg flex items-center space-x-2 transition-all active:scale-95"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Define New Target</span>
+            <span>{isTa ? '+ புதிய இலக்கு நிர்ணயம்' : 'Define New Target'}</span>
           </button>
           <button
             onClick={fetchData}
             className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-            title="Refresh"
+            title={isTa ? 'புதுப்பிக்க' : 'Refresh'}
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -164,19 +175,19 @@ export default function TargetManager() {
       {/* OVERVIEW STATS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Active Targets</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'செயலில் உள்ள இலக்குகள்' : 'Active Targets'}</span>
           <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">{targets.length}</p>
-          <span className="text-[10px] text-purple-600 font-semibold">Across all teams</span>
+          <span className="text-[10px] text-purple-600 font-semibold">{isTa ? 'அனைத்து குழுக்களிலும்' : 'Across all teams'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Target Volume</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'நிர்ணயிக்கப்பட்ட அளவு' : 'Target Volume'}</span>
           <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{totalTargetVolume}</p>
-          <span className="text-[10px] text-slate-500 font-semibold">Total expected units</span>
+          <span className="text-[10px] text-slate-500 font-semibold">{isTa ? 'மொத்த எதிர்பார்க்கப்படும் யூனிட்கள்' : 'Total expected units'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Approved Completed</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'அனுமதிக்கப்பட்டவை' : 'Approved Completed'}</span>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{totalApprovedVolume}</p>
-          <span className="text-[10px] text-emerald-600 font-semibold">Verified work</span>
+          <span className="text-[10px] text-emerald-600 font-semibold">{isTa ? 'சரிபார்க்கப்பட்ட பணிகள்' : 'Verified work'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <span className="text-xs font-semibold text-slate-500">Company Achievement</span>

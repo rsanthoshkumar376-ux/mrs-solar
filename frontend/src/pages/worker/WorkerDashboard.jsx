@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import api from '../../utils/api.js';
 import { formatCurrency } from '../../utils/format.js';
+import { translations, getLanguage } from '../../utils/translations.js';
 import {
   CheckCircle2, Clock, AlertCircle, Award, Target,
   FileCheck, Play, Send, Camera, Upload, Calendar,
@@ -14,7 +15,17 @@ export default function WorkerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [lang, setLang] = useState(getLanguage);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
 
   // Synchronize active tab with URL path
   const getTabFromPath = () => {
@@ -283,37 +294,37 @@ export default function WorkerDashboard() {
         <div>
           <div className="flex items-center space-x-2.5 mb-1.5">
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
-              FIELD TECHNICAL CONSULTANT PORTAL
+              {isTa ? 'கள சோலார் தொழில்நுட்ப பொறியாளர் தளம்' : 'FIELD TECHNICAL CONSULTANT PORTAL'}
             </span>
             <span className="text-xs text-slate-400 font-mono">ID: {user?.employeeId || 'EMP-1001'}</span>
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white flex items-center space-x-2">
-            <span>Welcome, {user?.fullName || user?.username || 'Karthik Raja'}</span>
+            <span>{isTa ? `வணக்கம், ${user?.fullName || user?.username || 'பொறியாளர்'}` : `Welcome, ${user?.fullName || user?.username || 'Field Engineer'}`}</span>
             <Sun className="w-5 h-5 text-yellow-400" />
           </h1>
           <p className="text-xs text-slate-300 mt-1">
-            Department: <strong className="text-teal-300">{user?.department || 'Sales & Customer Outreach'}</strong> • Reporting Manager: <strong className="text-teal-300">{user?.managerName || 'Suresh Kumar (MGR-1001)'}</strong>
+            {isTa ? 'துறை:' : 'Department:'} <strong className="text-teal-300">{user?.department || (isTa ? 'கள நிறுவல் & சேவை' : 'Sales & Customer Outreach')}</strong> • {isTa ? 'மேலாளர்:' : 'Reporting Manager:'} <strong className="text-teal-300">{user?.managerName || 'Suresh Kumar (MGR-1001)'}</strong>
           </p>
         </div>
 
         {/* COMPACT SHIFT STATUS INDICATOR */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-slate-900/90 border border-teal-700/40">
-            <span className="text-[10px] uppercase font-bold text-slate-400">Shift Status:</span>
+            <span className="text-[10px] uppercase font-bold text-slate-400">{isTa ? 'பணி நிலை:' : 'Shift Status:'}</span>
             {todayAttendance?.checkInTime ? (
               <span className="text-xs font-bold text-emerald-400 flex items-center space-x-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>On Duty ({todayAttendance.checkInTime})</span>
+                <span>{isTa ? `பணியில் (${todayAttendance.checkInTime})` : `On Duty (${todayAttendance.checkInTime})`}</span>
               </span>
             ) : (
-              <span className="text-xs font-bold text-amber-400">⚪ Shift Not Started</span>
+              <span className="text-xs font-bold text-amber-400">{isTa ? '⚪ பணி இன்னும் தொடங்கவில்லை' : '⚪ Shift Not Started'}</span>
             )}
           </div>
 
           <button
             onClick={fetchWorkerData}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
-            title="Refresh Data"
+            title={isTa ? 'புதுப்பிக்க' : 'Refresh Data'}
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -492,10 +503,10 @@ export default function WorkerDashboard() {
       {/* PORTAL TABS */}
       <div className="flex items-center space-x-1 sm:space-x-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1 scrollbar-none">
         {[
-          { id: 'tasks', label: 'My Assigned Tasks', icon: Clock, badge: tasks.length },
-          { id: 'targets', label: 'My Target Tracking', icon: Target, badge: `${targetPct}%` },
-          { id: 'attendance', label: 'Attendance & Leaves', icon: Calendar },
-          { id: 'leads', label: 'Customer Visits', icon: MapPin, badge: assignedLeads.length }
+          { id: 'tasks', label: isTa ? 'எனது பணிகள்' : 'My Assigned Tasks', icon: Clock, badge: tasks.length },
+          { id: 'targets', label: isTa ? 'எனது இலக்குகள்' : 'My Target Tracking', icon: Target, badge: `${targetPct}%` },
+          { id: 'attendance', label: isTa ? 'வருகை & விடுப்புகள்' : 'Attendance & Leaves', icon: Calendar },
+          { id: 'leads', label: isTa ? 'வாடிக்கையாளர் ஆய்வுகள்' : 'Customer Visits', icon: MapPin, badge: assignedLeads.length }
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

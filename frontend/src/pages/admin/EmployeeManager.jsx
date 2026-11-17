@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
+import { translations, getLanguage } from '../../utils/translations.js';
 import {
   Users, UserPlus, Search, Filter, ShieldCheck, ShieldAlert,
   Key, Edit3, Trash2, CheckCircle2, XCircle, RefreshCw, X,
@@ -7,10 +8,20 @@ import {
 } from 'lucide-react';
 
 export default function EmployeeManager() {
+  const [lang, setLang] = useState(getLanguage);
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
 
   // Filters
   const [search, setSearch] = useState('');
@@ -282,10 +293,10 @@ export default function EmployeeManager() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center space-x-2.5">
             <Users className="w-7 h-7 text-teal-600 dark:text-teal-400" />
-            <span>Workforce & Employee Management</span>
+            <span>{isTa ? 'பணியாளர்கள் & மனிதவள மேலாண்மை' : 'Workforce & Employee Management'}</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Super Admin Control: Create accounts, assign managers, configure departments and credentials.
+            {isTa ? 'நிர்வாகக் கட்டுப்பாடு: புதிய பணியாளர் கணக்குகள், மேலாளர்கள் ஒதுக்கீடு, துறைகள் மற்றும் கடவுச்சொல் மேலாண்மை.' : 'Super Admin Control: Create accounts, assign managers, configure departments and credentials.'}
           </p>
         </div>
 
@@ -295,13 +306,13 @@ export default function EmployeeManager() {
             className="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-teal-500/20 flex items-center space-x-2 transition-all active:scale-95"
           >
             <UserPlus className="w-4 h-4" />
-            <span>Add New Employee</span>
+            <span>{isTa ? '+ புதிய பணியாளர் சேர்க்கை' : 'Add New Employee'}</span>
           </button>
           <button
             onClick={fetchData}
             disabled={loading}
             className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
-            title="Refresh"
+            title={isTa ? 'புதுப்பிக்க' : 'Refresh'}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-teal-500' : ''}`} />
           </button>
@@ -311,24 +322,24 @@ export default function EmployeeManager() {
       {/* METRIC CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Total Workforce</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'மொத்த பணியாளர்கள்' : 'Total Workforce'}</span>
           <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">{totalEmployees}</p>
-          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">{activeCount} Active</span>
+          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">{activeCount} {isTa ? 'செயலில்' : 'Active'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Team Managers</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'குழு மேலாளர்கள்' : 'Team Managers'}</span>
           <p className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">{managerCount}</p>
-          <span className="text-[10px] text-slate-500 font-semibold">Supervisors</span>
+          <span className="text-[10px] text-slate-500 font-semibold">{isTa ? 'மேற்பார்வையாளர்கள்' : 'Supervisors'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Field Workers</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'களப்பணியாளர்கள்' : 'Field Workers'}</span>
           <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{workerCount}</p>
-          <span className="text-[10px] text-slate-500 font-semibold">Consultants & Engineers</span>
+          <span className="text-[10px] text-slate-500 font-semibold">{isTa ? 'பொறியாளர்கள் & ஆலோசகர்கள்' : 'Consultants & Engineers'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Departments</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'துறைகள்' : 'Departments'}</span>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{departments.length || 5}</p>
-          <span className="text-[10px] text-slate-500 font-semibold">{teams.length || 1} Functional Teams</span>
+          <span className="text-[10px] text-slate-500 font-semibold">{teams.length || 1} {isTa ? 'குழுக்கள்' : 'Functional Teams'}</span>
         </div>
       </div>
 
@@ -340,7 +351,7 @@ export default function EmployeeManager() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, Employee ID (EMP-1001), mobile, designation..."
+            placeholder={isTa ? 'பெயர், பணியாளர் எண் (EMP-1001), மொபைல் மூலம் தேடுக...' : 'Search by name, Employee ID (EMP-1001), mobile, designation...'}
             className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-teal-500 transition-colors"
           />
         </div>

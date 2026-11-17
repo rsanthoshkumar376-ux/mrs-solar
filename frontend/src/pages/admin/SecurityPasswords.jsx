@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
+import { translations, getLanguage } from '../../utils/translations.js';
 import { 
   KeyRound, ShieldCheck, ShieldAlert, Users, Clock, 
   Search, Filter, RefreshCw, AlertCircle, CheckCircle2,
@@ -8,11 +9,21 @@ import {
 } from 'lucide-react';
 
 export default function SecurityPasswords() {
+  const [lang, setLang] = useState(getLanguage);
   const [summary, setSummary] = useState(null);
   const [users, setUsers] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
 
   // Filters & Search
   const [selectedRole, setSelectedRole] = useState('all');
@@ -137,13 +148,13 @@ export default function SecurityPasswords() {
           <div>
             <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-semibold mb-3 border border-white/10">
               <Shield className="w-3.5 h-3.5 text-teal-400" />
-              <span>Owner Security Command Center</span>
+              <span>{isTa ? 'உரிமையாளர் பாதுகாப்பு கட்டுப்பாட்டு மையம்' : 'Owner Security Command Center'}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Security & Password Management
+              {t.securityPasswordsTitle || 'Security & Password Management'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
-              Monitor credential health across all four roles (Owner, Manager, Worker, and Customer). Inspect password last-change timestamps and trigger authorized administrative resets.
+              {t.securityPasswordsSubtitle || 'Monitor credential health across all four roles (Owner, Manager, Worker, and Customer). Inspect password last-change timestamps and trigger authorized administrative resets.'}
             </p>
           </div>
 
@@ -154,7 +165,7 @@ export default function SecurityPasswords() {
               className="px-4 py-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-colors disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refresh Metrics</span>
+              <span>{isTa ? 'புதுப்பிக்க' : 'Refresh Metrics'}</span>
             </button>
           </div>
         </div>
@@ -169,62 +180,62 @@ export default function SecurityPasswords() {
         {/* Total Users */}
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-semibold">Total Accounts</span>
+            <span className="text-xs font-semibold">{isTa ? 'மொத்த கணக்குகள்' : 'Total Accounts'}</span>
             <Users className="w-4 h-4 text-teal-600" />
           </div>
           <p className="text-2xl font-black text-slate-800 dark:text-white">
             {summary?.totalUsers || 0}
           </p>
           <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-1.5 font-medium">
-            <span>Admin: {summary?.roleCounts?.owner || 1}</span>
+            <span>{isTa ? 'நிர்வாகி:' : 'Admin:'} {summary?.roleCounts?.owner || 1}</span>
             <span>•</span>
-            <span>Mgr: {summary?.roleCounts?.manager || 0}</span>
+            <span>{isTa ? 'மேலாளர்:' : 'Mgr:'} {summary?.roleCounts?.manager || 0}</span>
             <span>•</span>
-            <span>Wrk: {summary?.roleCounts?.worker || 0}</span>
+            <span>{isTa ? 'பணியாளர்:' : 'Wrk:'} {summary?.roleCounts?.worker || 0}</span>
             <span>•</span>
-            <span>Cust: {summary?.roleCounts?.customer || 0}</span>
+            <span>{isTa ? 'வாடிக்கையாளர்:' : 'Cust:'} {summary?.roleCounts?.customer || 0}</span>
           </div>
         </div>
 
         {/* Changes Today */}
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-semibold">Password Changes Today</span>
+            <span className="text-xs font-semibold">{isTa ? 'இன்று மாற்றப்பட்ட கடவுச்சொற்கள்' : 'Password Changes Today'}</span>
             <Clock className="w-4 h-4 text-emerald-600" />
           </div>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
             {summary?.changesToday || 0}
           </p>
           <p className="text-[10px] text-emerald-600 font-semibold mt-1">
-            Active credentials updated today
+            {isTa ? 'இன்று புதுப்பிக்கப்பட்ட கணக்குகள்' : 'Active credentials updated today'}
           </p>
         </div>
 
         {/* Recent Changes (7 Days) */}
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-semibold">Recent Changes (7 Days)</span>
+            <span className="text-xs font-semibold">{isTa ? 'சமீபத்திய மாற்றங்கள் (7 நாட்கள்)' : 'Recent Changes (7 Days)'}</span>
             <History className="w-4 h-4 text-indigo-600" />
           </div>
           <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
             {summary?.recentChanges || 0}
           </p>
           <p className="text-[10px] text-indigo-600 font-semibold mt-1">
-            Updated within the last week
+            {isTa ? 'கடந்த வாரத்தில் புதுப்பிக்கப்பட்டவை' : 'Updated within the last week'}
           </p>
         </div>
 
         {/* Requiring Password Reset */}
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-semibold">Accounts Needing Update</span>
+            <span className="text-xs font-semibold">{isTa ? 'இயல்புநிலை கடவுச்சொல் உள்ளவை' : 'Accounts Needing Update'}</span>
             <AlertTriangle className="w-4 h-4 text-amber-500" />
           </div>
           <p className="text-2xl font-black text-amber-500 dark:text-amber-400">
             {summary?.accountsRequiringReset || 0}
           </p>
           <p className="text-[10px] text-amber-600 font-semibold mt-1">
-            Using default password or reset pending
+            {isTa ? 'ஆரம்ப கடவுச்சொல் பயன்படுத்தும் கணக்குகள்' : 'Using default password or reset pending'}
           </p>
         </div>
       </div>
@@ -243,7 +254,7 @@ export default function SecurityPasswords() {
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>User Accounts ({users.length})</span>
+              <span>{isTa ? `பயனர் கணக்குகள் (${users.length})` : `User Accounts (${users.length})`}</span>
             </button>
             <button
               onClick={() => setActiveTab('logs')}
@@ -254,7 +265,7 @@ export default function SecurityPasswords() {
               }`}
             >
               <History className="w-3.5 h-3.5" />
-              <span>Activity History ({logs.length})</span>
+              <span>{isTa ? `பாதுகாப்பு ஏடு (${logs.length})` : `Activity History (${logs.length})`}</span>
             </button>
           </div>
 
@@ -266,7 +277,7 @@ export default function SecurityPasswords() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search name, username, ID, phone..."
+                placeholder={isTa ? 'பெயர், பயனர் பெயர், எண் தேடுக...' : 'Search name, username, ID, phone...'}
                 className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
             </div>
@@ -274,14 +285,14 @@ export default function SecurityPasswords() {
               type="submit"
               className="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-colors"
             >
-              Search
+              {isTa ? 'தேடு' : 'Search'}
             </button>
           </form>
         </div>
 
         {/* ROLE & STATUS FILTERS */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Filter Role:</span>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">{isTa ? 'பொறுப்பு:' : 'Filter Role:'}</span>
           {['all', 'admin', 'manager', 'worker', 'customer'].map((role) => (
             <button
               key={role}
@@ -292,7 +303,7 @@ export default function SecurityPasswords() {
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300'
               }`}
             >
-              {role === 'admin' ? 'Owner / Admin' : role}
+              {role === 'admin' ? (isTa ? 'நிர்வாகி' : 'Owner / Admin') : role === 'manager' ? (isTa ? 'மேலாளர்' : 'Manager') : role === 'worker' ? (isTa ? 'களப்பணியாளர்' : 'Worker') : role === 'customer' ? (isTa ? 'வாடிக்கையாளர்' : 'Customer') : (isTa ? 'அனைத்தும்' : 'All')}
             </button>
           ))}
 

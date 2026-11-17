@@ -154,19 +154,39 @@ export default function Login() {
       <div className="absolute top-4 right-4 z-20 flex items-center space-x-2">
         <AppUpdateModalButton />
 
-        <button
-          type="button"
-          onClick={() => {
-            const nextLang = lang === 'en' ? 'ta' : 'en';
-            setLang(nextLang);
-            setLanguage(nextLang);
-          }}
-          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-slate-900/70 hover:bg-slate-900/90 border border-white/20 backdrop-blur-md text-xs font-bold text-slate-200 hover:text-teal-400 transition-colors shadow-md"
-          title="Switch Language / மொழி மாற்றுக"
-        >
-          <Languages className="w-3.5 h-3.5 text-teal-400" />
-          <span>{lang === 'en' ? 'தமிழ்' : 'English'}</span>
-        </button>
+        {/* Bilingual Language Switcher (EN | தமிழ்) */}
+        <div className="inline-flex items-center rounded-full bg-slate-900/80 border border-white/20 p-0.5 backdrop-blur-md text-xs font-bold shadow-md">
+          <button
+            type="button"
+            onClick={() => {
+              setLang('en');
+              setLanguage('en');
+            }}
+            className={`px-2.5 py-1 rounded-full transition-all ${
+              lang === 'en'
+                ? 'bg-teal-500 text-slate-950 font-black shadow-sm'
+                : 'text-slate-300 hover:text-white'
+            }`}
+            title="English"
+          >
+            EN
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setLang('ta');
+              setLanguage('ta');
+            }}
+            className={`px-2.5 py-1 rounded-full transition-all ${
+              lang === 'ta'
+                ? 'bg-teal-500 text-slate-950 font-black shadow-sm'
+                : 'text-slate-300 hover:text-white'
+            }`}
+            title="தமிழ்"
+          >
+            தமிழ்
+          </button>
+        </div>
 
         <button 
           onClick={() => setDarkMode(!darkMode)}

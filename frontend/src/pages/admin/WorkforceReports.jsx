@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
+import { translations, getLanguage } from '../../utils/translations.js';
 import {
   TrendingUp, Award, Download, Printer, Filter,
   Users, CheckCircle2, Target, Calendar, Sparkles, RefreshCw
 } from 'lucide-react';
 
 export default function WorkforceReports() {
+  const [lang, setLang] = useState(getLanguage);
   const [reports, setReports] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
 
   useEffect(() => {
     fetchReports();
@@ -69,10 +80,10 @@ export default function WorkforceReports() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center space-x-2.5">
             <TrendingUp className="w-7 h-7 text-teal-600 dark:text-teal-400" />
-            <span>Workforce Performance & Target Analytics</span>
+            <span>{isTa ? 'பணியாளர் செயல்திறன் & இலக்கு பகுப்பாய்வு' : 'Workforce Performance & Target Analytics'}</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Audited performance reports, quota achievement rankings, and workforce productivity insights.
+            {isTa ? 'தணிக்கை செய்யப்பட்ட செயல்திறன் அறிக்கைகள், இலக்கு அடைவு தரவரிசைகள் மற்றும் உற்பத்தித்திறன் கண்ணோட்டம்.' : 'Audited performance reports, quota achievement rankings, and workforce productivity insights.'}
           </p>
         </div>
 
@@ -82,19 +93,19 @@ export default function WorkforceReports() {
             className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center space-x-2 transition-all active:scale-95"
           >
             <Download className="w-4 h-4" />
-            <span>Export CSV</span>
+            <span>{isTa ? 'CSV பதிவிறக்கம்' : 'Export CSV'}</span>
           </button>
           <button
             onClick={() => window.print()}
             className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center space-x-2 transition-all active:scale-95"
           >
             <Printer className="w-4 h-4" />
-            <span>Print Report</span>
+            <span>{isTa ? 'அறிக்கையை அச்சிடு' : 'Print Report'}</span>
           </button>
           <button
             onClick={fetchReports}
             className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition-colors"
-            title="Refresh"
+            title={isTa ? 'புதுப்பிக்க' : 'Refresh'}
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -110,7 +121,7 @@ export default function WorkforceReports() {
             </div>
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-950 text-yellow-400">
-                Star Performer of the Month
+                {isTa ? 'மாதத்தின் சிறந்த சாதனையாளர்' : 'Star Performer of the Month'}
               </span>
               <h2 className="text-xl font-black mt-1">{topPerformer.fullName} ({topPerformer.employeeId})</h2>
               <p className="text-xs font-medium text-slate-900">

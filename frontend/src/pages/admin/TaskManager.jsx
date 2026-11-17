@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
+import { translations, getLanguage } from '../../utils/translations.js';
 import {
   Clock, CheckCircle2, AlertCircle, FileCheck, Search, Filter,
   Eye, RefreshCw, X, ShieldAlert, Check, ChevronRight, User,
@@ -7,8 +8,18 @@ import {
 } from 'lucide-react';
 
 export default function TaskManager() {
+  const [lang, setLang] = useState(getLanguage);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
 
   // Filters
   const [search, setSearch] = useState('');
@@ -101,17 +112,17 @@ export default function TaskManager() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center space-x-2.5">
             <Clock className="w-7 h-7 text-teal-600 dark:text-teal-400" />
-            <span>Company Task & Milestone Board</span>
+            <span>{isTa ? 'நிறுவனப் பணிகள் & மைல்கல் மேலாண்மை' : 'Company Task & Milestone Board'}</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Real-time tracking of field assignments, customer visits, rooftop inspections, and installations.
+            {isTa ? 'கள ஆய்வு, வாடிக்கையாளர் சந்திப்புகள், கூரை ஆய்வுகள் மற்றும் சோலார் நிறுவல் பணிகளின் நேரடி கண்காணிப்பு.' : 'Real-time tracking of field assignments, customer visits, rooftop inspections, and installations.'}
           </p>
         </div>
 
         <button
           onClick={fetchTasks}
           className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors self-start md:self-auto"
-          title="Refresh"
+          title={isTa ? 'புதுப்பிக்க' : 'Refresh'}
         >
           <RefreshCw className="w-4 h-4" />
         </button>
@@ -120,24 +131,24 @@ export default function TaskManager() {
       {/* METRIC CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Total Tasks</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'மொத்த பணிகள்' : 'Total Tasks'}</span>
           <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">{totalTasks}</p>
-          <span className="text-[10px] text-slate-500 font-semibold">Across all departments</span>
+          <span className="text-[10px] text-slate-500 font-semibold">{isTa ? 'அனைத்து துறைகளிலும்' : 'Across all departments'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">In Progress</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'நடைமுறையில் உள்ளவை' : 'In Progress'}</span>
           <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{inProgress}</p>
-          <span className="text-[10px] text-blue-600 font-semibold">Active field assignments</span>
+          <span className="text-[10px] text-blue-600 font-semibold">{isTa ? 'செயலில் உள்ள பணிகள்' : 'Active field assignments'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Awaiting Approval</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'அனுமதி நிலுவை' : 'Awaiting Approval'}</span>
           <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{pendingApprovals}</p>
-          <span className="text-[10px] text-amber-600 font-semibold">Submissions to review</span>
+          <span className="text-[10px] text-amber-600 font-semibold">{isTa ? 'சரிபார்க்க வேண்டியவை' : 'Submissions to review'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Completed & Approved</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'நிறைவடைந்து அனுமதிக்கப்பட்டவை' : 'Completed & Approved'}</span>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{approved}</p>
-          <span className="text-[10px] text-emerald-600 font-semibold">Target achievements counted</span>
+          <span className="text-[10px] text-emerald-600 font-semibold">{isTa ? 'இலக்கில் சேர்க்கப்பட்டது' : 'Target achievements counted'}</span>
         </div>
       </div>
 

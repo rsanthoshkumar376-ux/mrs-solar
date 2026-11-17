@@ -205,33 +205,33 @@ export default function Layout({ children }) {
 
   // Define navigation links based on role
   const adminLinks = [
-    { label: t.dashboard || 'Overview', path: '/admin', icon: LayoutDashboard },
-    { label: 'Employees & Teams', path: '/admin/employees', icon: Users },
+    { label: t.dashboard || 'Dashboard', path: '/admin', icon: LayoutDashboard },
+    { label: t.employeesTeams || 'Employees & Teams', path: '/admin/employees', icon: Users },
     { label: t.leadsCrm || 'Leads & CRM', path: '/admin/leads', icon: KanbanSquare },
-    { label: 'Tasks & Approvals', path: '/admin/tasks', icon: CheckSquare },
-    { label: 'Target Management', path: '/admin/targets', icon: Target },
-    { label: 'Solar Installations', path: '/admin/projects', icon: Wrench },
-    { label: t.customers, path: '/admin/customers', icon: Users },
-    { label: 'Attendance & Leaves', path: '/admin/attendance', icon: Calendar },
-    { label: 'Workforce Reports', path: '/admin/reports', icon: BarChart3 },
-    { label: t.aiVisionHub || 'AI Recognition Hub', path: '/admin/ai-vision', icon: Eye },
-    { label: 'AI Vision Analytics', path: '/admin/ai-dashboard', icon: Sparkles },
-    { label: 'Security & Passwords', path: '/admin/security-passwords', icon: KeyRound },
-    { label: 'Customer Live Support', path: '/admin#support-monitoring', icon: Headphones },
+    { label: t.tasksApprovals || 'Tasks & Approvals', path: '/admin/tasks', icon: CheckSquare },
+    { label: t.targetManagement || 'Target Management', path: '/admin/targets', icon: Target },
+    { label: t.solarInstallations || 'Solar Installations', path: '/admin/projects', icon: Wrench },
+    { label: t.customers || 'Customers', path: '/admin/customers', icon: Users },
+    { label: t.attendanceLeaves || 'Attendance & Leaves', path: '/admin/attendance', icon: Calendar },
+    { label: t.workforceReports || 'Workforce Reports', path: '/admin/reports', icon: BarChart3 },
+    { label: t.aiRecognitionHub || 'AI Recognition Hub', path: '/admin/ai-vision', icon: Eye },
+    { label: t.aiVisionAnalytics || 'AI Vision Analytics', path: '/admin/ai-dashboard', icon: Sparkles },
+    { label: t.securityPasswords || 'Security & Passwords', path: '/admin/security-passwords', icon: KeyRound },
+    { label: t.customerLiveSupport || 'Customer Live Support', path: '/admin#support-monitoring', icon: Headphones },
     { label: t.settings || 'Settings', path: '/admin/settings', icon: Settings }
   ];
 
   const managerLinks = [
-    { label: 'Team Dashboard', path: '/manager', icon: LayoutDashboard },
-    { label: 'Customer Live Support', path: '/manager/support', icon: Headphones },
+    { label: t.teamDashboard || 'Team Dashboard', path: '/manager', icon: LayoutDashboard },
+    { label: t.customerLiveSupport || 'Customer Live Support', path: '/manager/support', icon: Headphones },
     { label: t.aiVisionHub || 'AI Recognition Hub', path: '/admin/ai-vision', icon: Eye }
   ];
 
   const workerLinks = [
-    { label: 'My Tasks', path: '/worker/tasks', icon: CheckSquare },
-    { label: 'My Targets', path: '/worker/targets', icon: Target },
-    { label: 'My Attendance', path: '/worker/attendance', icon: Calendar },
-    { label: 'Customer Visits', path: '/worker/leads', icon: MapPin }
+    { label: t.myTasks || 'My Tasks', path: '/worker/tasks', icon: CheckSquare },
+    { label: t.myTargets || 'My Targets', path: '/worker/targets', icon: Target },
+    { label: t.myAttendance || 'My Attendance', path: '/worker/attendance', icon: Calendar },
+    { label: t.customerVisits || 'Customer Visits', path: '/worker/leads', icon: MapPin }
   ];
 
   const customerLinks = [
@@ -250,24 +250,24 @@ export default function Layout({ children }) {
   const mobileLinks = user?.role === 'admin'
     ? [
         { label: t.dashboard, path: '/admin', icon: LayoutDashboard },
-        { label: 'Employees', path: '/admin/employees', icon: Users },
-        { label: 'CRM', path: '/admin/leads', icon: KanbanSquare },
-        { label: 'Tasks', path: '/admin/tasks', icon: CheckSquare },
+        { label: t.employeesTeams || 'Employees', path: '/admin/employees', icon: Users },
+        { label: t.leadsCrm || 'CRM', path: '/admin/leads', icon: KanbanSquare },
+        { label: t.tasksApprovals || 'Tasks', path: '/admin/tasks', icon: CheckSquare },
         { label: t.moreMenu || 'More', action: () => setSidebarOpen(true), icon: Menu }
       ]
     : user?.role === 'manager'
     ? [
-        { label: 'Dashboard', path: '/manager', icon: LayoutDashboard },
-        { label: 'Tasks', path: '/manager/tasks', icon: CheckSquare },
-        { label: 'Targets', path: '/manager/targets', icon: Target },
+        { label: t.teamDashboard || 'Dashboard', path: '/manager', icon: LayoutDashboard },
+        { label: t.tasksApprovals || 'Tasks', path: '/manager/tasks', icon: CheckSquare },
+        { label: t.targetManagement || 'Targets', path: '/manager/targets', icon: Target },
         { label: t.moreMenu || 'More', action: () => setSidebarOpen(true), icon: Menu }
       ]
     : user?.role === 'worker'
     ? [
-        { label: 'Dashboard', path: '/worker', icon: LayoutDashboard },
-        { label: 'My Tasks', path: '/worker/tasks', icon: CheckSquare },
-        { label: 'Targets', path: '/worker/targets', icon: Target },
-        { label: 'Attendance', path: '/worker/attendance', icon: Calendar }
+        { label: t.teamDashboard || 'Dashboard', path: '/worker', icon: LayoutDashboard },
+        { label: t.myTasks || 'My Tasks', path: '/worker/tasks', icon: CheckSquare },
+        { label: t.myTargets || 'Targets', path: '/worker/targets', icon: Target },
+        { label: t.myAttendance || 'Attendance', path: '/worker/attendance', icon: Calendar }
       ]
     : customerLinks;
 
@@ -391,9 +391,9 @@ export default function Layout({ children }) {
               {user?.role === 'admin' 
                 ? (t.roleAdmin || 'Owner / Super Admin')
                 : user?.role === 'manager'
-                ? 'Team Manager Portal'
+                ? (lang === 'ta' ? 'மேலாளர் தளம்' : 'Team Manager Portal')
                 : user?.role === 'worker'
-                ? 'Workforce Portal'
+                ? (lang === 'ta' ? 'களப்பணியாளர் தளம்' : 'Workforce Portal')
                 : t.roleCustomer}
             </span>
           </div>
@@ -464,30 +464,49 @@ export default function Layout({ children }) {
           {/* Right Header items */}
           <div className="flex items-center space-x-1.5 sm:space-x-3">
             
-            {/* Language Switcher */}
-            <button
-              type="button"
-              onClick={() => {
-                const nextLang = lang === 'en' ? 'ta' : 'en';
-                setLang(nextLang);
-                setLanguage(nextLang);
-              }}
-              className="inline-flex items-center space-x-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
-              title="Switch Language / மொழி மாற்றுக"
-            >
-              <Languages className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-              <span>{lang === 'en' ? 'தமிழ்' : 'English'}</span>
-            </button>
+            {/* Bilingual Language Switcher (EN | தமிழ்) */}
+            <div className="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-100 dark:bg-slate-900 text-[11px] sm:text-xs font-bold shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setLang('en');
+                  setLanguage('en');
+                }}
+                className={`px-2 py-1 rounded-lg transition-all ${
+                  lang === 'en'
+                    ? 'bg-teal-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+                title="Switch to English"
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLang('ta');
+                  setLanguage('ta');
+                }}
+                className={`px-2 py-1 rounded-lg transition-all ${
+                  lang === 'ta'
+                    ? 'bg-teal-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+                title="தமிழுக்கு மாற்றவும்"
+              >
+                தமிழ்
+              </button>
+            </div>
 
             {/* AI Multimodal Vision Scanner Launcher */}
             <button
               type="button"
               onClick={() => setShowAiScanner(true)}
               className="inline-flex items-center space-x-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-teal-500/10 to-emerald-500/10 hover:from-teal-500/20 hover:to-emerald-500/20 border border-teal-500/30 text-[11px] sm:text-xs font-black text-teal-700 dark:text-teal-300 transition-all active:scale-95 shrink-0"
-              title="Launch Gemini 2.5 Flash Vision Inspector (EB Bill, Inverter, Panels)"
+              title={lang === 'ta' ? 'ஜெமினி 2.5 ஃப்ளாஷ் AI ஆய்வாளரைத் திற (EB பில், இன்வெர்ட்டர், பேனல்)' : 'Launch Gemini 2.5 Flash Vision Inspector (EB Bill, Inverter, Panels)'}
             >
               <Sparkles className="w-3.5 h-3.5 text-yellow-500 animate-pulse" />
-              <span className="hidden sm:inline">AI Scanner</span>
+              <span className="hidden sm:inline">{lang === 'ta' ? 'AI ஸ்கேனர்' : 'AI Scanner'}</span>
             </button>
 
             {/* Install Mobile/Desktop App Button */}

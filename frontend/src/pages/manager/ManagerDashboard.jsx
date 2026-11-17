@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import api from '../../utils/api.js';
 import { formatCurrency } from '../../utils/format.js';
+import { translations, getLanguage } from '../../utils/translations.js';
 import {
   Users, CheckCircle2, Clock, AlertCircle, Award, Target,
   FileCheck, PlusCircle, ArrowUpRight, Calendar, UserCheck,
@@ -17,7 +18,17 @@ export default function ManagerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [lang, setLang] = useState(getLanguage);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
 
   // Synchronize active tab with URL path
   const getTabFromPath = () => {
@@ -470,16 +481,16 @@ export default function ManagerDashboard() {
         <div>
           <div className="flex items-center space-x-2.5 mb-1.5">
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
-              TEAM LEADER & MANAGER PORTAL
+              {isTa ? 'குழு தலைவர் & மேலாளர் தளம்' : 'TEAM LEADER & MANAGER PORTAL'}
             </span>
             <span className="text-xs text-slate-400">ID: {user?.employeeId || 'MGR-1001'}</span>
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white flex items-center space-x-2">
-            <span>Welcome, {user?.fullName || user?.username || 'Team Leader'}</span>
+            <span>{isTa ? `வணக்கம், ${user?.fullName || user?.username || 'மேலாளர்'}` : `Welcome, ${user?.fullName || user?.username || 'Team Leader'}`}</span>
             <Sparkles className="w-5 h-5 text-yellow-400" />
           </h1>
           <p className="text-xs text-slate-300 mt-1">
-            Department: <strong className="text-teal-300">{user?.department || 'Sales & Customer Outreach'}</strong> • Team: <strong className="text-teal-300">Thiruvallur Solar Champions (TEAM-101)</strong>
+            {isTa ? 'துறை:' : 'Department:'} <strong className="text-teal-300">{user?.department || (isTa ? 'விற்பனை & சேவை' : 'Sales & Customer Outreach')}</strong> • {isTa ? 'குழு:' : 'Team:'} <strong className="text-teal-300">{isTa ? 'திருவள்ளூர் சோலார் சாம்பியன்ஸ் (TEAM-101)' : 'Thiruvallur Solar Champions (TEAM-101)'}</strong>
           </p>
         </div>
 
@@ -491,7 +502,7 @@ export default function ManagerDashboard() {
             className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-bold shadow-lg flex items-center space-x-2 transition-all active:scale-95"
           >
             <Headphones className="w-4 h-4" />
-            <span>Customer Live Support ({openSupportCount})</span>
+            <span>{isTa ? 'வாடிக்கையாளர் நேரடி உதவி' : 'Customer Live Support'} ({openSupportCount})</span>
           </button>
           <button
             onClick={() => {
@@ -500,20 +511,20 @@ export default function ManagerDashboard() {
             className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg hover:shadow-teal-500/20 flex items-center space-x-2 transition-all active:scale-95"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Assign New Task</span>
+            <span>{isTa ? 'புதிய பணி ஒதுக்கீடு' : 'Assign New Task'}</span>
           </button>
           <button
             onClick={() => navigate('/change-password')}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all flex items-center space-x-1.5 text-xs font-semibold"
-            title="Change Account Password"
+            title={isTa ? 'கடவுச்சொல்லை மாற்றுக' : 'Change Account Password'}
           >
             <KeyRound className="w-4 h-4 text-teal-400" />
-            <span className="hidden sm:inline">Password</span>
+            <span className="hidden sm:inline">{isTa ? 'கடவுச்சொல்' : 'Password'}</span>
           </button>
           <button
             onClick={fetchDashboardData}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
-            title="Refresh Data"
+            className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
+            title={isTa ? 'புதுப்பிக்க' : 'Refresh Data'}
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -527,69 +538,69 @@ export default function ManagerDashboard() {
           className="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 shadow-sm cursor-pointer hover:shadow-md transition-all"
         >
           <div className="flex items-center justify-between text-amber-700 dark:text-amber-300 mb-2">
-            <span className="text-xs font-bold">Live Support</span>
+            <span className="text-xs font-bold">{isTa ? 'நேரடி உதவி' : 'Live Support'}</span>
             <Headphones className="w-4 h-4 text-amber-500" />
           </div>
           <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{openSupportCount}</p>
-          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">New Escalations</span>
+          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">{isTa ? 'புதிய கோரிக்கைகள்' : 'New Escalations'}</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-semibold">Team Members</span>
+            <span className="text-xs font-semibold">{isTa ? 'குழு உறுப்பினர்கள்' : 'Team Members'}</span>
             <Users className="w-4 h-4 text-teal-500" />
           </div>
           <p className="text-2xl font-black text-slate-800 dark:text-white">{teamMembers.length}</p>
-          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">Supervised Workers</span>
+          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">{isTa ? 'களப்பணியாளர்கள்' : 'Supervised Workers'}</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-semibold">Pending Approvals</span>
+            <span className="text-xs font-semibold">{isTa ? 'அனுமதி நிலுவை' : 'Pending Approvals'}</span>
             <AlertCircle className="w-4 h-4 text-amber-500" />
           </div>
           <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{pendingApprovals.length}</p>
-          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Review Submissions</span>
+          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">{isTa ? 'சமர்ப்பிப்புகள்' : 'Review Submissions'}</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-semibold">Active Tasks</span>
+            <span className="text-xs font-semibold">{isTa ? 'செயலில் உள்ளவை' : 'Active Tasks'}</span>
             <Clock className="w-4 h-4 text-blue-500" />
           </div>
           <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{activeTasks.length}</p>
-          <span className="text-[10px] text-slate-500 font-semibold">In Progress</span>
+          <span className="text-[10px] text-slate-500 font-semibold">{isTa ? 'நடைமுறையில்' : 'In Progress'}</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-semibold">Completed</span>
+            <span className="text-xs font-semibold">{isTa ? 'நிறைவடைந்தது' : 'Completed'}</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{completedTasks.length}</p>
-          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Approved Work</span>
+          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">{isTa ? 'அனுமதிக்கப்பட்டது' : 'Approved Work'}</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-semibold">Assigned Leads</span>
+            <span className="text-xs font-semibold">{isTa ? 'விசாரணைகள்' : 'Assigned Leads'}</span>
             <Building className="w-4 h-4 text-purple-500" />
           </div>
           <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{leads.length}</p>
-          <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">Pipeline</span>
+          <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">{isTa ? 'முன்னேற்றம்' : 'Pipeline'}</span>
         </div>
       </div>
 
       {/* PORTAL TABS */}
       <div className="flex items-center space-x-1 sm:space-x-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1 scrollbar-none">
         {[
-          { id: 'approvals', label: 'Pending Approvals', icon: FileCheck, badge: pendingApprovals.length },
-          { id: 'support', label: 'Customer Live Support', icon: Headphones, badge: openSupportCount, isHighlight: true },
-          { id: 'assign', label: 'Assign Task', icon: PlusCircle },
-          { id: 'targets', label: 'Target Distribution', icon: Target, badge: targets.length },
-          { id: 'team', label: 'Team Members', icon: Users, badge: teamMembers.length },
-          { id: 'attendance', label: 'Attendance & Leaves', icon: Calendar, badge: leaves.filter(l => l.status === 'Pending').length },
-          { id: 'leads', label: 'Assigned Leads', icon: Building, badge: leads.length }
+          { id: 'approvals', label: isTa ? 'அனுமதிக்க வேண்டியவை' : 'Pending Approvals', icon: FileCheck, badge: pendingApprovals.length },
+          { id: 'support', label: isTa ? 'வாடிக்கையாளர் நேரடி உதவி' : 'Customer Live Support', icon: Headphones, badge: openSupportCount, isHighlight: true },
+          { id: 'assign', label: isTa ? 'பணி ஒதுக்கீடு' : 'Assign Task', icon: PlusCircle },
+          { id: 'targets', label: isTa ? 'இலக்கு பகிர்வு' : 'Target Distribution', icon: Target, badge: targets.length },
+          { id: 'team', label: isTa ? 'குழு உறுப்பினர்கள்' : 'Team Members', icon: Users, badge: teamMembers.length },
+          { id: 'attendance', label: isTa ? 'வருகை & விடுப்புகள்' : 'Attendance & Leaves', icon: Calendar, badge: leaves.filter(l => l.status === 'Pending').length },
+          { id: 'leads', label: isTa ? 'விசாரணைகள்' : 'Assigned Leads', icon: Building, badge: leads.length }
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

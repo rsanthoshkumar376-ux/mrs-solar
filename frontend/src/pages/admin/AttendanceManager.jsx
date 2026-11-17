@@ -1,16 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api.js';
+import { translations, getLanguage } from '../../utils/translations.js';
 import {
   Calendar, UserCheck, Clock, CheckCircle2, AlertCircle,
   Users, Check, X, RefreshCw, ShieldAlert, FileText, Search
 } from 'lucide-react';
 
 export default function AttendanceManager() {
+  const [lang, setLang] = useState(getLanguage);
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('today'); // today | leaves | history
+
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
 
   const [search, setSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -94,17 +105,17 @@ export default function AttendanceManager() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center space-x-2.5">
             <UserCheck className="w-7 h-7 text-teal-600 dark:text-teal-400" />
-            <span>Workforce Attendance & Leave Control</span>
+            <span>{isTa ? 'பணியாளர் வருகை & விடுப்பு மேலாண்மை' : 'Workforce Attendance & Leave Control'}</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Real-time punch-in records, shift completion, and centralized leave approvals for all employees.
+            {isTa ? 'பணியாளர்களின் நேரடி வருகைப்பதிவு, பணி நிறைவு மற்றும் விடுப்பு அனுமதிகள்.' : 'Real-time punch-in records, shift completion, and centralized leave approvals for all employees.'}
           </p>
         </div>
 
         <button
           onClick={fetchData}
           className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors self-start md:self-auto"
-          title="Refresh"
+          title={isTa ? 'புதுப்பிக்க' : 'Refresh'}
         >
           <RefreshCw className="w-4 h-4" />
         </button>
@@ -113,33 +124,33 @@ export default function AttendanceManager() {
       {/* METRIC CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Total Workforce</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'மொத்த பணியாளர்கள்' : 'Total Workforce'}</span>
           <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">{employees.length}</p>
-          <span className="text-[10px] text-slate-500 font-semibold">Registered staff</span>
+          <span className="text-[10px] text-slate-500 font-semibold">{isTa ? 'பதிவு செய்யப்பட்டவர்கள்' : 'Registered staff'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Punched In Today</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'இன்று பணிக்கு வந்தவர்கள்' : 'Punched In Today'}</span>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{todayAttendance.length}</p>
-          <span className="text-[10px] text-emerald-600 font-semibold">Active on duty</span>
+          <span className="text-[10px] text-emerald-600 font-semibold">{isTa ? 'பணியில் உள்ளவர்கள்' : 'Active on duty'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Pending Leave Requests</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'விடுப்பு அனுமதி நிலுவை' : 'Pending Leave Requests'}</span>
           <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{pendingLeaves.length}</p>
-          <span className="text-[10px] text-amber-600 font-semibold">Awaiting decision</span>
+          <span className="text-[10px] text-amber-600 font-semibold">{isTa ? 'முடிவுக்காக காத்திருப்பவை' : 'Awaiting decision'}</span>
         </div>
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">Today's Date</span>
+          <span className="text-xs font-semibold text-slate-500">{isTa ? 'இன்றைய தேதி' : "Today's Date"}</span>
           <p className="text-lg font-black text-slate-800 dark:text-white mt-1 font-mono">{todayStr}</p>
-          <span className="text-[10px] text-teal-600 font-semibold">Live system clock</span>
+          <span className="text-[10px] text-teal-600 font-semibold">{isTa ? 'நேரடி கடிகாரம்' : 'Live system clock'}</span>
         </div>
       </div>
 
       {/* TABS */}
       <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 pb-1">
         {[
-          { id: 'today', label: "Today's Attendance", icon: UserCheck, count: todayAttendance.length },
-          { id: 'leaves', label: 'Leave Requests Queue', icon: Calendar, count: pendingLeaves.length },
-          { id: 'history', label: 'Historical Records', icon: Clock, count: attendance.length }
+          { id: 'today', label: isTa ? 'இன்றைய வருகை' : "Today's Attendance", icon: UserCheck, count: todayAttendance.length },
+          { id: 'leaves', label: isTa ? 'விடுப்பு கோரிக்கைகள்' : 'Leave Requests Queue', icon: Calendar, count: pendingLeaves.length },
+          { id: 'history', label: isTa ? 'வருகை வரலாறு' : 'Historical Records', icon: Clock, count: attendance.length }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

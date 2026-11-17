@@ -72,7 +72,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/cron', cronRoutes);
-app.use('/api/ai', aiRoutes);
+app.use(['/api/ai', '/ai'], aiRoutes);
 app.use(['/api/workforce', '/workforce'], workforceRoutes);
 app.use('/api/admin/password-management', passwordManagementRoutes);
 app.use(['/api/support', '/support'], supportRoutes);

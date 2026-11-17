@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import api from '../utils/api.js';
+import { translations, getLanguage } from '../utils/translations.js';
 import {
   Sparkles, X, Upload, Camera, FileText, Sun, Zap, CheckCircle2,
   AlertCircle, ShieldAlert, Check, Copy, RefreshCw, Eye, ChevronRight,
@@ -7,6 +8,7 @@ import {
 } from 'lucide-react';
 
 export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'EB_BILL', onDataExtracted = null }) {
+  const [lang, setLang] = useState(getLanguage);
   const [activeTab, setActiveTab] = useState(initialType);
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
@@ -18,14 +20,23 @@ export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'E
 
   const [saveLoading, setSaveLoading] = useState(false);
 
+  useEffect(() => {
+    const handleLangChange = () => setLang(getLanguage());
+    window.addEventListener('language-change', handleLangChange);
+    return () => window.removeEventListener('language-change', handleLangChange);
+  }, []);
+
+  const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
+
   if (!isOpen) return null;
 
   const tabs = [
-    { id: 'EB_BILL', label: 'TNEB Electricity Bill', icon: Zap, endpoint: '/ai/analyze-eb-bill', field: 'billImage' },
-    { id: 'SOLAR_PANEL', label: 'Solar Panel Health', icon: Sun, endpoint: '/ai/analyze-solar-panel', field: 'panelImage' },
-    { id: 'INVERTER', label: 'Inverter & Error Codes', icon: Wrench, endpoint: '/ai/analyze-inverter', field: 'inverterImage' },
-    { id: 'INSTALLATION', label: 'Installation Audit', icon: Layers, endpoint: '/ai/analyze-installation', field: 'installationImage' },
-    { id: 'DOCUMENT', label: 'Invoice & Warranty', icon: FileText, endpoint: '/ai/analyze-document', field: 'document' }
+    { id: 'EB_BILL', label: t.tabTnebBill || 'TNEB Electricity Bill', icon: Zap, endpoint: '/ai/analyze-eb-bill', field: 'billImage' },
+    { id: 'SOLAR_PANEL', label: t.tabSolarPanel || 'Solar Panel Health', icon: Sun, endpoint: '/ai/analyze-solar-panel', field: 'panelImage' },
+    { id: 'INVERTER', label: t.tabInverter || 'Inverter & Error Codes', icon: Wrench, endpoint: '/ai/analyze-inverter', field: 'inverterImage' },
+    { id: 'INSTALLATION', label: t.tabInstallation || 'Installation Audit', icon: Layers, endpoint: '/ai/analyze-installation', field: 'installationImage' },
+    { id: 'DOCUMENT', label: t.tabDocument || 'Invoice & Warranty', icon: FileText, endpoint: '/ai/analyze-document', field: 'document' }
   ];
 
   const currentTabInfo = tabs.find(t => t.id === activeTab) || tabs[0];
@@ -117,14 +128,14 @@ export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'E
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
-                  MRS SOLAR AI — Multimodal Vision Inspector
+                  {t.visionInspectorModalTitle || 'MRS SOLAR AI — Multimodal Vision Inspector'}
                 </h3>
                 <span className="hidden sm:inline px-2 py-0.5 rounded-full text-[10px] font-black bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                  Google Gemini 2.5 Flash Free Tier
+                  {t.geminiFreeTierBadge || 'Google Gemini 2.5 Flash Free Tier'}
                 </span>
               </div>
               <p className="text-xs text-slate-300">
-                Visual OCR, defect inspection, and technical audit powered by multimodal intelligence.
+                {t.visionInspectorModalSubtitle || 'Visual OCR, defect inspection, and technical audit powered by multimodal intelligence.'}
               </p>
             </div>
           </div>
@@ -182,7 +193,7 @@ export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'E
             {/* LEFT COLUMN: UPLOAD / CAMERA BOX */}
             <div className="space-y-3">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                Upload or Capture Photograph
+                {t.uploadOrCaptureHeading || 'Upload or Capture Photograph'}
               </label>
 
               {!imagePreview ? (
@@ -194,10 +205,10 @@ export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'E
                     <Upload className="w-6 h-6" />
                   </div>
                   <p className="text-xs font-bold text-slate-800 dark:text-white">
-                    Click to browse or drag and drop image
+                    {t.dragDropPhotoNotice || 'Click to browse or drag and drop image'}
                   </p>
                   <p className="text-[11px] text-slate-500 mt-1">
-                    Supports JPG, PNG, WEBP, HEIC up to 10MB
+                    {t.photoFormatsNotice || 'Supports JPG, PNG, WEBP, PDF up to 10MB'}
                   </p>
 
                   <div className="mt-4 flex items-center space-x-2">
@@ -206,7 +217,7 @@ export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'E
                       className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold shadow-xs flex items-center space-x-1"
                     >
                       <Camera className="w-3.5 h-3.5 text-teal-600" />
-                      <span>Take Photo</span>
+                      <span>{t.takeCameraPhotoBtn || 'Take Photo with Camera'}</span>
                     </button>
                   </div>
                 </div>
@@ -221,7 +232,7 @@ export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'E
                     <button
                       onClick={handleReset}
                       className="p-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-900 text-white shadow-md transition-colors"
-                      title="Clear image"
+                      title={isTa ? 'படத்தை நீக்கு' : 'Clear image'}
                     >
                       <RefreshCw className="w-4 h-4" />
                     </button>
@@ -246,12 +257,12 @@ export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'E
                 {loading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Gemini 2.5 Flash Vision Analyzing...</span>
+                    <span>{t.analyzingWithGemini || 'Gemini 2.5 Flash Vision Analyzing...'}</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 text-yellow-300" />
-                    <span>Run AI Visual Analysis</span>
+                    <span>{t.runAiAnalysisBtn || 'Run AI Visual Analysis'}</span>
                   </>
                 )}
               </button>
@@ -261,7 +272,7 @@ export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'E
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Extracted Intelligence & Technical Audit
+                  {t.extractedIntelligenceHeading || 'Extracted Intelligence & Technical Audit'}
                 </label>
                 {result?.data && (
                   <button
@@ -269,7 +280,7 @@ export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'E
                     className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center space-x-1"
                   >
                     {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? 'Copied' : 'Copy JSON'}</span>
+                    <span>{copied ? (t.copiedJsonSuccess || 'Copied') : (t.copyJsonBtn || 'Copy JSON')}</span>
                   </button>
                 )}
               </div>
@@ -277,9 +288,9 @@ export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'E
               {!result ? (
                 <div className="p-8 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center min-h-[260px] flex flex-col items-center justify-center text-slate-400">
                   <Sparkles className="w-10 h-10 text-slate-300 dark:text-slate-700 mb-2" />
-                  <p className="text-xs font-semibold">Upload an image and run analysis</p>
+                  <p className="text-xs font-semibold">{isTa ? 'புகைப்படத்தைப் பதிவேற்றி பகுப்பாய்வைத் தொடங்கவும்' : 'Upload an image and run analysis'}</p>
                   <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
-                    Gemini 2.5 Flash will extract readings, detect faults, check TNEB billing, or audit rooftop installation milestones.
+                    {t.emptyInspectorPrompt || 'Gemini 2.5 Flash will extract readings, detect faults, check TNEB billing, or audit rooftop installation milestones.'}
                   </p>
                 </div>
               ) : (
