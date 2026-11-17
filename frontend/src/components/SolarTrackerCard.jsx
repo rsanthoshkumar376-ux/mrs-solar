@@ -247,10 +247,10 @@ export default function SolarTrackerCard({
                   <span>{lang === 'ta' ? 'பேட்டரி இல்லாத ஆன்-கிரிட் கட்டமைப்பு' : 'Battery-Free On-Grid System'}</span>
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {lang === 'ta'
-                  ? 'கிரிட்-இணைக்கப்பட்ட இன்வெர்ட்டர், இருவழி நெட்-மீட்டர் மற்றும் TNEB மின் கட்டண சேமிப்பு'
-                  : (t.solarTrackingSubtitle || 'On-grid inverter, bi-directional net meter, and verified TNEB bill tallying.')}
+                  ? 'பேட்டரி தேவையில்லை — சோலார் மின்சாரம் நேரடியாக EB-க்கு அனுப்பப்பட்டு உங்கள் மின் கட்டணம் குறைக்கப்படுகிறது.'
+                  : 'Zero batteries needed — Clean solar power is sent directly to the EB grid via Net-Meter, directly reducing your electricity bill to ₹0.'}
               </p>
             </div>
           </div>

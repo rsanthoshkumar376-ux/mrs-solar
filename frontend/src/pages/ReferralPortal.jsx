@@ -500,6 +500,106 @@ Please help me schedule a Free Rooftop Site Survey and Loan Consultation.`;
       </section>
 
       {/* ============================================================== */}
+      {/* 3.5. CORE VALUE: STRICTLY BATTERY-FREE & DIRECT EB EXPORT      */}
+      {/* ============================================================== */}
+      <section className="py-8 px-4 sm:px-6 relative z-10 -mt-6">
+        <div className="max-w-5xl mx-auto rounded-3xl bg-gradient-to-r from-teal-950/80 via-slate-900/95 to-indigo-950/80 border-2 border-teal-500/40 p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6">
+          <div className="text-center space-y-2">
+            <span className="inline-flex items-center space-x-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-950/90 border border-emerald-500/40 px-3 py-1 rounded-full">
+              <Zap className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
+              <span>{isTa ? '100% பேட்டரி இல்லாத ஆன்-கிரிட் சோலார்' : 'Strictly Battery-Free On-Grid Solar'}</span>
+            </span>
+            <h2 className="text-xl sm:text-3xl font-black text-white leading-snug">
+              {isTa ? (
+                <>
+                  பேட்டரி தேவையில்லை! சோலார் மின்சாரம் <span className="text-teal-400">நேரடியாக EB-க்கு அனுப்பப்பட்டு</span>, உங்கள் <span className="text-yellow-400">EB பில் கட்டணத்தை ₹0 ஆக்கும்!</span>
+                </>
+              ) : (
+                <>
+                  No Battery Needed! Solar Power is <span className="text-teal-400">Directly Sent to EB</span>, and the <span className="text-yellow-400">EB Directly Reduces Your Bill!</span>
+                </>
+              )}
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto">
+              {isTa
+                ? 'விலை உயர்ந்த பேட்டரி பராமரிப்பு செலவுகள் ஏதுமின்றி, பகலில் உற்பத்தி செய்யப்படும் சோலார் மின்சாரம் இருவழி நெட்-மீட்டர் மூலம் நேரடியாக TNEB கிரிட்டுக்கு அனுப்பப்படும். இது உங்கள் இருமாத கரண்ட் பில் அலகுகளை நேரடியாகக் குறைக்கும்.'
+                : 'Zero battery replacement expenses! Surplus rooftop solar electricity is exported directly into the TANGEDCO/TNEB grid via a Bi-Directional Net Meter, unit-for-unit reducing and wiping out your bi-monthly EB electricity bill.'}
+            </p>
+          </div>
+
+          {/* 3-Step Visual Architecture Flow */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            
+            {/* Step 1: No Battery */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-teal-500/20 hover:border-teal-500/40 transition-all space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-black text-lg">
+                🚫
+              </div>
+              <h3 className="font-extrabold text-white text-sm sm:text-base">
+                {isTa ? '1. பேட்டரி தேவையே இல்லை' : '1. Zero Batteries Required'}
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {isTa
+                  ? '3-5 ஆண்டுகளுக்கு ஒருமுறை மாற்ற வேண்டிய விலை உயர்ந்த பேட்டரிகள் இதில் இல்லை. இதனால் ₹80,000+ கூடுதல் செலவு முற்றிலும் மிச்சமாகிறது.'
+                  : 'No chemical batteries to maintain or replace every 3-5 years. Eliminates ₹80,000+ in recurring battery replacement and maintenance costs.'}
+              </p>
+            </div>
+
+            {/* Step 2: Direct to EB */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-teal-500/20 hover:border-teal-500/40 transition-all space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 border border-teal-500/30 flex items-center justify-center font-black text-lg">
+                ⚡
+              </div>
+              <h3 className="font-extrabold text-white text-sm sm:text-base">
+                {isTa ? '2. நேரடியாக EB-க்கு அனுப்பப்படும்' : '2. Solar Sent Directly to EB'}
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {isTa
+                  ? 'பகலில் உற்பத்தியாகும் 100% சோலார் மின்சாரம் உங்கள் வீட்டின் பயன்பாட்டிற்கு பிறகு TNEB கிரிட்டுக்கு இருவழி நெட்-மீட்டர் மூலம் தானாக அனுப்பப்படும்.'
+                  : '100% of clean solar electricity is fed straight into the TANGEDCO/TNEB grid through a certified Bi-Directional Net Meter that spins backwards.'}
+              </p>
+            </div>
+
+            {/* Step 3: EB Bill Reduced */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-teal-500/20 hover:border-teal-500/40 transition-all space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black text-lg">
+                📉
+              </div>
+              <h3 className="font-extrabold text-white text-sm sm:text-base">
+                {isTa ? '3. EB பில் தானாக குறையும்' : '3. EB Slashes Your Bill to ₹0'}
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {isTa
+                  ? 'EB-க்கு அனுப்பப்படும் ஒவ்வொரு யூனிட்டும் உங்கள் பயன்பாட்டு அலகுகளில் இருந்து கழிக்கப்பட்டு, உங்கள் இருமாத கரண்ட் பில் கிட்டத்தட்ட ₹0 ஆக குறையும்!'
+                  : 'Every exported solar unit cancels out your EB consumption. Your bi-monthly electricity bill is slashed up to 100%, plus you get 100 Free Units!'}
+              </p>
+            </div>
+
+          </div>
+
+          {/* Quick Net-Meter Summary Strip */}
+          <div className="p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center space-x-2.5">
+              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span className="text-slate-200">
+                {isTa
+                  ? 'தமிழ்நாடு மின்சார வாரியம் (TANGEDCO) அங்கீகரித்த 1:1 நெட்-மீட்டரிங் + மத்திய அரசின் ₹78,000 நேரடி மானியம்!'
+                  : 'Official TANGEDCO 1:1 Net-Metering Certified + Up to ₹78,000 Direct PM Surya Ghar Subsidy!'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => scrollToSection('calculator')}
+              className="px-4 py-1.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs transition-all shadow-md active:scale-95 shrink-0"
+            >
+              {isTa ? 'சேமிப்பு கணக்கிடு' : 'Check Your Savings'}
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ============================================================== */}
       {/* 4. REAL SOLAR INSTALLATION VIDEO SHOWCASE                      */}
       {/* ============================================================== */}
       <section id="video-showcase" className="py-12 px-4 sm:px-6 bg-slate-900/60 border-y border-slate-800/80">

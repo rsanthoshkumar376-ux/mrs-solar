@@ -245,6 +245,57 @@ export default function SolarProjectManager() {
         </div>
       </div>
 
+      {/* STRICT BATTERY-FREE & DIRECT EB FEED EXPLAINER BANNER */}
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-teal-900/40 via-slate-900 to-indigo-950/40 border border-teal-500/30 shadow-lg space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center space-x-2">
+            <span className="p-2 rounded-xl bg-teal-500/20 text-teal-400 border border-teal-500/30">
+              <Zap className="w-5 h-5 text-teal-400" />
+            </span>
+            <div>
+              <h3 className="font-bold text-sm sm:text-base text-white flex items-center space-x-2">
+                <span>Strict Battery-Free Design: Solar Directly Sent to EB to Reduce Electricity Bill</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  100% On-Grid
+                </span>
+              </h3>
+              <p className="text-xs text-teal-200/80 mt-0.5">
+                தமிழ்: பேட்டரி தேவையில்லை — சோலார் மின்சாரம் நேரடியாக EB-க்கு அனுப்பப்பட்டு, உங்கள் கரண்ட் பில் தொகையை பெருமளவு குறைக்கும்!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 text-xs">
+          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+            <span className="font-bold text-amber-400 flex items-center space-x-1.5">
+              <span>🚫 1. No Batteries Required</span>
+            </span>
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              Zero expensive chemical batteries to maintain or replace every 3-5 years, saving ₹80,000+ in replacement costs with zero safety hazards.
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+            <span className="font-bold text-teal-400 flex items-center space-x-1.5">
+              <span>⚡ 2. Directly Sent to EB (TNEB Grid)</span>
+            </span>
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              During sunlight hours, 100% of solar electricity is fed straight into the TANGEDCO/TNEB grid through a certified Bi-Directional Net Meter.
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+            <span className="font-bold text-emerald-400 flex items-center space-x-1.5">
+              <span>📉 3. EB Reduces Your Electricity Bill</span>
+            </span>
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              Every unit exported to EB spins your net meter backwards, directly offsetting your household consumption and reducing your bi-monthly bill to ₹0!
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* PROJECTS LIST */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {projects.map((proj) => {
@@ -479,13 +530,13 @@ export default function SolarProjectManager() {
                 />
               </div>
 
-              <div className="p-3 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-[11px] text-teal-800 dark:text-teal-200">
-                <p className="font-bold flex items-center space-x-1.5">
-                  <ShieldCheck className="w-4 h-4 text-teal-600" />
-                  <span>Strict Battery-Free On-Grid Standard</span>
+              <div className="p-3.5 rounded-xl bg-teal-50 dark:bg-teal-950/50 border border-teal-300 dark:border-teal-700/60 text-xs text-teal-900 dark:text-teal-100 space-y-1.5">
+                <p className="font-bold flex items-center space-x-1.5 text-teal-700 dark:text-teal-300">
+                  <ShieldCheck className="w-4 h-4 text-teal-500" />
+                  <span>Strict Battery-Free Standard • Direct EB Export • EB Bill Reduced to ₹0</span>
                 </p>
-                <p className="mt-1">
-                  System will be commissioned with a bi-directional TANGEDCO net-meter. Zero batteries, maximum government subsidy up to ₹78,000.
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  <strong>No battery is needed</strong> for this rooftop solar system. All electricity generated is <strong>directly sent to the EB (TANGEDCO/TNEB)</strong> through a bi-directional net-meter. The <strong>EB directly reduces your bi-monthly electricity bill</strong> unit-for-unit, plus qualifies for up to ₹78,000 in PM Surya Ghar central subsidies!
                 </p>
               </div>
 

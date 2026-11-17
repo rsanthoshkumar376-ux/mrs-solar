@@ -242,6 +242,21 @@ Contact: MRS SOLAR | 📞 +91 97894 48979 / +91 80724 54996`;
             </div>
           </div>
 
+          {/* STRICTLY BATTERY-FREE DIRECT EB NET-METERING SPECIFICATION */}
+          <div className="p-4 rounded-2xl bg-teal-50/70 dark:bg-teal-950/40 print:bg-teal-50 border border-teal-300 print:border-teal-400 space-y-1.5 text-xs">
+            <div className="flex items-center space-x-2 text-teal-800 dark:text-teal-300 print:text-teal-900 font-extrabold uppercase tracking-wide text-[11px]">
+              <Zap className="w-4 h-4 text-teal-600 shrink-0" />
+              <span>Strictly Battery-Free Standard: Solar Power Directly Sent to EB to Slash Electricity Bills</span>
+            </div>
+            <p className="text-[11px] text-slate-700 dark:text-slate-300 print:text-black leading-relaxed">
+              <strong>1. No Batteries Required:</strong> This on-grid installation contains zero chemical batteries, completely eliminating recurrent replacement costs (~₹80,000 every 3-5 years) and hazardous battery degradation.
+              <br />
+              <strong>2. Direct EB Grid Feed:</strong> 100% of the solar electricity generated daytime is fed directly into the TANGEDCO/TNEB grid through an official Bi-Directional Net-Meter.
+              <br />
+              <strong>3. Direct EB Bill Reduction:</strong> Under TNERC LT-1A Net Metering, every solar unit exported subtracts directly from your electricity consumption, reducing your bi-monthly EB electricity bill to ₹0.00!
+            </p>
+          </div>
+
           {/* FINANCIAL SUMMARY TABLE */}
           <div className="p-5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/30 print:bg-amber-50 border border-amber-300 dark:border-amber-700/60 print:border-amber-400">
             <h4 className="font-black uppercase tracking-wider text-[11px] text-amber-900 dark:text-amber-200 print:text-black mb-3">
