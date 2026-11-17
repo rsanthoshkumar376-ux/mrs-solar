@@ -3,7 +3,7 @@ import api from '../../utils/api.js';
 import {
   Sun, Zap, PlusCircle, CheckCircle2, Clock, AlertCircle,
   Building, MapPin, User, ChevronRight, X, RefreshCw,
-  ShieldCheck, FileText, Check, ShieldAlert
+  ShieldCheck, FileText, Check, ShieldAlert, Trash2
 } from 'lucide-react';
 
 const MILESTONES = [
@@ -25,9 +25,11 @@ export default function SolarProjectManager() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [modalError, setModalError] = useState('');
 
   // New Project Form
   const [newProjectForm, setNewProjectForm] = useState({
+    customerId: '',
     customerName: '',
     customerMobile: '',
     capacityKWp: 3,
@@ -35,7 +37,8 @@ export default function SolarProjectManager() {
     district: 'Thiruvallur',
     teamId: 'TEAM-101',
     inverterModel: 'On-Grid String Inverter (Battery-Free)',
-    panelCount: 6
+    panelCount: 6,
+    createCustomerAccount: true
   });
 
   const [successMsg, setSuccessMsg] = useState('');
@@ -70,11 +73,17 @@ export default function SolarProjectManager() {
 
   const handleCreateProject = async (e) => {
     e.preventDefault();
+    setModalError('');
     try {
       setSaving(true);
       const team = teams.find(t => t.teamId === newProjectForm.teamId);
+      const cap = Number(newProjectForm.capacityKWp) || 3;
       await api.post('/workforce/projects', {
         ...newProjectForm,
+        capacityKw: cap,
+        capacityKWp: cap,
+        address: newProjectForm.siteAddress,
+        siteAddress: newProjectForm.siteAddress,
         teamName: team?.teamName || 'Solar Installation Squad',
         milestones: MILESTONES.map((title, idx) => ({
           milestoneId: `M-${idx + 1}`,
@@ -85,14 +94,44 @@ export default function SolarProjectManager() {
       });
 
       setShowCreateModal(false);
-      setSuccessMsg('Solar installation project created successfully!');
+      setModalError('');
+      setNewProjectForm({
+        customerId: '',
+        customerName: '',
+        customerMobile: '',
+        capacityKWp: 3,
+        siteAddress: '',
+        district: 'Thiruvallur',
+        teamId: 'TEAM-101',
+        inverterModel: 'On-Grid String Inverter (Battery-Free)',
+        panelCount: 6,
+        createCustomerAccount: true
+      });
+      setSuccessMsg('Solar installation project created successfully and linked to customer user account!');
       setTimeout(() => setSuccessMsg(''), 4000);
       fetchData();
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Failed to create project');
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to create project';
+      setModalError(msg);
+      setErrorMsg(msg);
       setTimeout(() => setErrorMsg(''), 4000);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteProject = async (proj) => {
+    if (!window.confirm(`Are you sure you want to delete solar project ${proj.projectId || proj.customerName}?`)) {
+      return;
+    }
+    try {
+      await api.delete(`/workforce/projects/${proj._id || proj.id || proj.projectId}`);
+      setSuccessMsg(`Project ${proj.projectId || ''} deleted`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+      fetchData();
+    } catch (err) {
+      setErrorMsg('Failed to delete project');
+      setTimeout(() => setErrorMsg(''), 3000);
     }
   };
 
@@ -125,7 +164,7 @@ export default function SolarProjectManager() {
     }
   };
 
-  const totalCapacity = projects.reduce((sum, p) => sum + (Number(p.capacityKWp) || 3), 0);
+  const totalCapacity = projects.reduce((sum, p) => sum + (Number(p.capacityKWp || p.capacityKw) || 3), 0);
   const completedProjects = projects.filter(p => p.status === 'Completed').length;
   const ongoingProjects = projects.filter(p => p.status !== 'Completed').length;
 
@@ -166,7 +205,7 @@ export default function SolarProjectManager() {
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => { setModalError(''); setShowCreateModal(true); }}
             className="px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-slate-950 font-black rounded-xl text-xs shadow-lg flex items-center space-x-2 transition-all active:scale-95"
           >
             <PlusCircle className="w-4 h-4" />
@@ -219,16 +258,35 @@ export default function SolarProjectManager() {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-300 font-mono">
-                    {proj.projectId || 'PRJ-1001'}
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-300 font-mono">
+                      {proj.projectId || 'PRJ-1001'}
+                    </span>
+                    {proj.customerId && (
+                      <span className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 font-mono">
+                        {proj.customerId}
+                      </span>
+                    )}
+                  </div>
                   <h3 className="font-bold text-slate-900 dark:text-white text-base mt-1.5">{proj.customerName}</h3>
-                  <p className="text-xs text-slate-500">{proj.siteAddress || 'Thiruvallur, Tamil Nadu'}</p>
+                  <p className="text-xs text-slate-500">{proj.siteAddress || proj.address || 'Thiruvallur, Tamil Nadu'}</p>
+                  {proj.customerMobile && (
+                    <p className="text-[11px] font-mono text-slate-400 mt-0.5">📞 {proj.customerMobile}</p>
+                  )}
                 </div>
-                <div className="text-right">
-                  <span className="text-sm font-black text-teal-600 dark:text-teal-400">
-                    {proj.capacityKWp || 3} kWp On-Grid
-                  </span>
+                <div className="text-right flex flex-col items-end">
+                  <div className="flex items-center space-x-1">
+                    <span className="text-sm font-black text-teal-600 dark:text-teal-400">
+                      {proj.capacityKWp || proj.capacityKw || 3} kWp On-Grid
+                    </span>
+                    <button
+                      onClick={() => handleDeleteProject(proj)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors ml-1"
+                      title="Delete Project"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                   <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{pct}% Milestones</p>
                 </div>
               </div>
@@ -246,13 +304,13 @@ export default function SolarProjectManager() {
               {/* Milestones Checklist Snippet */}
               <div className="space-y-1.5 pt-1">
                 {milestones.map((m, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-slate-50 dark:border-slate-850">
+                  <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-slate-50 dark:border-slate-800">
                     <div className="flex items-center space-x-2 truncate pr-2">
                       <span className={`w-2 h-2 rounded-full shrink-0 ${
                         m.status === 'Completed' ? 'bg-emerald-500' : m.status === 'In Progress' ? 'bg-amber-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-700'
                       }`} />
                       <span className={`truncate ${m.status === 'Completed' ? 'text-slate-800 dark:text-slate-200 font-semibold' : 'text-slate-500'}`}>
-                        {idx + 1}. {m.title}
+                        {idx + 1}. {m.title || m.name}
                       </span>
                     </div>
 
@@ -289,7 +347,7 @@ export default function SolarProjectManager() {
       {/* CREATE PROJECT MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
               <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center space-x-2">
                 <Sun className="w-5 h-5 text-yellow-500" />
@@ -301,6 +359,60 @@ export default function SolarProjectManager() {
             </div>
 
             <form onSubmit={handleCreateProject} className="space-y-3.5 text-xs">
+              {modalError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center space-x-2">
+                  <ShieldAlert className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{modalError}</span>
+                </div>
+              )}
+
+              {/* Customer Selector / Creator */}
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Customer / User Account *
+                </label>
+                <select
+                  value={newProjectForm.customerId || ''}
+                  onChange={(e) => {
+                    const cid = e.target.value;
+                    if (!cid) {
+                      setNewProjectForm({
+                        ...newProjectForm,
+                        customerId: '',
+                        customerName: '',
+                        customerMobile: '',
+                        siteAddress: ''
+                      });
+                    } else {
+                      const c = customers.find(item => item.customerId === cid);
+                      if (c) {
+                        setNewProjectForm({
+                          ...newProjectForm,
+                          customerId: c.customerId,
+                          customerName: c.fullName || '',
+                          customerMobile: c.mobileNumber || '',
+                          siteAddress: c.address || `${c.district || 'Thiruvallur'}, Tamil Nadu`,
+                          capacityKWp: Number(c.solarCapacity) || 3
+                        });
+                      }
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-medium"
+                >
+                  <option value="">➕ Register New Customer & User Login</option>
+                  {customers.map((c) => (
+                    <option key={c.customerId} value={c.customerId}>
+                      {c.fullName} ({c.customerId}) - {c.mobileNumber}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                  {newProjectForm.customerId
+                    ? `Linked to existing customer account ${newProjectForm.customerId}.`
+                    : 'A customer account and Customer Portal user login will be automatically created with password = Mobile Number.'}
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Customer Name *</label>
@@ -320,7 +432,7 @@ export default function SolarProjectManager() {
                     required
                     value={newProjectForm.customerMobile}
                     onChange={(e) => setNewProjectForm({ ...newProjectForm, customerMobile: e.target.value })}
-                    placeholder="9840123456"
+                    placeholder="Enter 10-digit mobile number"
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl"
                   />
                 </div>
@@ -381,16 +493,16 @@ export default function SolarProjectManager() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-xl font-bold bg-yellow-500 hover:bg-yellow-600 text-slate-950 shadow-md"
+                  className="px-5 py-2 rounded-xl font-bold bg-yellow-500 hover:bg-yellow-600 text-slate-950 shadow-md transition-all active:scale-95"
                 >
-                  {saving ? 'Creating...' : 'Initialize Project'}
+                  {saving ? 'Creating...' : 'Initialize Project & Create User'}
                 </button>
               </div>
             </form>

@@ -1266,44 +1266,184 @@ router.get('/projects', authenticateToken, authorizeRole(['admin', 'manager', 'w
 // POST /api/workforce/projects (Owner or Manager)
 router.post('/projects', authenticateToken, authorizeRole(['admin', 'manager']), async (req, res) => {
   try {
-    const { customerId, customerName, capacityKw, address, managerId, assignedWorkers, expectedCompletionDate } = req.body;
+    const {
+      customerId,
+      customerName,
+      customerMobile,
+      capacityKw,
+      capacityKWp,
+      address,
+      siteAddress,
+      district,
+      teamId,
+      teamName,
+      inverterModel,
+      panelCount,
+      managerId,
+      assignedWorkers,
+      expectedCompletionDate,
+      milestones: customMilestones,
+      createCustomerAccount = true
+    } = req.body;
 
-    if (!customerName || !capacityKw) {
-      return res.status(400).json({ message: 'Customer name and system capacity (kW) are required' });
+    const finalCustName = String(customerName || '').trim();
+    const finalCapacity = Number(capacityKWp || capacityKw || 3);
+    const finalAddress = String(siteAddress || address || '').trim() || 'Tamil Nadu';
+    const finalMobile = String(customerMobile || '').trim().replace(/[\s-]/g, '');
+    const finalDistrict = String(district || 'Thiruvallur').trim();
+
+    if (!finalCustName) {
+      return res.status(400).json({ message: 'Customer name is required' });
+    }
+    if (!finalCapacity || isNaN(finalCapacity) || finalCapacity <= 0) {
+      return res.status(400).json({ message: 'A valid system capacity (kW) is required' });
     }
 
-    const count = (await db.find('solar_projects')).length + 1001;
-    const projectId = `PRJ-${count}`;
+    // Auto-generate collision-free Project ID
+    const allProjects = await db.find('solar_projects');
+    const numbers = allProjects
+      .map(p => {
+        const m = String(p.projectId || '').match(/PRJ-(\d+)/i);
+        return m ? parseInt(m[1], 10) : 0;
+      })
+      .filter(n => !isNaN(n) && n > 0);
+    const nextNum = (numbers.length > 0 ? Math.max(...numbers) : 1000) + 1;
+    const projectId = `PRJ-${nextNum}`;
+
+    // Link or Create Customer
+    const allCustomers = await db.find('customers');
+    let targetCustomerId = customerId ? String(customerId).trim() : '';
+
+    if (!targetCustomerId && finalMobile) {
+      const cleanMob = finalMobile.replace(/^\+?91/, '').replace(/^0+/, '');
+      const existingCust = allCustomers.find(c => {
+        const cMob = String(c.mobileNumber || '').replace(/^\+?91/, '').replace(/^0+/, '').replace(/[\s-]/g, '');
+        return cMob && cMob === cleanMob;
+      });
+      if (existingCust) {
+        targetCustomerId = existingCust.customerId;
+      }
+    }
+
+    // If still no customerId, generate new SOL-XXXX and create customer record & login user
+    if (!targetCustomerId) {
+      const custNumbers = allCustomers
+        .map(c => {
+          const m = String(c.customerId || '').match(/SOL-(\d+)/i);
+          return m ? parseInt(m[1], 10) : 0;
+        })
+        .filter(n => !isNaN(n) && n > 0);
+      const nextCustNum = (custNumbers.length > 0 ? Math.max(...custNumbers) : 1000) + 1;
+      targetCustomerId = `SOL-${nextCustNum}`;
+
+      // Create Customer in customers collection
+      const standardCost = finalCapacity * 65000;
+      await db.create('customers', {
+        customerId: targetCustomerId,
+        fullName: finalCustName,
+        mobileNumber: finalMobile || '9840123456',
+        address: finalAddress,
+        district: finalDistrict,
+        state: 'Tamil Nadu',
+        solarCapacity: finalCapacity,
+        loanAmount: standardCost,
+        downPayment: Math.round(standardCost * 0.15),
+        interestRate: 8.5,
+        emiDuration: 36,
+        monthlyEmi: Math.round(((standardCost * 0.85) * 1.085) / 36),
+        loanStatus: 'Active',
+        paymentStatus: 'Pending',
+        emiSchedule: [],
+        createdAt: new Date().toISOString()
+      });
+
+      // Create Customer User Login in users collection
+      if (createCustomerAccount) {
+        const allUsers = await db.find('users');
+        const existingUser = allUsers.find(u => u.customerId === targetCustomerId || (finalMobile && u.username === finalMobile));
+        if (!existingUser) {
+          const salt = await bcrypt.genSalt(10);
+          const rawPassword = finalMobile || 'solar123';
+          const hashedPassword = await bcrypt.hash(rawPassword, salt);
+          await db.create('users', {
+            username: finalCustName,
+            customerId: targetCustomerId,
+            password: hashedPassword,
+            role: 'customer',
+            createdAt: new Date().toISOString()
+          });
+        }
+      }
+    }
 
     const defaultMilestones = [
-      { id: 1, name: 'Site Survey & Roof Strength Assessment', status: 'Completed', completedDate: new Date().toISOString().split('T')[0] },
-      { id: 2, name: 'PM Surya Ghar Portal Sanction Approval', status: 'In Progress' },
-      { id: 3, name: 'Tier-1 Mono PERC Solar Panels Installation', status: 'Pending' },
-      { id: 4, name: 'Grid-Tied String Inverter & SPD Grounding', status: 'Pending' },
-      { id: 5, name: 'TANGEDCO Bi-directional Net-Meter Energization', status: 'Pending' },
-      { id: 6, name: 'Customer Handover & ₹78k Subsidy Inspection', status: 'Pending' }
+      { milestoneId: 'M-1', id: 1, title: 'Site Feasibility & Roof Structural Audit', name: 'Site Feasibility & Roof Structural Audit', status: 'In Progress', updatedAt: new Date().toISOString() },
+      { milestoneId: 'M-2', id: 2, title: 'TNEB Net-Meter Application & Sanction', name: 'TNEB Net-Meter Application & Sanction', status: 'Pending', updatedAt: new Date().toISOString() },
+      { milestoneId: 'M-3', id: 3, title: 'Solar Module & On-Grid Inverter Delivery', name: 'Solar Module & On-Grid Inverter Delivery', status: 'Pending', updatedAt: new Date().toISOString() },
+      { milestoneId: 'M-4', id: 4, title: 'Rooftop Mounting Structure & Panel Installation', name: 'Rooftop Mounting Structure & Panel Installation', status: 'Pending', updatedAt: new Date().toISOString() },
+      { milestoneId: 'M-5', id: 5, title: 'TNEB Bi-Directional Net-Meter Inspection & Charging', name: 'TNEB Bi-Directional Net-Meter Inspection & Charging', status: 'Pending', updatedAt: new Date().toISOString() },
+      { milestoneId: 'M-6', id: 6, title: 'PM Surya Ghar Subsidy Documentation & Handover', name: 'PM Surya Ghar Subsidy Documentation & Handover', status: 'Pending', updatedAt: new Date().toISOString() }
     ];
+
+    let finalMilestones = defaultMilestones;
+    if (Array.isArray(customMilestones) && customMilestones.length > 0) {
+      finalMilestones = customMilestones.map((m, idx) => ({
+        milestoneId: m.milestoneId || `M-${idx + 1}`,
+        id: m.id || idx + 1,
+        title: m.title || m.name || `Milestone ${idx + 1}`,
+        name: m.title || m.name || `Milestone ${idx + 1}`,
+        status: m.status || (idx === 0 ? 'In Progress' : 'Pending'),
+        updatedAt: m.updatedAt || new Date().toISOString()
+      }));
+    }
 
     const newProject = await db.create('solar_projects', {
       projectId,
-      customerId: customerId || `SOL-${count}`,
-      customerName: String(customerName).trim(),
-      capacityKw: Number(capacityKw),
-      address: address || 'Tamil Nadu',
+      customerId: targetCustomerId,
+      customerName: finalCustName,
+      customerMobile: finalMobile,
+      capacityKw: finalCapacity,
+      capacityKWp: finalCapacity,
+      address: finalAddress,
+      siteAddress: finalAddress,
+      district: finalDistrict,
+      teamId: teamId || 'TEAM-101',
+      teamName: teamName || 'Solar Installation Squad',
+      inverterModel: inverterModel || 'On-Grid String Inverter (Battery-Free)',
+      panelCount: Number(panelCount) || (finalCapacity * 2),
       managerId: managerId || req.user.employeeId || 'MGR-1001',
-      assignedWorkers: Array.isArray(assignedWorkers) ? assignedWorkers : ['EMP-1001'],
+      assignedWorkers: Array.isArray(assignedWorkers) && assignedWorkers.length > 0 ? assignedWorkers : ['EMP-1001'],
       startDate: new Date().toISOString().split('T')[0],
       expectedCompletionDate: expectedCompletionDate || new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0],
       status: 'Ongoing',
       completionPct: 15,
-      milestones: defaultMilestones,
-      notes: 'Battery-free on-grid configuration with 1:1 net metering.'
+      milestones: finalMilestones,
+      notes: 'Battery-free on-grid configuration with 1:1 net metering.',
+      createdAt: new Date().toISOString()
     });
 
-    res.status(201).json(newProject);
+    res.status(201).json({
+      success: true,
+      message: 'Solar installation project and customer user account created successfully',
+      project: newProject,
+      customerId: targetCustomerId
+    });
   } catch (err) {
     console.error('Create project error:', err);
-    res.status(500).json({ message: 'Failed to create solar project' });
+    res.status(500).json({ message: 'Failed to create solar project: ' + err.message });
+  }
+});
+
+// DELETE /api/workforce/projects/:id (Admin only)
+router.delete('/projects/:id', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const proj = await db.findOne('solar_projects', { _id: req.params.id }) || await db.findOne('solar_projects', { projectId: req.params.id });
+    if (!proj) return res.status(404).json({ message: 'Project not found' });
+
+    await db.deleteOne('solar_projects', { _id: proj._id });
+    res.json({ success: true, message: `Project ${proj.projectId} deleted successfully` });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete solar project' });
   }
 });
 
