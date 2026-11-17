@@ -8,7 +8,7 @@ import {
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
   Search, Languages, Mic, CreditCard, Trash2, Settings, KanbanSquare,
   Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench, Sparkles, KeyRound,
-  PlusCircle, MapPin, Eye
+  PlusCircle, MapPin, Eye, Headphones
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -217,11 +217,13 @@ export default function Layout({ children }) {
     { label: t.aiVisionHub || 'AI Recognition Hub', path: '/admin/ai-vision', icon: Eye },
     { label: 'AI Vision Analytics', path: '/admin/ai-dashboard', icon: Sparkles },
     { label: 'Security & Passwords', path: '/admin/security-passwords', icon: KeyRound },
+    { label: 'Customer Live Support', path: '/admin#support-monitoring', icon: Headphones },
     { label: t.settings || 'Settings', path: '/admin/settings', icon: Settings }
   ];
 
   const managerLinks = [
     { label: 'Team Dashboard', path: '/manager', icon: LayoutDashboard },
+    { label: 'Customer Live Support', path: '/manager/support', icon: Headphones },
     { label: t.aiVisionHub || 'AI Recognition Hub', path: '/admin/ai-vision', icon: Eye }
   ];
 

@@ -1,9 +1,15 @@
 import cron from 'node-cron';
 import fs from 'fs/promises';
+import http from 'http';
 import app, { connectDB, seedAdmin, uploadsPath } from './app.js';
 import { runDailyInterestAndPenaltyCheck } from './utils/scheduler.js';
+import { initSocketIO } from './utils/socketManager.js';
 
 const PORT = process.env.PORT || 5000;
+
+// Create HTTP Server & initialize Socket.IO
+const server = http.createServer(app);
+initSocketIO(server);
 
 // Scheduler — Runs at 9:00 AM IST (03:30 UTC) every day
 // Sends due-date emails and updates loan statuses/penalties
@@ -28,8 +34,8 @@ cron.schedule('0 0 * * *', async () => {
 
 // Start Server — listen on port immediately for Render / local dev, then connect to database
 async function startServer() {
-  app.listen(PORT, '0.0.0.0', async () => {
-    console.log(`[Server] MRS SOLAR backend listening on port ${PORT}`);
+  server.listen(PORT, '0.0.0.0', async () => {
+    console.log(`[Server] MRS SOLAR backend & Socket.IO listening on port ${PORT}`);
     
     // Connect to database (MySQL / Mongo)
     await connectDB();

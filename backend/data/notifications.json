@@ -1,1 +1,74 @@
-[]
+[
+  {
+    "_id": "NOT-928649-379",
+    "createdAt": "2026-11-17T02:02:08.649Z",
+    "updatedAt": "2026-11-17T02:02:08.649Z",
+    "customerId": "CUS-109136-819",
+    "role": "customer",
+    "title": "Overdue EMI Alert",
+    "message": "Your EMI #1 of ₹4,727.98 is late by 5 days. Late penalty: ₹236.4.",
+    "type": "Customer_Overdue_5d",
+    "emiNumber": 1,
+    "read": false
+  },
+  {
+    "_id": "NOT-928956-696",
+    "createdAt": "2026-11-17T02:02:08.956Z",
+    "updatedAt": "2026-11-17T02:02:08.956Z",
+    "role": "admin",
+    "customerId": "CUS-109136-819",
+    "title": "Customer Overdue Alert",
+    "message": "Customer Santhosh Kumar r (ID: SOL-1002) is overdue on EMI #1 by 5 days. Late fee: ₹236.4.",
+    "type": "Owner_Overdue_5d",
+    "emiNumber": 1,
+    "read": false
+  },
+  {
+    "_id": "NOT-929188-731",
+    "createdAt": "2026-11-17T02:02:09.188Z",
+    "updatedAt": "2026-11-17T02:02:09.188Z",
+    "customerId": "CUS-447057-647",
+    "role": "customer",
+    "title": "Overdue EMI Alert",
+    "message": "Your EMI #1 of ₹1,418.39 is late by 18 days. Late penalty: ₹255.31.",
+    "type": "Customer_Overdue_18d",
+    "emiNumber": 1,
+    "read": false
+  },
+  {
+    "_id": "NOT-929356-893",
+    "createdAt": "2026-11-17T02:02:09.356Z",
+    "updatedAt": "2026-11-17T02:02:09.356Z",
+    "role": "admin",
+    "customerId": "CUS-447057-647",
+    "title": "Customer Overdue Alert",
+    "message": "Customer Vishal (ID: SOL-1004) is overdue on EMI #1 by 18 days. Late fee: ₹255.31.",
+    "type": "Owner_Overdue_18d",
+    "emiNumber": 1,
+    "read": false
+  },
+  {
+    "_id": "NOT-929571-547",
+    "createdAt": "2026-11-17T02:02:09.571Z",
+    "updatedAt": "2026-11-17T02:02:09.571Z",
+    "customerId": "CUS-718363-656",
+    "role": "customer",
+    "title": "Overdue EMI Alert",
+    "message": "Your EMI #1 of ₹18.91 is late by 13 days. Late penalty: ₹0.",
+    "type": "Customer_Overdue_13d",
+    "emiNumber": 1,
+    "read": false
+  },
+  {
+    "_id": "NOT-929753-909",
+    "createdAt": "2026-11-17T02:02:09.753Z",
+    "updatedAt": "2026-11-17T02:02:09.753Z",
+    "role": "admin",
+    "customerId": "CUS-718363-656",
+    "title": "Customer Overdue Alert",
+    "message": "Customer Sanju (ID: SOL-1003) is overdue on EMI #1 by 13 days. Late fee: ₹0.",
+    "type": "Owner_Overdue_13d",
+    "emiNumber": 1,
+    "read": false
+  }
+]

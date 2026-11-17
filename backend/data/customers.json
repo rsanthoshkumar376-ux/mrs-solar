@@ -1096,5 +1096,25 @@
     ],
     "latePaymentCharges": 0,
     "totalOutstandingAmount": 56735.759999999995
+  },
+  {
+    "_id": "CUS-958497-735",
+    "createdAt": "2026-11-17T02:02:38.497Z",
+    "updatedAt": "2026-11-17T02:02:38.497Z",
+    "customerId": "SOL-1006",
+    "fullName": "Anand Natarajan",
+    "mobileNumber": "9840123456",
+    "address": "Tamil Nadu",
+    "district": "Thiruvallur",
+    "state": "Tamil Nadu",
+    "solarCapacity": 3,
+    "loanAmount": 195000,
+    "downPayment": 29250,
+    "interestRate": 8.5,
+    "emiDuration": 36,
+    "monthlyEmi": 4996,
+    "loanStatus": "Active",
+    "paymentStatus": "Pending",
+    "emiSchedule": []
   }
 ]

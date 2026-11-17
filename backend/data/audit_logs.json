@@ -8,5 +8,78 @@
     "target": "Ganesh Ram (EMP-1009)",
     "details": "Created new worker in department Rooftop Solar Installation",
     "timestamp": "2026-11-16T16:32:55.661Z"
+  },
+  {
+    "_id": "AUD-929996-121",
+    "createdAt": "2026-11-17T02:02:09.996Z",
+    "updatedAt": "2026-11-17T02:02:09.996Z",
+    "username": "MRSassociates",
+    "action": "TRIGGER_SCHEDULER",
+    "target": "SYSTEM",
+    "details": {
+      "success": true,
+      "alreadyRun": false,
+      "auditDate": "2026-11-17",
+      "runId": "AUD-928112-549",
+      "checkedCount": 5,
+      "notificationsCreated": 6,
+      "durationMs": 1723,
+      "triggeredBy": "manual-admin:MRSassociates"
+    },
+    "timestamp": "2026-11-17T02:02:09.996Z"
+  },
+  {
+    "_id": "AUD-944891-619",
+    "createdAt": "2026-11-17T02:02:24.891Z",
+    "updatedAt": "2026-11-17T02:02:24.891Z",
+    "actor": "MRSassociates",
+    "action": "CREATE_EMPLOYEE",
+    "target": "Ramesh Kumar (EMP-1010)",
+    "details": "Created new worker in department Sales & Customer Outreach",
+    "timestamp": "2026-11-17T02:02:24.891Z"
+  },
+  {
+    "_id": "AUD-158735-277",
+    "createdAt": "2026-11-17T09:02:38.735Z",
+    "updatedAt": "2026-11-17T09:02:38.735Z",
+    "action": "CUSTOMER_MANAGER_ESCALATION",
+    "category": "SUPPORT",
+    "details": "Ticket #MRS-2026-001 created for deepi (SOL-1001): I want to talk to a manager about my solar generation drop and TNEB net meter bill discrepancy.",
+    "performedBy": "deepi",
+    "customerId": "SOL-1001",
+    "timestamp": "2026-11-17T09:02:38.734Z"
+  },
+  {
+    "_id": "AUD-219922-777",
+    "createdAt": "2026-11-17T09:20:19.922Z",
+    "updatedAt": "2026-11-17T09:20:19.922Z",
+    "action": "CUSTOMER_MANAGER_ESCALATION",
+    "category": "SUPPORT",
+    "details": "Ticket #MRS-2026-002 created for Customer (CUS-219511): Customer requested manager escalation for personal assistance.",
+    "performedBy": "Customer",
+    "customerId": "CUS-219511",
+    "timestamp": "2026-11-17T09:20:19.922Z"
+  },
+  {
+    "_id": "AUD-310331-258",
+    "createdAt": "2026-11-17T09:21:50.331Z",
+    "updatedAt": "2026-11-17T09:21:50.331Z",
+    "action": "CUSTOMER_MANAGER_ESCALATION",
+    "category": "SUPPORT",
+    "details": "Ticket #MRS-2026-003 created for MRSassociates (SOL-DEMO-02): How does battery-free solar export to TNEB net-meter?",
+    "performedBy": "MRSassociates",
+    "customerId": "SOL-DEMO-02",
+    "timestamp": "2026-11-17T09:21:50.331Z"
+  },
+  {
+    "_id": "AUD-465545-559",
+    "createdAt": "2026-11-17T09:24:25.545Z",
+    "updatedAt": "2026-11-17T09:24:25.545Z",
+    "action": "CUSTOMER_MANAGER_ESCALATION",
+    "category": "SUPPORT",
+    "details": "Ticket #MRS-2026-004 created for MRSassociates (SOL-TEST-99): When will my rooftop net-meter be commissioned by TNEB?",
+    "performedBy": "MRSassociates",
+    "customerId": "SOL-TEST-99",
+    "timestamp": "2026-11-17T09:24:25.545Z"
   }
 ]
