@@ -9,7 +9,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'mrs_solari_secret_key_13579';
 
 // Login route for both Customers and Owners/Admins
 router.post('/login', async (req, res) => {
-  const { usernameOrCustomerId, password } = req.body;
+  const usernameOrCustomerId = req.body.usernameOrCustomerId || req.body.username || req.body.customerId;
+  const password = req.body.password;
 
   if (!usernameOrCustomerId || !password) {
     return res.status(400).json({ message: 'Username/Customer ID and password are required' });
