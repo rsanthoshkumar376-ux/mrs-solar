@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "_id": "AUD-775661-484",
+    "createdAt": "2026-11-16T16:32:55.661Z",
+    "updatedAt": "2026-11-16T16:32:55.661Z",
+    "actor": "MRSassociates",
+    "action": "CREATE_EMPLOYEE",
+    "target": "Ganesh Ram (EMP-1009)",
+    "details": "Created new worker in department Rooftop Solar Installation",
+    "timestamp": "2026-11-16T16:32:55.661Z"
+  }
+]
