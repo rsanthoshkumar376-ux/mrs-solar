@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import path from 'path';
 import fs from 'fs/promises';
 import syncFs from 'fs';
@@ -31,6 +32,9 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config();
 
 export const app = express();
+
+// High-speed response compression (Gzip/Brotli)
+app.use(compression());
 
 // Enable CORS
 app.use(cors({

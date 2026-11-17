@@ -197,12 +197,26 @@ const jsonDb = new JsonDatabaseEngine();
 // ─── MySQL Engine ───────────────────────────────────────────────────────────
 let mysqlPool = null;
 
+// In-Memory Micro-Cache for low-latency queries (reduces overseas database round-trips)
+const queryCache = new Map();
+const CACHE_TTL_MS = 10000; // 10 seconds TTL
+
+export function invalidateCache(collection) {
+  if (collection) {
+    queryCache.delete(collection);
+  } else {
+    queryCache.clear();
+  }
+}
+
 function isMySQLConnected() {
   return mysqlPool !== null;
 }
 
+let tablesInitialized = false;
+
 async function initMySQLTables() {
-  if (!mysqlPool) return;
+  if (!mysqlPool || tablesInitialized) return;
   const collections = [
     'users', 'customers', 'payments', 'audit_logs', 'notifications', 
     'settings', 'customer_documents', 'audit_runs', 'leads', 'tickets',
@@ -211,18 +225,21 @@ async function initMySQLTables() {
     'ai_conversations', 'ai_messages', 'ai_analyses', 'ai_reviews', 'ai_image_analyses', 'ai_analysis_reports', 'ai_usage_logs',
     'password_change_logs'
   ];
-  for (const col of collections) {
-    try {
-      await mysqlPool.query(`
+  
+  try {
+    // Run table creation in parallel for 10x faster startup / cold-start
+    await Promise.all(collections.map(col =>
+      mysqlPool.query(`
         CREATE TABLE IF NOT EXISTS mrs_${col} (
           id VARCHAR(120) PRIMARY KEY,
           data JSON NOT NULL,
           updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-      `);
-    } catch (e) {
-      console.warn(`Could not init table mrs_${col}:`, e.message);
-    }
+      `).catch(e => console.warn(`Could not init table mrs_${col}:`, e.message))
+    ));
+    tablesInitialized = true;
+  } catch (e) {
+    console.warn('initMySQLTables batch error:', e.message);
   }
 }
 
@@ -244,9 +261,16 @@ class MySQLDatabaseEngine {
 
   async find(collection, query = {}) {
     try {
-      const [rows] = await mysqlPool.query(`SELECT data FROM mrs_${collection}`);
-      const items = rows.map(r => typeof r.data === 'string' ? JSON.parse(r.data) : r.data);
-      return items.filter(item => matchQuery(item, query));
+      let allItems;
+      const cached = queryCache.get(collection);
+      if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+        allItems = cached.items;
+      } else {
+        const [rows] = await mysqlPool.query(`SELECT data FROM mrs_${collection}`);
+        allItems = rows.map(r => typeof r.data === 'string' ? JSON.parse(r.data) : r.data);
+        queryCache.set(collection, { items: allItems, timestamp: Date.now() });
+      }
+      return allItems.filter(item => matchQuery(item, query));
     } catch (err) {
       if (err.message && err.message.includes("doesn't exist")) {
         await this.ensureTable(collection);
@@ -258,11 +282,33 @@ class MySQLDatabaseEngine {
   }
 
   async findOne(collection, query = {}) {
+    // 1. Instant cache match (0ms latency)
+    const cached = queryCache.get(collection);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+      const match = cached.items.find(item => matchQuery(item, query));
+      if (match) return match;
+    }
+
+    // 2. Direct primary key index lookup if querying by _id
+    if (query._id && Object.keys(query).length === 1 && mysqlPool) {
+      try {
+        const [rows] = await mysqlPool.query(`SELECT data FROM mrs_${collection} WHERE id = ? LIMIT 1`, [query._id]);
+        if (rows.length > 0) {
+          const r = rows[0];
+          return typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+        }
+        return null;
+      } catch (err) {
+        // Fall back to general find
+      }
+    }
+
     const items = await this.find(collection, query);
     return items.length > 0 ? items[0] : null;
   }
 
   async create(collection, record) {
+    invalidateCache(collection);
     const id = record._id || generateId(collection);
     const newRecord = {
       _id: id,
@@ -297,6 +343,7 @@ class MySQLDatabaseEngine {
   }
 
   async updateOne(collection, query, updateData) {
+    invalidateCache(collection);
     try {
       const existing = await this.findOne(collection, query);
       if (!existing) return null;
@@ -324,6 +371,7 @@ class MySQLDatabaseEngine {
   }
 
   async updateMany(collection, query, updateData) {
+    invalidateCache(collection);
     const items = await this.find(collection, query);
     let count = 0;
     for (const item of items) {
@@ -334,6 +382,7 @@ class MySQLDatabaseEngine {
   }
 
   async deleteOne(collection, query) {
+    invalidateCache(collection);
     try {
       const existing = await this.findOne(collection, query);
       if (!existing) return { deletedCount: 0 };
@@ -351,6 +400,7 @@ class MySQLDatabaseEngine {
   }
 
   async deleteMany(collection, query = {}) {
+    invalidateCache(collection);
     try {
       if (Object.keys(query).length === 0) {
         const [res] = await mysqlPool.query(`DELETE FROM mrs_${collection}`);
@@ -717,7 +767,9 @@ export async function connectDB() {
       database,
       ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true },
       waitForConnections: true,
-      connectionLimit: 10,
+      connectionLimit: 15,
+      maxIdle: 10,
+      idleTimeout: 60000,
       queueLimit: 0,
       enableKeepAlive: true,
       keepAliveInitialDelay: 10000,

@@ -6,7 +6,11 @@ import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 const router = express.Router();
 
 // ─── INITIAL SEEDING HELPER ─────────────────────────────────────────────────
+let workforceDefaultsSeeded = false;
+
 export async function seedWorkforceDefaults() {
+  if (workforceDefaultsSeeded) return;
+  workforceDefaultsSeeded = true;
   try {
     // 1. Departments
     const existingDeps = await db.find('departments');
