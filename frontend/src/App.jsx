@@ -43,6 +43,10 @@ const EmiHistory = React.lazy(() => import('./pages/customer/EmiHistory.jsx'));
 // Referral & New Customer Standalone Portal
 const ReferralPortal = React.lazy(() => import('./pages/ReferralPortal.jsx'));
 
+// Public Account Activation & Forgot Password
+const ActivateAccount = React.lazy(() => import('./pages/ActivateAccount.jsx'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword.jsx'));
+
 function PageFallback() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
@@ -60,6 +64,9 @@ export default function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/activate" element={<ActivateAccount />} />
+            <Route path="/activate-account" element={<ActivateAccount />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/referral" element={<ReferralPortal />} />
             <Route path="/refer" element={<ReferralPortal />} />
             <Route path="/join" element={<ReferralPortal />} />

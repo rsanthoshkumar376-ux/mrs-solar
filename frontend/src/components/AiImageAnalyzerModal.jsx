@@ -74,13 +74,14 @@ export default function AiImageAnalyzerModal({ isOpen, onClose, initialType = 'E
       const formData = new FormData();
       if (selectedFile) {
         formData.append(currentTabInfo.field, selectedFile);
-      } else {
+      }
+      if (imagePreview) {
         formData.append('imageBase64', imagePreview);
       }
       formData.append('analysisType', activeTab);
 
       const res = await api.post(currentTabInfo.endpoint, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': undefined }
       });
 
       setResult(res.data);

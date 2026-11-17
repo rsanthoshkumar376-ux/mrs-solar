@@ -8,7 +8,7 @@ import {
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
   Search, Languages, Mic, CreditCard, Trash2, Settings, KanbanSquare,
   Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench, Sparkles, KeyRound,
-  PlusCircle, MapPin, Eye, Headphones
+  PlusCircle, MapPin, Eye, Headphones, UserPlus, UserCheck
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -222,9 +222,17 @@ export default function Layout({ children }) {
   ];
 
   const managerLinks = [
-    { label: t.teamDashboard || 'Team Dashboard', path: '/manager', icon: LayoutDashboard },
-    { label: t.customerLiveSupport || 'Customer Live Support', path: '/manager/support', icon: Headphones },
-    { label: t.aiVisionHub || 'AI Recognition Hub', path: '/admin/ai-vision', icon: Eye }
+    { label: isTa ? 'மேலாளர் முகப்பு' : 'Manager Dashboard', path: '/manager', icon: LayoutDashboard },
+    { label: isTa ? 'புதிய வாடிக்கையாளர்' : 'Add Customer', path: '/manager?tab=add-customer', icon: UserPlus },
+    { label: isTa ? 'வாடிக்கையாளர் மேலாண்மை' : 'Customer Management', path: '/manager?tab=customers', icon: Users },
+    { label: isTa ? 'புதிய பணியாளர்' : 'Add Worker', path: '/manager?tab=add-worker', icon: UserCheck },
+    { label: isTa ? 'பணியாளர் மேலாண்மை' : 'Worker Management', path: '/manager?tab=workers', icon: Briefcase },
+    { label: isTa ? 'பணிகள் ஒதுக்கீடு' : 'Task Management', path: '/manager?tab=tasks', icon: CheckSquare },
+    { label: isTa ? 'கணக்குகள் & பயனர் ஐடி' : 'Account Management', path: '/manager?tab=accounts', icon: KeyRound },
+    { label: isTa ? 'வாடிக்கையாளர் நேரடி உதவி' : 'Customer Live Support', path: '/manager?tab=support', icon: Headphones },
+    { label: isTa ? 'மின்னஞ்சல் பதிவுகள்' : 'Email Notifications', path: '/manager?tab=emails', icon: Mail },
+    { label: isTa ? 'அறிக்கைகள்' : 'Reports', path: '/manager?tab=reports', icon: BarChart3 },
+    { label: isTa ? 'செயல்பாட்டு பதிவுகள்' : 'Activity Logs', path: '/manager?tab=activity', icon: History }
   ];
 
   const workerLinks = [
@@ -310,7 +318,11 @@ export default function Layout({ children }) {
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {links.map((link) => {
             const Icon = link.icon;
-            const isActive = location.pathname === link.path || (link.path === '/admin/settings' && location.pathname.startsWith('/admin/settings'));
+            const currentFull = location.pathname + location.search;
+            const isActive = link.path === currentFull || 
+              location.pathname === link.path || 
+              (link.path === '/admin/settings' && location.pathname.startsWith('/admin/settings')) ||
+              (link.path === '/manager' && (currentFull === '/manager' || currentFull === '/manager?tab=dashboard'));
             return (
               <Link
                 key={link.path}

@@ -224,7 +224,8 @@ async function initMySQLTables() {
     'attendance', 'leave_requests', 'solar_projects',
     'ai_conversations', 'ai_messages', 'ai_analyses', 'ai_reviews', 'ai_image_analyses', 'ai_analysis_reports', 'ai_usage_logs',
     'password_change_logs',
-    'support_tickets', 'support_messages', 'support_assignments', 'support_notifications', 'support_status_history'
+    'support_tickets', 'support_messages', 'support_assignments', 'support_notifications', 'support_status_history',
+    'account_invitations', 'customer_assignments', 'account_activity_logs', 'password_reset_tokens', 'email_notifications'
   ];
   
   try {

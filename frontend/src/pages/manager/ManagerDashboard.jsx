@@ -30,32 +30,30 @@ export default function ManagerDashboard() {
   const t = translations[lang] || translations.en;
   const isTa = lang === 'ta';
 
-  // Synchronize active tab with URL path
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Synchronize active tab with URL path or query parameter
   const getTabFromPath = () => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) return tabParam;
     if (location.pathname.includes('/support')) return 'support';
     if (location.pathname.includes('/assign') || location.pathname.includes('/tasks')) return 'assign';
     if (location.pathname.includes('/targets')) return 'targets';
-    if (location.pathname.includes('/team') || location.pathname.includes('/members')) return 'team';
+    if (location.pathname.includes('/team') || location.pathname.includes('/members') || location.pathname.includes('/workers')) return 'workers';
     if (location.pathname.includes('/attendance') || location.pathname.includes('/leaves')) return 'attendance';
-    if (location.pathname.includes('/leads')) return 'leads';
-    return 'approvals';
+    if (location.pathname.includes('/leads') || location.pathname.includes('/reports')) return 'leads';
+    return 'dashboard';
   };
 
   const [activeTab, setActiveTab] = useState(getTabFromPath);
 
   useEffect(() => {
     setActiveTab(getTabFromPath());
-  }, [location.pathname]);
+  }, [location.pathname, searchParams]);
 
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);
-    if (tabId === 'approvals') navigate('/manager');
-    else if (tabId === 'support') navigate('/manager/support');
-    else if (tabId === 'assign') navigate('/manager/assign');
-    else if (tabId === 'targets') navigate('/manager/targets');
-    else if (tabId === 'team') navigate('/manager/team');
-    else if (tabId === 'attendance') navigate('/manager/attendance');
-    else if (tabId === 'leads') navigate('/manager/leads');
+    setSearchParams({ tab: tabId });
   };
   
   // Data state
@@ -65,6 +63,23 @@ export default function ManagerDashboard() {
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
   const [leads, setLeads] = useState([]);
+
+  // Manager Overview Stats
+  const [managerStats, setManagerStats] = useState({
+    summary: {
+      totalCustomers: 0,
+      activeCustomers: 0,
+      newlyRegisteredCustomers: 0,
+      totalWorkers: 0,
+      activeWorkers: 0,
+      pendingAccountActivations: 0,
+      completedTasks: 0,
+      pendingTasks: 0
+    },
+    monthlyRegistrations: [],
+    workerPerformance: [],
+    recentActivity: []
+  });
 
   // Customer Live Support States
   const [supportTickets, setSupportTickets] = useState([]);
@@ -112,14 +127,15 @@ export default function ManagerDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [empRes, taskRes, tgtRes, attRes, leaveRes, leadRes, supportRes] = await Promise.all([
+      const [empRes, taskRes, tgtRes, attRes, leaveRes, leadRes, supportRes, managerStatsRes] = await Promise.all([
         api.get('/workforce/employees').catch(() => ({ data: { employees: [] } })),
         api.get('/workforce/tasks').catch(() => ({ data: { tasks: [] } })),
         api.get('/workforce/targets').catch(() => ({ data: { targets: [] } })),
         api.get('/workforce/attendance').catch(() => ({ data: { attendance: [] } })),
         api.get('/workforce/leaves').catch(() => ({ data: { leaves: [] } })),
         api.get('/leads').catch(() => ({ data: [] })),
-        api.get('/support/manager/tickets').catch(() => ({ data: { tickets: [] } }))
+        api.get('/support/manager/tickets').catch(() => ({ data: { tickets: [] } })),
+        api.get('/manager/stats').catch(() => ({ data: null }))
       ]);
 
       const empList = Array.isArray(empRes.data) ? empRes.data : (empRes.data?.employees || []);
@@ -129,6 +145,10 @@ export default function ManagerDashboard() {
       const leaveList = Array.isArray(leaveRes.data) ? leaveRes.data : (leaveRes.data?.leaves || []);
       const leadList = Array.isArray(leadRes.data) ? leadRes.data : (leadRes.data?.leads || []);
       const ticketList = Array.isArray(supportRes.data) ? supportRes.data : (supportRes.data?.tickets || []);
+
+      if (managerStatsRes?.data) {
+        setManagerStats(managerStatsRes.data);
+      }
 
       const myWorkers = empList.filter(e => e.role === 'worker');
       setTeamMembers(myWorkers);
@@ -594,13 +614,17 @@ export default function ManagerDashboard() {
       {/* PORTAL TABS */}
       <div className="flex items-center space-x-1 sm:space-x-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1 scrollbar-none">
         {[
-          { id: 'approvals', label: isTa ? 'அனுமதிக்க வேண்டியவை' : 'Pending Approvals', icon: FileCheck, badge: pendingApprovals.length },
+          { id: 'dashboard', label: isTa ? 'மேலாளர் முகப்பு' : 'Overview Dashboard', icon: BarChart3 },
+          { id: 'customers', label: isTa ? 'வாடிக்கையாளர்கள்' : 'Customer Management', icon: Users, badge: managerStats.summary?.totalCustomers },
+          { id: 'workers', label: isTa ? 'பணியாளர்கள்' : 'Worker Management', icon: Briefcase, badge: managerStats.summary?.totalWorkers },
+          { id: 'accounts', label: isTa ? 'கணக்குகள் & பயனர் ஐடி' : 'Account Management', icon: KeyRound, badge: managerStats.summary?.pendingAccountActivations },
           { id: 'support', label: isTa ? 'வாடிக்கையாளர் நேரடி உதவி' : 'Customer Live Support', icon: Headphones, badge: openSupportCount, isHighlight: true },
+          { id: 'approvals', label: isTa ? 'அனுமதிக்க வேண்டியவை' : 'Task Approvals', icon: FileCheck, badge: pendingApprovals.length },
           { id: 'assign', label: isTa ? 'பணி ஒதுக்கீடு' : 'Assign Task', icon: PlusCircle },
           { id: 'targets', label: isTa ? 'இலக்கு பகிர்வு' : 'Target Distribution', icon: Target, badge: targets.length },
-          { id: 'team', label: isTa ? 'குழு உறுப்பினர்கள்' : 'Team Members', icon: Users, badge: teamMembers.length },
           { id: 'attendance', label: isTa ? 'வருகை & விடுப்புகள்' : 'Attendance & Leaves', icon: Calendar, badge: leaves.filter(l => l.status === 'Pending').length },
-          { id: 'leads', label: isTa ? 'விசாரணைகள்' : 'Assigned Leads', icon: Building, badge: leads.length }
+          { id: 'emails', label: isTa ? 'மின்னஞ்சல் பதிவுகள்' : 'Email Invites', icon: Mail },
+          { id: 'activity', label: isTa ? 'செயல்பாட்டு பதிவுகள்' : 'Activity Logs', icon: History }
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -631,6 +655,326 @@ export default function ManagerDashboard() {
           );
         })}
       </div>
+
+      {/* ========================================================================= */}
+      {/* TAB: MANAGER OVERVIEW DASHBOARD */}
+      {/* ========================================================================= */}
+      {activeTab === 'dashboard' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* QUICK SHORTCUTS */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <button
+              onClick={() => handleTabClick('add-customer')}
+              className="p-3.5 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs flex items-center justify-between shadow-md shadow-teal-900/20 transition-all hover:scale-[1.02] active:scale-95"
+            >
+              <div className="flex items-center space-x-2">
+                <UserPlus className="w-4 h-4 text-amber-300" />
+                <span>{isTa ? '+ வாடிக்கையாளர் பதிவு' : '+ Add New Customer'}</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-teal-200" />
+            </button>
+
+            <button
+              onClick={() => handleTabClick('add-worker')}
+              className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center justify-between shadow-md shadow-blue-900/20 transition-all hover:scale-[1.02] active:scale-95"
+            >
+              <div className="flex items-center space-x-2">
+                <UserCheck className="w-4 h-4 text-sky-300" />
+                <span>{isTa ? '+ பணியாளர் பதிவு' : '+ Add New Worker'}</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-blue-200" />
+            </button>
+
+            <button
+              onClick={() => handleTabClick('assign')}
+              className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white font-bold text-xs flex items-center justify-between shadow-md shadow-purple-900/20 transition-all hover:scale-[1.02] active:scale-95"
+            >
+              <div className="flex items-center space-x-2">
+                <PlusCircle className="w-4 h-4 text-purple-200" />
+                <span>{isTa ? 'பணி ஒதுக்கீடு' : 'Assign Task'}</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-purple-200" />
+            </button>
+
+            <button
+              onClick={() => handleTabClick('support')}
+              className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs flex items-center justify-between shadow-md shadow-amber-900/20 transition-all hover:scale-[1.02] active:scale-95"
+            >
+              <div className="flex items-center space-x-2">
+                <Headphones className="w-4 h-4 text-yellow-200" />
+                <span>{isTa ? 'நேரடி வாடிக்கையாளர் உதவி' : 'Live Support Desk'}</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-amber-200" />
+            </button>
+          </div>
+
+          {/* 8 REQUIREMENT METRIC CARDS */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+            <div className="glass-premium p-3.5 rounded-2xl border-l-4 border-l-teal-500">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Customers</span>
+              <p className="text-xl font-black text-slate-900 dark:text-white mt-1">{managerStats.summary?.totalCustomers || 0}</p>
+              <span className="text-[9px] text-teal-600 font-semibold">Registered base</span>
+            </div>
+
+            <div className="glass-premium p-3.5 rounded-2xl border-l-4 border-l-emerald-500">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Active Customers</span>
+              <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{managerStats.summary?.activeCustomers || 0}</p>
+              <span className="text-[9px] text-emerald-600 font-semibold">Generating solar</span>
+            </div>
+
+            <div className="glass-premium p-3.5 rounded-2xl border-l-4 border-l-sky-500">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">New (30 Days)</span>
+              <p className="text-xl font-black text-sky-600 dark:text-sky-400 mt-1">{managerStats.summary?.newlyRegisteredCustomers || 0}</p>
+              <span className="text-[9px] text-sky-600 font-semibold">Recent enrolls</span>
+            </div>
+
+            <div className="glass-premium p-3.5 rounded-2xl border-l-4 border-l-blue-500">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Total Workers</span>
+              <p className="text-xl font-black text-blue-600 dark:text-blue-400 mt-1">{managerStats.summary?.totalWorkers || teamMembers.length}</p>
+              <span className="text-[9px] text-blue-600 font-semibold">Field workforce</span>
+            </div>
+
+            <div className="glass-premium p-3.5 rounded-2xl border-l-4 border-l-indigo-500">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Active Workers</span>
+              <p className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-1">{managerStats.summary?.activeWorkers || teamMembers.length}</p>
+              <span className="text-[9px] text-indigo-600 font-semibold">On duty</span>
+            </div>
+
+            <div className="glass-premium p-3.5 rounded-2xl border-l-4 border-l-amber-500">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Pending Invites</span>
+              <p className="text-xl font-black text-amber-600 dark:text-amber-400 mt-1">{managerStats.summary?.pendingAccountActivations || 0}</p>
+              <span className="text-[9px] text-amber-600 font-semibold">Awaiting activation</span>
+            </div>
+
+            <div className="glass-premium p-3.5 rounded-2xl border-l-4 border-l-purple-500">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Completed Tasks</span>
+              <p className="text-xl font-black text-purple-600 dark:text-purple-400 mt-1">{managerStats.summary?.completedTasks || completedTasks.length}</p>
+              <span className="text-[9px] text-purple-600 font-semibold">Approved</span>
+            </div>
+
+            <div className="glass-premium p-3.5 rounded-2xl border-l-4 border-l-rose-500">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Pending Tasks</span>
+              <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1">{managerStats.summary?.pendingTasks || pendingApprovals.length}</p>
+              <span className="text-[9px] text-rose-600 font-semibold">Needs review</span>
+            </div>
+          </div>
+
+          {/* CHARTS & RECENT ACTIVITY SECTION */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* MONTHLY REGISTRATIONS CHART (2 COLUMNS) */}
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center space-x-2">
+                    <BarChart3 className="w-4 h-4 text-teal-600" />
+                    <span>{isTa ? 'மாதாந்திர வாடிக்கையாளர் பதிவுகள் (கடந்த 6 மாதங்கள்)' : 'Monthly Customer Registrations (Past 6 Months)'}</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">Trend of onboarding battery-free on-grid solar households</p>
+                </div>
+                <span className="text-xs font-bold text-teal-600 bg-teal-50 dark:bg-teal-950/40 px-2.5 py-1 rounded-full border border-teal-200 dark:border-teal-800">
+                  {managerStats.monthlyRegistrations?.reduce((acc, m) => acc + m.count, 0) || 0} Total Registrations
+                </span>
+              </div>
+
+              {/* BAR CHART SVG */}
+              <div className="pt-4 pb-2">
+                <div className="h-48 flex items-end justify-between gap-3 px-4">
+                  {(managerStats.monthlyRegistrations || []).map((m, idx) => {
+                    const maxCount = Math.max(1, ...(managerStats.monthlyRegistrations?.map(x => x.count) || [1]));
+                    const heightPercent = Math.max(12, Math.round((m.count / maxCount) * 100));
+                    return (
+                      <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {m.count}
+                        </span>
+                        <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-t-xl overflow-hidden flex items-end h-36">
+                          <div 
+                            style={{ height: `${heightPercent}%` }}
+                            className="w-full bg-gradient-to-t from-teal-600 to-emerald-400 rounded-t-xl group-hover:from-teal-500 group-hover:to-emerald-300 transition-all duration-500"
+                          />
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-500 group-hover:text-teal-600 transition-colors whitespace-nowrap">
+                          {m.month}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* RECENT ACTIVITY LOGS (1 COLUMN) */}
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center space-x-2">
+                  <History className="w-4 h-4 text-teal-600" />
+                  <span>{isTa ? 'சமீபத்திய செயல்பாடுகள்' : 'Recent Activity Feed'}</span>
+                </h3>
+                <button
+                  onClick={() => handleTabClick('activity')}
+                  className="text-xs font-bold text-teal-600 hover:text-teal-700"
+                >
+                  View All
+                </button>
+              </div>
+
+              <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+                {(managerStats.recentActivity || []).length === 0 ? (
+                  <p className="text-xs text-slate-400 text-center py-8">No recent activity logged.</p>
+                ) : (
+                  (managerStats.recentActivity || []).slice(0, 8).map((log, i) => (
+                    <div key={i} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/80 text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-teal-700 dark:text-teal-400 uppercase text-[10px]">
+                          {log.action?.replace(/_/g, ' ')}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </span>
+                      </div>
+                      <p className="text-slate-700 dark:text-slate-300 font-medium truncate">
+                        {log.details?.targetName || log.targetId} • {log.performedByName || 'Manager'}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* WORKER PERFORMANCE OVERVIEW */}
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center space-x-2">
+                  <Briefcase className="w-4 h-4 text-teal-600" />
+                  <span>{isTa ? 'பணியாளர் செயல்திறன் கண்ணோட்டம்' : 'Worker Performance Overview'}</span>
+                </h3>
+                <p className="text-xs text-slate-400">Assigned customer installations, task completion rates, and field status</p>
+              </div>
+              <button
+                onClick={() => handleTabClick('workers')}
+                className="text-xs font-bold text-teal-600 hover:text-teal-700"
+              >
+                Manage Workforce →
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 dark:bg-slate-950 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="px-4 py-3">Worker Name</th>
+                    <th className="px-4 py-3">Role / Department</th>
+                    <th className="px-4 py-3">Assigned Customers</th>
+                    <th className="px-4 py-3">Task Completion</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {(managerStats.workerPerformance || []).length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                        No worker performance metrics recorded yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    (managerStats.workerPerformance || []).map((w) => (
+                      <tr key={w.id || w.employeeId} className="hover:bg-slate-50/80 dark:hover:bg-slate-950/40">
+                        <td className="px-4 py-3">
+                          <div className="font-bold text-slate-800 dark:text-white">{w.fullName}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{w.employeeId}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                          <div>{w.jobRole}</div>
+                          <div className="text-[10px] text-slate-400">{w.department}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-bold text-slate-800 dark:text-white">{w.assignedCustomers || 0}</span> Customers
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-24 bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                              <div
+                                className="bg-teal-600 h-2 rounded-full"
+                                style={{ width: `${w.completionRate || 0}%` }}
+                              />
+                            </div>
+                            <span className="font-bold text-slate-700 dark:text-slate-300">{w.completionRate || 0}%</span>
+                            <span className="text-[10px] text-slate-400">({w.completedTasks}/{w.totalTasks})</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            w.status === 'active' 
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                              : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                          }`}>
+                            {w.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => handleTabClick('assign')}
+                            className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 rounded-lg text-[11px] font-bold border border-teal-200 dark:border-teal-800"
+                          >
+                            Assign Task
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: CUSTOMER MANAGEMENT & REGISTRATION */}
+      {/* ========================================================================= */}
+      {(activeTab === 'customers' || activeTab === 'add-customer') && (
+        <ManagerCustomerManager 
+          defaultMode={activeTab === 'add-customer' ? 'add' : 'list'} 
+          workers={teamMembers} 
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: WORKER MANAGEMENT & REGISTRATION */}
+      {/* ========================================================================= */}
+      {(activeTab === 'workers' || activeTab === 'add-worker') && (
+        <ManagerWorkerManager 
+          defaultMode={activeTab === 'add-worker' ? 'add' : 'list'} 
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: ACCOUNT CREDENTIALS & USER ID MANAGEMENT */}
+      {/* ========================================================================= */}
+      {activeTab === 'accounts' && (
+        <ManagerAccountManager />
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: GMAIL INVITATION NOTIFICATION LOGS */}
+      {/* ========================================================================= */}
+      {activeTab === 'emails' && (
+        <ManagerEmailLogs />
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: MANAGER ACTIVITY LOGS */}
+      {/* ========================================================================= */}
+      {activeTab === 'activity' && (
+        <ManagerActivityLogs />
+      )}
 
       {/* ========================================================================= */}
       {/* TAB: CUSTOMER LIVE SUPPORT & HUMAN ASSISTANCE DASHBOARD */}

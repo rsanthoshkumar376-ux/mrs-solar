@@ -24,6 +24,7 @@ import aiRoutes from './routes/ai.js';
 import workforceRoutes, { seedWorkforceDefaults } from './routes/workforce.js';
 import passwordManagementRoutes from './routes/passwordManagement.js';
 import supportRoutes from './routes/support.js';
+import managerRoutes from './routes/manager.js';
 import { runDailyInterestAndPenaltyCheck } from './utils/scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -76,6 +77,7 @@ app.use(['/api/ai', '/ai'], aiRoutes);
 app.use(['/api/workforce', '/workforce'], workforceRoutes);
 app.use('/api/admin/password-management', passwordManagementRoutes);
 app.use(['/api/support', '/support'], supportRoutes);
+app.use(['/api/manager', '/manager'], managerRoutes);
 
 // Serve Frontend Static Production Build
 const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');

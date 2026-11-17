@@ -117,31 +117,41 @@ router.get('/users', async (req, res) => {
         department: e.department || 'Operations',
         designation: e.designation || (e.role === 'manager' ? 'Team Manager' : 'Solar Technician'),
         mobileNumber: e.mobileNumber,
-        email: e.email,
+        email: e.email || '—',
         status: e.status || 'active',
+        createdByName: e.createdByName || 'Owner / Super Admin',
+        createdById: e.createdById || 'Admin',
+        registeredBy: e.registeredBy || 'admin',
         passwordLastChanged: e.passwordLastChanged || null,
         isDefaultPassword: Boolean(!e.passwordLastChanged || e.isDefaultPassword),
         mustChangePassword: Boolean(e.mustChangePassword)
       });
     });
 
-    // 3. Customers
-    allUsers.filter(u => u.role === 'customer').forEach(u => {
-      const custDetail = allCustomers.find(c => c.customerId === u.customerId);
+    // 3. Customers (All registered customers, with or without completed user account)
+    allCustomers.forEach(c => {
+      const user = allUsers.find(u => u.customerId === c.customerId);
+      const isPending = c.accountStatus === 'Pending Activation' || (!user && !c.loginUsername);
+      const isDisabled = c.accountStatus === 'Disabled' || user?.status === 'disabled';
+
       unifiedAccounts.push({
-        id: u._id,
-        source: 'users',
-        name: custDetail ? custDetail.fullName : u.username,
-        username: u.username,
-        identifier: u.customerId || u.username,
+        id: user?._id || c._id,
+        source: user ? 'users' : 'customers',
+        name: c.fullName,
+        username: user?.username || c.loginUsername || c.customerId,
+        identifier: c.customerId,
         role: 'customer',
         department: 'Customer Portal',
-        designation: 'Solar System Owner',
-        mobileNumber: custDetail ? custDetail.mobileNumber : '',
-        status: 'active',
-        passwordLastChanged: u.passwordLastChanged || custDetail?.passwordLastChanged || null,
-        isDefaultPassword: Boolean(!u.passwordLastChanged || u.isDefaultPassword),
-        mustChangePassword: Boolean(u.mustChangePassword)
+        designation: `${c.systemCapacity || 3} kW Rooftop Solar`,
+        mobileNumber: c.mobileNumber || '',
+        email: c.email || user?.email || '—',
+        status: isDisabled ? 'disabled' : (isPending ? 'pending_activation' : 'active'),
+        createdByName: c.createdByName || 'Owner / Direct',
+        createdById: c.createdById || 'Admin',
+        registeredBy: c.registeredBy || 'admin',
+        passwordLastChanged: user?.passwordLastChanged || c.passwordLastChanged || null,
+        isDefaultPassword: Boolean(!user?.passwordLastChanged || user?.isDefaultPassword),
+        mustChangePassword: Boolean(user?.mustChangePassword)
       });
     });
 
@@ -333,6 +343,208 @@ router.post('/reset-user', async (req, res) => {
   } catch (err) {
     console.error('Reset user password error:', err);
     res.status(500).json({ message: 'Failed to reset password' });
+  }
+});
+
+/**
+ * PUT /api/admin/password-management/change-username
+ * Owner changes customer or worker User ID
+ */
+router.put('/change-username', async (req, res) => {
+  try {
+    const { targetUserId, targetRole, newUsername } = req.body;
+
+    if (!targetUserId || !newUsername) {
+      return res.status(400).json({ message: 'Target user ID and new User ID are required' });
+    }
+
+    const cleanUsername = String(newUsername).trim();
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({ message: 'User ID must be at least 3 characters long' });
+    }
+    if (!/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+      return res.status(400).json({ message: 'User ID can only contain letters, numbers, hyphens, periods, and underscores' });
+    }
+
+    const norm = cleanUsername.toLowerCase();
+    const nowIso = new Date().toISOString();
+
+    // Check uniqueness across users and employees
+    const allUsers = await db.find('users');
+    const duplicateUser = allUsers.find(u => u.username && u.username.toLowerCase() === norm && u._id !== targetUserId);
+    if (duplicateUser) {
+      return res.status(400).json({ message: `User ID "${cleanUsername}" is already in use by another user.` });
+    }
+
+    let previousUsername = '';
+    let targetName = '';
+
+    if (targetRole === 'customer') {
+      const user = await db.findOne('users', { _id: targetUserId }) || await db.findOne('users', { customerId: targetUserId });
+      const customer = await db.findOne('customers', { customerId: targetUserId }) || (user?.customerId ? await db.findOne('customers', { customerId: user.customerId }) : null);
+
+      if (user) {
+        previousUsername = user.username;
+        targetName = user.fullName || user.username;
+        await db.updateOne('users', { _id: user._id }, {
+          username: cleanUsername,
+          updatedAt: nowIso
+        });
+      }
+      if (customer) {
+        if (!targetName) targetName = customer.fullName;
+        if (!previousUsername) previousUsername = customer.loginUsername || customer.customerId;
+        await db.updateOne('customers', { _id: customer._id }, {
+          loginUsername: cleanUsername,
+          updatedAt: nowIso
+        });
+      }
+    } else {
+      // Manager or Worker
+      const employee = await db.findOne('employees', { _id: targetUserId }) || await db.findOne('employees', { employeeId: targetUserId });
+      const user = await db.findOne('users', { employeeId: targetUserId }) || (employee?.employeeId ? await db.findOne('users', { employeeId: employee.employeeId }) : null);
+
+      if (employee) {
+        previousUsername = employee.username || employee.employeeId;
+        targetName = employee.fullName;
+        await db.updateOne('employees', { _id: employee._id }, {
+          username: cleanUsername,
+          updatedAt: nowIso
+        });
+      }
+      if (user) {
+        if (!previousUsername) previousUsername = user.username;
+        if (!targetName) targetName = user.fullName || user.username;
+        await db.updateOne('users', { _id: user._id }, {
+          username: cleanUsername,
+          updatedAt: nowIso
+        });
+      }
+    }
+
+    // Log in account_activity_logs
+    await db.create('account_activity_logs', {
+      action: 'USER_ID_CHANGED',
+      performedByRole: 'admin',
+      performedById: req.user.username || 'Owner',
+      performedByName: req.user.fullName || 'Main Owner',
+      targetId: targetUserId,
+      targetType: targetRole || 'user',
+      details: {
+        previousUsername,
+        newUsername: cleanUsername,
+        targetName
+      },
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+      timestamp: nowIso
+    }).catch(() => {});
+
+    // Log in audit_logs
+    await db.create('audit_logs', {
+      action: 'ADMIN_USERNAME_CHANGE',
+      target: cleanUsername,
+      performedBy: req.user.username || 'Owner',
+      details: { targetUserId, targetRole, previousUsername, newUsername: cleanUsername },
+      createdAt: nowIso
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      message: `User ID for ${targetName || targetUserId} successfully updated to "${cleanUsername}".`,
+      newUsername: cleanUsername
+    });
+  } catch (err) {
+    console.error('Change username error:', err);
+    res.status(500).json({ message: 'Failed to change User ID' });
+  }
+});
+
+/**
+ * POST /api/admin/password-management/toggle-status
+ * Owner enables or disables account
+ */
+router.post('/toggle-status', async (req, res) => {
+  try {
+    const { targetUserId, targetRole, status } = req.body;
+    if (!targetUserId) {
+      return res.status(400).json({ message: 'Target user ID is required' });
+    }
+
+    const nowIso = new Date().toISOString();
+    let targetName = '';
+
+    if (targetRole === 'customer') {
+      const customer = await db.findOne('customers', { customerId: targetUserId }) || await db.findOne('customers', { _id: targetUserId });
+      const user = await db.findOne('users', { customerId: targetUserId }) || await db.findOne('users', { _id: targetUserId });
+
+      const newStatus = status || (customer?.accountStatus === 'Active' ? 'Disabled' : 'Active');
+      if (customer) {
+        targetName = customer.fullName;
+        await db.updateOne('customers', { _id: customer._id }, { accountStatus: newStatus, updatedAt: nowIso });
+      }
+      if (user) {
+        if (!targetName) targetName = user.fullName || user.username;
+        await db.updateOne('users', { _id: user._id }, { status: newStatus.toLowerCase(), updatedAt: nowIso });
+      }
+
+      await db.create('account_activity_logs', {
+        action: newStatus === 'Active' ? 'ACCOUNT_REACTIVATED' : 'ACCOUNT_DISABLED',
+        performedByRole: 'admin',
+        performedById: req.user.username,
+        performedByName: 'Main Owner',
+        targetId: targetUserId,
+        targetType: 'customer',
+        details: { targetName, newStatus },
+        ipAddress: req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+        timestamp: nowIso
+      }).catch(() => {});
+
+      return res.json({ success: true, message: `Account is now ${newStatus}.`, status: newStatus });
+    } else {
+      // Employee / Worker / Manager
+      const employee = await db.findOne('employees', { employeeId: targetUserId }) || await db.findOne('employees', { _id: targetUserId });
+      const user = await db.findOne('users', { employeeId: targetUserId }) || await db.findOne('users', { _id: targetUserId });
+
+      const newStatus = status || (employee?.status === 'active' ? 'disabled' : 'active');
+      if (employee) {
+        targetName = employee.fullName;
+        await db.updateOne('employees', { _id: employee._id }, { status: newStatus, updatedAt: nowIso });
+      }
+      if (user) {
+        if (!targetName) targetName = user.fullName || user.username;
+        await db.updateOne('users', { _id: user._id }, { status: newStatus, updatedAt: nowIso });
+      }
+
+      await db.create('account_activity_logs', {
+        action: newStatus === 'active' ? 'ACCOUNT_REACTIVATED' : 'ACCOUNT_DISABLED',
+        performedByRole: 'admin',
+        performedById: req.user.username,
+        performedByName: 'Main Owner',
+        targetId: targetUserId,
+        targetType: targetRole || 'employee',
+        details: { targetName, newStatus },
+        ipAddress: req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+        timestamp: nowIso
+      }).catch(() => {});
+
+      return res.json({ success: true, message: `Account is now ${newStatus}.`, status: newStatus });
+    }
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update account status' });
+  }
+});
+
+/**
+ * GET /api/admin/password-management/activity-logs
+ * Full Manager & System activity audit logs for Owner monitoring
+ */
+router.get('/activity-logs', async (req, res) => {
+  try {
+    const logs = await db.find('account_activity_logs');
+    logs.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+    res.json(logs.slice(0, 150));
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load activity logs' });
   }
 });
 

@@ -1,8 +1,14 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { db } from '../database/db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { 
+  sendAccountActivatedEmail, 
+  sendPasswordResetEmail, 
+  sendPasswordChangedNotificationEmail 
+} from '../utils/email.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'mrs_solari_secret_key_13579';
@@ -491,6 +497,511 @@ router.get('/profile', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Profile fetch error:', error);
     res.status(500).json({ message: 'Server error fetching profile' });
+  }
+});
+
+// Check User ID / Username Availability
+router.get('/check-username-availability', async (req, res) => {
+  try {
+    const rawUsername = String(req.query.username || '').trim();
+    if (!rawUsername || rawUsername.length < 3) {
+      return res.json({ available: false, message: 'User ID must be at least 3 characters' });
+    }
+
+    if (!/^[a-zA-Z0-9_.-]+$/.test(rawUsername)) {
+      return res.json({ available: false, message: 'Only letters, numbers, underscores, dashes, and periods allowed' });
+    }
+
+    const norm = rawUsername.toLowerCase();
+
+    // Check users
+    const allUsers = await db.find('users');
+    const userMatch = allUsers.some(u => u.username && u.username.toLowerCase() === norm);
+    if (userMatch) {
+      return res.json({ available: false, message: 'User ID is already taken. Please choose another.' });
+    }
+
+    // Check employees
+    const allEmployees = await db.find('employees');
+    const empMatch = allEmployees.some(e => 
+      (e.username && e.username.toLowerCase() === norm) || 
+      (e.employeeId && e.employeeId.toLowerCase() === norm)
+    );
+    if (empMatch) {
+      return res.json({ available: false, message: 'User ID is already in use.' });
+    }
+
+    // Check customers
+    const allCustomers = await db.find('customers');
+    const custMatch = allCustomers.some(c => c.customerId && c.customerId.toLowerCase() === norm);
+    if (custMatch) {
+      return res.json({ available: false, message: 'User ID is reserved.' });
+    }
+
+    res.json({ available: true, message: 'User ID is available' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error checking username availability' });
+  }
+});
+
+// Verify Account Invitation Token
+router.get('/invitation/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    if (!token) {
+      return res.status(400).json({ valid: false, message: 'Invitation token is required' });
+    }
+
+    const invitation = await db.findOne('account_invitations', { token });
+    if (!invitation) {
+      return res.status(404).json({ valid: false, message: 'Invalid or unrecognized invitation link.' });
+    }
+
+    if (invitation.status === 'activated') {
+      return res.status(400).json({ 
+        valid: false, 
+        alreadyActivated: true,
+        message: 'This account has already been activated! Please log in with your User ID and password.' 
+      });
+    }
+
+    if (invitation.status === 'cancelled') {
+      return res.status(400).json({ valid: false, message: 'This invitation has been cancelled by an administrator.' });
+    }
+
+    // Check expiration (7 days)
+    if (invitation.expiresAt && new Date() > new Date(invitation.expiresAt)) {
+      return res.status(400).json({ valid: false, expired: true, message: 'This invitation link has expired. Please ask your manager for a new link.' });
+    }
+
+    res.json({
+      valid: true,
+      invitationType: invitation.invitationType,
+      targetId: invitation.targetId,
+      fullName: invitation.fullName,
+      email: invitation.email,
+      mobileNumber: invitation.mobileNumber,
+      invitedByName: invitation.createdByName,
+      invitedByRole: invitation.createdByRole
+    });
+  } catch (err) {
+    console.error('Verify invitation error:', err);
+    res.status(500).json({ valid: false, message: 'Failed to verify invitation' });
+  }
+});
+
+// Complete Account Activation (User selects their own User ID and Password)
+router.post('/activate-account', async (req, res) => {
+  try {
+    const { token, username, password } = req.body;
+
+    if (!token || !username || !password) {
+      return res.status(400).json({ message: 'Token, User ID, and Password are all required' });
+    }
+
+    const cleanUsername = String(username).trim();
+    const cleanPassword = String(password).trim();
+
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({ message: 'User ID must be at least 3 characters long' });
+    }
+    if (!/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+      return res.status(400).json({ message: 'User ID can only contain letters, numbers, hyphens, periods, and underscores' });
+    }
+
+    if (cleanPassword.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters long for security' });
+    }
+
+    // Find and validate invitation
+    const invitation = await db.findOne('account_invitations', { token });
+    if (!invitation) {
+      return res.status(404).json({ message: 'Invalid invitation token' });
+    }
+    if (invitation.status === 'activated') {
+      return res.status(400).json({ message: 'Account is already activated. Please sign in.' });
+    }
+    if (invitation.expiresAt && new Date() > new Date(invitation.expiresAt)) {
+      return res.status(400).json({ message: 'Invitation has expired. Please request a new invitation.' });
+    }
+
+    // Check unique username across system
+    const normUser = cleanUsername.toLowerCase();
+    const allUsers = await db.find('users');
+    const isTakenInUsers = allUsers.some(u => 
+      u.username && u.username.toLowerCase() === normUser && u._id !== invitation.targetId
+    );
+    if (isTakenInUsers) {
+      return res.status(400).json({ message: `User ID "${cleanUsername}" is already taken. Please choose another.` });
+    }
+
+    const allEmployees = await db.find('employees');
+    const isTakenInEmployees = allEmployees.some(e => 
+      ((e.username && e.username.toLowerCase() === normUser) || 
+       (e.employeeId && e.employeeId.toLowerCase() === normUser)) &&
+      e.employeeId !== invitation.targetId
+    );
+    if (isTakenInEmployees) {
+      return res.status(400).json({ message: `User ID "${cleanUsername}" is reserved.` });
+    }
+
+    // Hash user's self-chosen password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(cleanPassword, salt);
+    const nowIso = new Date().toISOString();
+
+    let createdOrUpdatedUser = null;
+
+    if (invitation.invitationType === 'customer') {
+      // 1. Update customer record
+      const customer = await db.findOne('customers', { customerId: invitation.targetId });
+      if (customer) {
+        await db.updateOne('customers', { _id: customer._id }, {
+          accountStatus: 'Active',
+          loginUsername: cleanUsername,
+          activatedAt: nowIso
+        });
+      }
+
+      // 2. Create or update user account in users table
+      const existingUser = await db.findOne('users', { customerId: invitation.targetId });
+      if (existingUser) {
+        createdOrUpdatedUser = await db.updateOne('users', { _id: existingUser._id }, {
+          username: cleanUsername,
+          password: hashedPassword,
+          fullName: invitation.fullName,
+          email: invitation.email,
+          role: 'customer',
+          customerId: invitation.targetId,
+          status: 'active',
+          passwordLastChanged: nowIso,
+          isDefaultPassword: false,
+          mustChangePassword: false,
+          updatedAt: nowIso
+        });
+      } else {
+        createdOrUpdatedUser = await db.create('users', {
+          username: cleanUsername,
+          password: hashedPassword,
+          fullName: invitation.fullName,
+          email: invitation.email,
+          role: 'customer',
+          customerId: invitation.targetId,
+          status: 'active',
+          passwordLastChanged: nowIso,
+          isDefaultPassword: false,
+          mustChangePassword: false,
+          createdAt: nowIso,
+          updatedAt: nowIso
+        });
+      }
+    } else {
+      // Worker activation
+      const employee = await db.findOne('employees', { employeeId: invitation.targetId });
+      if (employee) {
+        await db.updateOne('employees', { _id: employee._id }, {
+          status: 'active',
+          username: cleanUsername,
+          password: hashedPassword,
+          passwordLastChanged: nowIso,
+          isDefaultPassword: false,
+          mustChangePassword: false,
+          activatedAt: nowIso
+        });
+      }
+
+      // Ensure user record in users collection
+      const existingUser = await db.findOne('users', { employeeId: invitation.targetId });
+      if (existingUser) {
+        createdOrUpdatedUser = await db.updateOne('users', { _id: existingUser._id }, {
+          username: cleanUsername,
+          password: hashedPassword,
+          fullName: invitation.fullName,
+          email: invitation.email,
+          role: 'worker',
+          employeeId: invitation.targetId,
+          status: 'active',
+          passwordLastChanged: nowIso,
+          isDefaultPassword: false,
+          mustChangePassword: false
+        });
+      } else {
+        createdOrUpdatedUser = await db.create('users', {
+          username: cleanUsername,
+          password: hashedPassword,
+          fullName: invitation.fullName,
+          email: invitation.email,
+          role: 'worker',
+          employeeId: invitation.targetId,
+          status: 'active',
+          passwordLastChanged: nowIso,
+          isDefaultPassword: false,
+          mustChangePassword: false
+        });
+      }
+    }
+
+    // Mark invitation token as activated
+    await db.updateOne('account_invitations', { _id: invitation._id }, {
+      status: 'activated',
+      assignedUsername: cleanUsername,
+      activatedAt: nowIso
+    });
+
+    // Record in account activity logs
+    await db.create('account_activity_logs', {
+      action: 'ACCOUNT_ACTIVATED',
+      performedByRole: invitation.invitationType,
+      performedById: invitation.targetId,
+      performedByName: invitation.fullName,
+      targetId: invitation.targetId,
+      targetType: invitation.invitationType,
+      details: {
+        chosenUsername: cleanUsername,
+        email: invitation.email,
+        registrationId: invitation.targetId,
+        activatedVia: 'Gmail Invitation Link'
+      },
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+      timestamp: nowIso
+    }).catch(() => {});
+
+    // Send confirmation email
+    sendAccountActivatedEmail({
+      to: invitation.email,
+      fullName: invitation.fullName,
+      username: cleanUsername,
+      category: invitation.invitationType === 'worker' ? 'Worker' : 'Customer'
+    }).catch(e => console.warn('Activation confirmation email note:', e.message));
+
+    // Generate JWT token for immediate sign-in
+    const tokenPayload = {
+      userId: createdOrUpdatedUser?._id || invitation.targetId,
+      role: invitation.invitationType === 'worker' ? 'worker' : 'customer',
+      customerId: invitation.invitationType === 'customer' ? invitation.targetId : null,
+      employeeId: invitation.invitationType === 'worker' ? invitation.targetId : null,
+      username: cleanUsername,
+      fullName: invitation.fullName
+    };
+
+    const authToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '30d' });
+
+    res.json({
+      success: true,
+      message: 'Account successfully activated! Welcome to MRS SOLAR.',
+      token: authToken,
+      user: tokenPayload
+    });
+  } catch (err) {
+    console.error('Account activation error:', err);
+    res.status(500).json({ message: `Activation failed: ${err.message}` });
+  }
+});
+
+// Request Password Reset Link
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { emailOrUsername } = req.body;
+    if (!emailOrUsername) {
+      return res.status(400).json({ message: 'Please enter your registered Gmail or User ID' });
+    }
+
+    const input = String(emailOrUsername).trim().toLowerCase();
+
+    // 1. Search in users
+    const allUsers = await db.find('users');
+    let matchedUser = allUsers.find(u => 
+      (u.username && u.username.toLowerCase() === input) ||
+      (u.email && u.email.toLowerCase() === input)
+    );
+
+    // 2. Search in employees if not found
+    let matchedEmployee = null;
+    if (!matchedUser) {
+      const allEmployees = await db.find('employees');
+      matchedEmployee = allEmployees.find(e => 
+        (e.username && e.username.toLowerCase() === input) ||
+        (e.employeeId && e.employeeId.toLowerCase() === input) ||
+        (e.email && e.email.toLowerCase() === input)
+      );
+    }
+
+    // 3. Search in customers if not found
+    let matchedCustomer = null;
+    if (!matchedUser && !matchedEmployee) {
+      const allCustomers = await db.find('customers');
+      matchedCustomer = allCustomers.find(c => 
+        (c.customerId && c.customerId.toLowerCase() === input) ||
+        (c.email && c.email.toLowerCase() === input)
+      );
+    }
+
+    const targetEmail = matchedUser?.email || matchedEmployee?.email || matchedCustomer?.email;
+    const targetName = matchedUser?.fullName || matchedEmployee?.fullName || matchedCustomer?.fullName || input;
+    const targetUsername = matchedUser?.username || matchedEmployee?.username || matchedEmployee?.employeeId || matchedCustomer?.customerId || input;
+
+    if (targetEmail && targetEmail.includes('@')) {
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 60 * 60 * 1000).toISOString(); // 1 hour
+
+      await db.create('password_reset_tokens', {
+        token: resetToken,
+        userId: matchedUser?._id || matchedEmployee?._id || matchedCustomer?._id,
+        identifier: targetUsername,
+        email: targetEmail,
+        expiresAt,
+        used: false,
+        createdAt: now.toISOString()
+      });
+
+      // Send email
+      sendPasswordResetEmail({
+        to: targetEmail,
+        fullName: targetName,
+        username: targetUsername,
+        resetToken
+      }).catch(e => console.warn('Forgot password email note:', e.message));
+
+      await db.create('account_activity_logs', {
+        action: 'PASSWORD_RESET_REQUESTED',
+        performedByRole: 'system',
+        performedById: targetUsername,
+        performedByName: targetName,
+        targetId: targetUsername,
+        targetType: 'user',
+        details: { email: targetEmail },
+        ipAddress: req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+        timestamp: now.toISOString()
+      }).catch(() => {});
+    }
+
+    // Always return neutral security message
+    res.json({
+      success: true,
+      message: 'If an account matches that email or User ID, a password reset link has been dispatched to your Gmail.'
+    });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ message: 'Failed to process password reset request' });
+  }
+});
+
+// Verify Password Reset Token
+router.get('/reset-token/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    if (!token) return res.status(400).json({ valid: false, message: 'Token is required' });
+
+    const record = await db.findOne('password_reset_tokens', { token });
+    if (!record || record.used) {
+      return res.status(404).json({ valid: false, message: 'This reset link is invalid or has already been used.' });
+    }
+
+    if (record.expiresAt && new Date() > new Date(record.expiresAt)) {
+      return res.status(400).json({ valid: false, expired: true, message: 'This reset link has expired. Please request a new one.' });
+    }
+
+    res.json({
+      valid: true,
+      identifier: record.identifier,
+      email: record.email
+    });
+  } catch (err) {
+    res.status(500).json({ valid: false, message: 'Error verifying reset token' });
+  }
+});
+
+// Execute Password Reset
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: 'Token and new password are required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+    }
+
+    const record = await db.findOne('password_reset_tokens', { token });
+    if (!record || record.used) {
+      return res.status(404).json({ message: 'Invalid or already used reset link' });
+    }
+
+    if (record.expiresAt && new Date() > new Date(record.expiresAt)) {
+      return res.status(400).json({ message: 'This reset link has expired. Please request a new one.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    const nowIso = new Date().toISOString();
+
+    // Update in users
+    if (record.userId) {
+      await db.updateOne('users', { _id: record.userId }, {
+        password: hashedPassword,
+        passwordLastChanged: nowIso,
+        isDefaultPassword: false,
+        mustChangePassword: false
+      });
+    }
+
+    // Update in employees if employee
+    await db.updateOne('employees', { employeeId: record.identifier }, {
+      password: hashedPassword,
+      passwordLastChanged: nowIso,
+      isDefaultPassword: false,
+      mustChangePassword: false
+    });
+
+    // Mark token as used
+    await db.updateOne('password_reset_tokens', { _id: record._id }, {
+      used: true,
+      usedAt: nowIso
+    });
+
+    // Log in password_change_logs
+    await db.create('password_change_logs', {
+      userId: record.userId || record.identifier,
+      userName: record.identifier,
+      username: record.identifier,
+      userRole: 'user',
+      changeStatus: 'Completed',
+      activity: 'Self-Service Password Reset via Gmail Link',
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+      changedAt: nowIso
+    }).catch(() => {});
+
+    // Log in account_activity_logs
+    await db.create('account_activity_logs', {
+      action: 'PASSWORD_RESET_COMPLETED',
+      performedByRole: 'user',
+      performedById: record.identifier,
+      performedByName: record.identifier,
+      targetId: record.identifier,
+      targetType: 'user',
+      details: { email: record.email, method: 'Gmail Token Reset' },
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+      timestamp: nowIso
+    }).catch(() => {});
+
+    // Send security notification email
+    if (record.email) {
+      sendPasswordChangedNotificationEmail({
+        to: record.email,
+        fullName: record.identifier,
+        username: record.identifier
+      }).catch(() => {});
+    }
+
+    res.json({
+      success: true,
+      message: 'Your password has been reset successfully! You can now log in.'
+    });
+  } catch (err) {
+    console.error('Execute password reset error:', err);
+    res.status(500).json({ message: 'Failed to reset password' });
   }
 });
 

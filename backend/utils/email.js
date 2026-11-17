@@ -536,3 +536,294 @@ export async function testEmailConnection(targetEmail) {
   };
 }
 
+/**
+ * Sends a secure account invitation email to newly registered Customer or Worker
+ */
+export async function sendAccountInvitationEmail({
+  to,
+  fullName,
+  category = 'Customer',
+  registrationId,
+  activationToken,
+  invitedByName = 'Operations Team',
+  invitedByRole = 'Manager',
+  baseUrl = null
+}) {
+  const targetEmail = String(to || '').trim().toLowerCase();
+  if (!targetEmail || !targetEmail.includes('@') || !targetEmail.includes('.')) {
+    console.warn(`[Email] Invalid invitation email address: ${to}`);
+    return { success: false, reason: 'Invalid email address' };
+  }
+
+  const appBaseUrl = (baseUrl || process.env.APP_URL || process.env.FRONTEND_URL || 'https://mrs-solar-yj6e.vercel.app').replace(/\/$/, '');
+  const activationLink = `${appBaseUrl}/activate?token=${encodeURIComponent(activationToken)}`;
+  const isWorker = category.toLowerCase() === 'worker';
+  const roleTitle = isWorker ? 'Field Solar Technician / Workforce' : 'Rooftop Solar Consumer';
+
+  const subject = `Welcome to MRS SOLAR – Complete Your ${category} Account Activation (${registrationId})`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #0b1329; margin: 0; padding: 24px; color: #1e293b; }
+        .wrapper { max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; }
+        .header { background: linear-gradient(135deg, #064e3b, #0f766e, #042f2e); padding: 36px 28px; text-align: center; color: white; }
+        .logo-badge { display: inline-block; background: rgba(255, 255, 255, 0.15); padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: 800; letter-spacing: 1px; color: #fde047; margin-bottom: 12px; }
+        .header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+        .header p { margin: 0; font-size: 14px; color: #ccfbf1; font-weight: 500; }
+        .content { padding: 32px 28px; }
+        .greeting { font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }
+        .intro-text { font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }
+        .info-card { background: #f8fafc; border-radius: 14px; border: 1px solid #e2e8f0; padding: 18px 20px; margin-bottom: 26px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #e2e8f0; font-size: 13px; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #64748b; font-weight: 600; }
+        .info-value { color: #0f172a; font-weight: 700; font-family: monospace; }
+        .cta-container { text-align: center; margin: 32px 0; }
+        .cta-btn { display: inline-block; background: linear-gradient(135deg, #0d9488, #059669); color: #ffffff !important; text-decoration: none; padding: 14px 34px; border-radius: 12px; font-size: 15px; font-weight: 700; box-shadow: 0 4px 14px rgba(13,148,136,0.35); }
+        .instructions { background: #fefce8; border-left: 4px solid #eab308; border-radius: 0 12px 12px 0; padding: 16px 18px; margin-bottom: 24px; font-size: 12px; line-height: 1.6; color: #713f12; }
+        .instructions strong { color: #854d0e; }
+        .instructions ol { margin: 8px 0 0 18px; padding: 0; }
+        .instructions li { margin-bottom: 4px; }
+        .security-note { font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5; margin-top: 24px; }
+        .footer { background: #f1f5f9; padding: 20px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; }
+        .footer p { margin: 4px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="header">
+          <div class="logo-badge">☀️ MRS SOLAR INDIA</div>
+          <h1>Account Activation Invitation</h1>
+          <p>Official Onboarding for ${roleTitle}</p>
+        </div>
+
+        <div class="content">
+          <div class="greeting">Vanakkam & Welcome, ${fullName}!</div>
+          <p class="intro-text">
+            Your MRS SOLAR account registration has been created by <strong>${invitedByName}</strong> (${invitedByRole}). To get started, please choose your personal User ID and create your own secure password using the link below.
+          </p>
+
+          <div class="info-card">
+            <div class="info-row">
+              <span class="info-label">Account Category</span>
+              <span class="info-value" style="font-family: inherit; color: #0d9488;">${category}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Registration ID</span>
+              <span class="info-value">${registrationId}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Registered Gmail</span>
+              <span class="info-value" style="font-family: inherit;">${targetEmail}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Invitation Valid Until</span>
+              <span class="info-value" style="color: #b45309;">7 Days from issue</span>
+            </div>
+          </div>
+
+          <div class="cta-container">
+            <a href="${activationLink}" target="_blank" class="cta-btn">
+              Activate My Account & Set Password →
+            </a>
+          </div>
+
+          <div class="instructions">
+            <strong>Security Notice & Next Steps:</strong>
+            <ol>
+              <li>Click the activation button above to access the MRS SOLAR secure activation portal.</li>
+              <li>Choose your own permanent <strong>User ID</strong> and create a strong password.</li>
+              <li><strong>Zero Plain-Text Passwords:</strong> MRS SOLAR staff will never ask for your password.</li>
+              <li>This activation link is single-use and will automatically expire in 7 days.</li>
+            </ol>
+          </div>
+
+          <p class="security-note">
+            If the button doesn't open, copy and paste this link into your browser:<br>
+            <a href="${activationLink}" style="color: #0d9488; word-break: break-all;">${activationLink}</a>
+          </p>
+        </div>
+
+        <div class="footer">
+          <p><strong>MRS ASSOCIATES & SOLAR SOLUTIONS</strong></p>
+          <p>Tamil Nadu On-Grid Solar Systems • TNEB Net-Metering • PM Surya Ghar Subsidy Facilitator</p>
+          <p>Helpline: +91 98401 23456 • Email: mrsassociates19@gmail.com</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const result = await sendEmail({ to: targetEmail, subject, html }, `Account Invitation (${category}: ${registrationId})`);
+
+  // Log in email_notifications table
+  try {
+    await db.create('email_notifications', {
+      recipientEmail: targetEmail,
+      recipientName: fullName,
+      recipientRole: category,
+      targetId: registrationId,
+      subject,
+      templateType: isWorker ? 'INVITATION_WORKER' : 'INVITATION_CUSTOMER',
+      deliveryStatus: result.success !== false ? 'sent' : 'failed',
+      error: result.error || null,
+      sentAt: new Date().toISOString()
+    });
+  } catch (logErr) {
+    console.warn('[Email] Could not log invitation to database:', logErr.message);
+  }
+
+  return result;
+}
+
+/**
+ * Sends a confirmation email when customer or worker successfully activates account
+ */
+export async function sendAccountActivatedEmail({
+  to,
+  fullName,
+  username,
+  category = 'Customer',
+  baseUrl = null
+}) {
+  const targetEmail = String(to || '').trim().toLowerCase();
+  if (!targetEmail || !targetEmail.includes('@')) return { success: false };
+
+  const appBaseUrl = (baseUrl || process.env.APP_URL || process.env.FRONTEND_URL || 'https://mrs-solar-yj6e.vercel.app').replace(/\/$/, '');
+  const loginLink = `${appBaseUrl}/login`;
+
+  const subject = `Account Activated Successfully – MRS SOLAR (${username})`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
+        .wrapper { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+        .header { background: linear-gradient(135deg, #0d9488, #059669); padding: 28px; text-align: center; color: white; }
+        .content { padding: 28px; }
+        .cta { text-align: center; margin: 28px 0; }
+        .cta-btn { background: #0d9488; color: white !important; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-weight: bold; font-size: 14px; }
+      </style>
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="header">
+          <h2 style="margin: 0; font-size: 22px;">✅ Account Activated Successfully!</h2>
+          <p style="margin: 6px 0 0 0; font-size: 13px; color: #ccfbf1;">MRS SOLAR ${category} Portal</p>
+        </div>
+        <div class="content">
+          <p>Dear <strong>${fullName}</strong>,</p>
+          <p>Your MRS SOLAR ${category.toLowerCase()} account has been verified and activated. You can now log in using your personal User ID:</p>
+          <div style="background: #f1f5f9; padding: 14px; border-radius: 10px; text-align: center; font-size: 16px; font-weight: bold; font-family: monospace; color: #0f766e; margin: 16px 0;">
+            User ID: ${username}
+          </div>
+          <div class="cta">
+            <a href="${loginLink}" class="cta-btn">Sign In to MRS SOLAR →</a>
+          </div>
+          <p style="font-size: 12px; color: #64748b; line-height: 1.5;">
+            Keep your credentials safe. If you did not activate this account, please contact us immediately at mrsassociates19@gmail.com.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({ to: targetEmail, subject, html }, `Account Activated (${username})`);
+}
+
+/**
+ * Sends password reset link email
+ */
+export async function sendPasswordResetEmail({
+  to,
+  fullName,
+  username,
+  resetToken,
+  baseUrl = null
+}) {
+  const targetEmail = String(to || '').trim().toLowerCase();
+  if (!targetEmail || !targetEmail.includes('@')) return { success: false };
+
+  const appBaseUrl = (baseUrl || process.env.APP_URL || process.env.FRONTEND_URL || 'https://mrs-solar-yj6e.vercel.app').replace(/\/$/, '');
+  const resetLink = `${appBaseUrl}/forgot-password?token=${encodeURIComponent(resetToken)}`;
+
+  const subject = `MRS SOLAR – Password Reset Request for ${username}`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
+        .wrapper { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+        .header { background: linear-gradient(135deg, #1e293b, #0f172a); padding: 28px; text-align: center; color: white; }
+        .content { padding: 28px; }
+        .cta { text-align: center; margin: 28px 0; }
+        .cta-btn { background: #d97706; color: white !important; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-weight: bold; font-size: 14px; }
+      </style>
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="header">
+          <h2 style="margin: 0; font-size: 20px;">🔐 Password Reset Request</h2>
+          <p style="margin: 6px 0 0 0; font-size: 13px; color: #94a3b8;">MRS SOLAR Security Portal</p>
+        </div>
+        <div class="content">
+          <p>Hello <strong>${fullName || username}</strong>,</p>
+          <p>We received a request to reset the password for your MRS SOLAR account (User ID: <code>${username}</code>).</p>
+          <p>Click the button below to choose a new password. This link is single-use and valid for <strong>1 hour</strong>.</p>
+          <div class="cta">
+            <a href="${resetLink}" class="cta-btn">Reset My Password →</a>
+          </div>
+          <p style="font-size: 12px; color: #64748b; line-height: 1.5;">
+            If you did not request this password reset, please ignore this email. Your current password remains secure.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({ to: targetEmail, subject, html }, `Password Reset (${username})`);
+}
+
+/**
+ * Sends notification when password has been modified
+ */
+export async function sendPasswordChangedNotificationEmail({
+  to,
+  fullName,
+  username
+}) {
+  const targetEmail = String(to || '').trim().toLowerCase();
+  if (!targetEmail || !targetEmail.includes('@')) return { success: false };
+
+  const subject = `Security Alert: Your MRS SOLAR Password Has Been Changed`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="font-family: sans-serif; background-color: #f8fafc; padding: 24px; color: #1e293b;">
+      <div style="max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 14px; padding: 28px; border: 1px solid #e2e8f0;">
+        <h3 style="color: #0d9488; margin-top: 0;">🛡️ Security Alert: Password Updated</h3>
+        <p>Dear ${fullName || username},</p>
+        <p>The password for your MRS SOLAR account (<strong>${username}</strong>) was successfully changed on <strong>${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</strong>.</p>
+        <p>If you made this change, no further action is needed.</p>
+        <p style="color: #b91c1c; font-size: 12px; font-weight: bold;">
+          If you did not authorize this change, please immediately reset your password and contact our support team.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({ to: targetEmail, subject, html }, `Password Changed Alert (${username})`);
+}
+

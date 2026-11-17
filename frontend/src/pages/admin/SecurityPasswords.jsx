@@ -29,7 +29,9 @@ export default function SecurityPasswords() {
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('accounts'); // 'accounts' or 'logs'
+  const [activeTab, setActiveTab] = useState('accounts'); // 'accounts', 'logs', or 'manager_activity'
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(false);
 
   // Admin Reset Password Modal
   const [resetModalUser, setResetModalUser] = useState(null);
@@ -37,6 +39,16 @@ export default function SecurityPasswords() {
   const [resetSuccessData, setResetSuccessData] = useState(null);
   const [copied, setCopied] = useState(false);
   const [resetError, setResetError] = useState('');
+
+  // Change User ID Modal
+  const [changeUserModalAccount, setChangeUserModalAccount] = useState(null);
+  const [newUsernameInput, setNewUsernameInput] = useState('');
+  const [changeUserLoading, setChangeUserLoading] = useState(false);
+  const [changeUserError, setChangeUserError] = useState('');
+  const [changeUserSuccess, setChangeUserSuccess] = useState('');
+
+  // Status toggle state
+  const [statusTogglingId, setStatusTogglingId] = useState(null);
 
   // Fetch summary and accounts
   const fetchData = async () => {
@@ -103,6 +115,75 @@ export default function SecurityPasswords() {
       setResetError(err.response?.data?.message || 'Failed to reset password');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const fetchActivityLogs = async () => {
+    setActivityLoading(true);
+    try {
+      const res = await api.get('/admin/password-management/activity-logs');
+      setActivityLogs(res.data || []);
+    } catch (err) {
+      console.error('Failed to load manager activity logs:', err);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'manager_activity') {
+      fetchActivityLogs();
+    }
+  }, [activeTab]);
+
+  const handleOpenChangeUserModal = (acc) => {
+    setChangeUserModalAccount(acc);
+    setNewUsernameInput(acc.identifier || acc.username || '');
+    setChangeUserError('');
+    setChangeUserSuccess('');
+  };
+
+  const handleExecuteChangeUsername = async () => {
+    if (!changeUserModalAccount || !newUsernameInput.trim()) return;
+    setChangeUserLoading(true);
+    setChangeUserError('');
+    setChangeUserSuccess('');
+    try {
+      const res = await api.put('/admin/password-management/change-username', {
+        targetUserId: changeUserModalAccount.id || changeUserModalAccount.identifier,
+        targetRole: changeUserModalAccount.role,
+        newUsername: newUsernameInput.trim()
+      });
+      setChangeUserSuccess(res.data?.message || 'User ID updated successfully!');
+      setTimeout(() => {
+        setChangeUserModalAccount(null);
+        setChangeUserSuccess('');
+        fetchData();
+      }, 1500);
+    } catch (err) {
+      setChangeUserError(err.response?.data?.message || 'Failed to change User ID');
+    } finally {
+      setChangeUserLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async (acc) => {
+    const isAct = (acc.status === 'active' || acc.status === 'Active' || !acc.status);
+    const actionLabel = isAct ? 'disable' : 'activate';
+    if (!window.confirm(`Are you sure you want to ${actionLabel} the account for ${acc.name}?`)) return;
+
+    setStatusTogglingId(acc.id);
+    try {
+      await api.post('/admin/password-management/toggle-status', {
+        targetUserId: acc.id || acc.identifier,
+        targetRole: acc.role,
+        status: isAct ? (acc.role === 'customer' ? 'Disabled' : 'disabled') : (acc.role === 'customer' ? 'Active' : 'active')
+      });
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update account status');
+    } finally {
+      setStatusTogglingId(null);
     }
   };
 
@@ -267,6 +348,17 @@ export default function SecurityPasswords() {
               <History className="w-3.5 h-3.5" />
               <span>{isTa ? `பாதுகாப்பு ஏடு (${logs.length})` : `Activity History (${logs.length})`}</span>
             </button>
+            <button
+              onClick={() => setActiveTab('manager_activity')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'manager_activity'
+                  ? 'bg-white dark:bg-slate-900 text-teal-600 dark:text-teal-400 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5 text-teal-600" />
+              <span>{isTa ? 'மேலாளர் செயல்பாடுகள்' : 'Manager Operations Logs'}</span>
+            </button>
           </div>
 
           {/* SEARCH FORM */}
@@ -336,8 +428,8 @@ export default function SecurityPasswords() {
                   <th className="px-5 py-4">Username / ID</th>
                   <th className="px-5 py-4">Role</th>
                   <th className="px-5 py-4">Department / Designation</th>
-                  <th className="px-5 py-4">Last Password Changed</th>
-                  <th className="px-5 py-4">Security Status</th>
+                  <th className="px-5 py-4">Created By / Manager</th>
+                  <th className="px-5 py-4">Security & Status</th>
                   <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -351,11 +443,17 @@ export default function SecurityPasswords() {
                 ) : (
                   users.map((u) => {
                     const isUpdated = Boolean(u.passwordLastChanged && !u.isDefaultPassword);
+                    const isActive = u.status === 'active' || u.status === 'Active' || !u.status;
                     return (
                       <tr key={u.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-950/40 transition-colors">
                         <td className="px-5 py-3.5">
-                          <div className="font-bold text-slate-800 dark:text-white">
-                            {u.name}
+                          <div className="font-bold text-slate-800 dark:text-white flex items-center space-x-1.5">
+                            <span>{u.name}</span>
+                            {!isActive && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+                                Disabled
+                              </span>
+                            )}
                           </div>
                           {u.mobileNumber && (
                             <div className="text-[10px] text-slate-400 font-mono">
@@ -364,9 +462,20 @@ export default function SecurityPasswords() {
                           )}
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold">
-                            {u.identifier || u.username}
-                          </span>
+                          <div className="flex items-center space-x-1.5">
+                            <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold">
+                              {u.identifier || u.username}
+                            </span>
+                            {u.role !== 'admin' && (
+                              <button
+                                onClick={() => handleOpenChangeUserModal(u)}
+                                className="p-1 text-slate-400 hover:text-teal-600 transition-colors"
+                                title="Change User ID"
+                              >
+                                <KeyRound className="w-3 h-3 text-teal-600" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="px-5 py-3.5">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${getRoleBadge(u.role)}`}>
@@ -378,37 +487,71 @@ export default function SecurityPasswords() {
                           <div className="text-[10px] text-slate-400">{u.designation}</div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <div className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300">
-                            <Clock className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{formatDateTime(u.passwordLastChanged)}</span>
+                          <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            {u.createdByName || u.registeredBy || 'System / Direct'}
                           </div>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          {u.mustChangePassword ? (
-                            <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200/40">
-                              <AlertCircle className="w-3 h-3" />
-                              <span>Reset Required</span>
-                            </span>
-                          ) : isUpdated ? (
-                            <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200/40">
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>Secure / Updated</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200/40">
-                              <AlertTriangle className="w-3 h-3" />
-                              <span>Default Password</span>
-                            </span>
+                          {u.createdById && (
+                            <div className="text-[10px] text-teal-600 font-mono font-medium">
+                              MGR: {u.createdById}
+                            </div>
                           )}
                         </td>
+                        <td className="px-5 py-3.5">
+                          <div className="space-y-1">
+                            {u.mustChangePassword ? (
+                              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200/40">
+                                <AlertCircle className="w-3 h-3" />
+                                <span>Reset Required</span>
+                              </span>
+                            ) : isUpdated ? (
+                              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200/40">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Secure / Updated</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200/40">
+                                <AlertTriangle className="w-3 h-3" />
+                                <span>Default Password</span>
+                              </span>
+                            )}
+                            <div className="text-[10px] text-slate-400 flex items-center space-x-1">
+                              <Clock className="w-3 h-3" />
+                              <span>{formatDateTime(u.passwordLastChanged)}</span>
+                            </div>
+                          </div>
+                        </td>
                         <td className="px-5 py-3.5 text-right">
-                          <button
-                            onClick={() => handleOpenResetModal(u)}
-                            className="px-3 py-1.5 bg-slate-100 hover:bg-teal-50 dark:bg-slate-800 dark:hover:bg-teal-950/40 text-slate-700 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 transition-colors inline-flex items-center space-x-1"
-                          >
-                            <KeyRound className="w-3 h-3" />
-                            <span>Reset Password</span>
-                          </button>
+                          <div className="flex items-center justify-end space-x-1.5">
+                            {u.role !== 'admin' && (
+                              <button
+                                onClick={() => handleOpenChangeUserModal(u)}
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-[11px] font-bold border border-slate-200 dark:border-slate-700"
+                                title="Change User ID"
+                              >
+                                Edit ID
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleOpenResetModal(u)}
+                              className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 rounded-lg text-[11px] font-bold border border-teal-200 dark:border-teal-800 inline-flex items-center space-x-1"
+                            >
+                              <KeyRound className="w-3 h-3" />
+                              <span>Reset</span>
+                            </button>
+                            {u.role !== 'admin' && (
+                              <button
+                                onClick={() => handleToggleStatus(u)}
+                                disabled={statusTogglingId === u.id}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
+                                  isActive
+                                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                                }`}
+                              >
+                                {isActive ? 'Disable' : 'Enable'}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -504,7 +647,180 @@ export default function SecurityPasswords() {
         </div>
       )}
 
-      {/* ADMINISTRATIVE RESET PASSWORD MODAL */}
+      {/* TAB 3: MANAGER OPERATIONS & ACCOUNT ACTIVITY AUDIT */}
+      {activeTab === 'manager_activity' && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <h3 className="font-bold text-sm text-slate-800 dark:text-white flex items-center space-x-2">
+              <Shield className="w-4 h-4 text-teal-600" />
+              <span>Manager & System Account Operations Audit</span>
+            </h3>
+            <button
+              onClick={fetchActivityLogs}
+              disabled={activityLoading}
+              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+              title="Refresh Logs"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${activityLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="px-5 py-4">Timestamp</th>
+                  <th className="px-5 py-4">Action</th>
+                  <th className="px-5 py-4">Performed By</th>
+                  <th className="px-5 py-4">Target Details</th>
+                  <th className="px-5 py-4">IP Address</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                {activityLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-12 text-center text-slate-400">
+                      No manager activity operations recorded yet.
+                    </td>
+                  </tr>
+                ) : (
+                  activityLogs.map((log) => (
+                    <tr key={log._id || log.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-950/40 transition-colors">
+                      <td className="px-5 py-3.5 text-slate-500 font-mono text-[11px]">
+                        {formatDateTime(log.timestamp)}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                          {log.action?.replace(/_/g, ' ') || 'Operation'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="font-bold text-slate-800 dark:text-white">
+                          {log.performedByName || log.performedById || 'Manager'}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          Role: {log.performedByRole}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-700 dark:text-slate-300">
+                        <div className="font-semibold text-slate-800 dark:text-white">
+                          {log.details?.targetName || log.targetId} ({log.targetType})
+                        </div>
+                        {log.details?.newUsername && (
+                          <div className="text-[10px] text-teal-600 font-mono">
+                            New ID: {log.details.newUsername}
+                          </div>
+                        )}
+                        {log.details?.newStatus && (
+                          <div className="text-[10px] text-amber-600">
+                            Status: {log.details.newStatus}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-500 font-mono text-[11px]">
+                        {log.ipAddress || '127.0.0.1'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* CHANGE USERNAME / USER ID MODAL */}
+      {changeUserModalAccount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-teal-50 dark:bg-teal-950/40 rounded-xl text-teal-600 dark:text-teal-400">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-800 dark:text-white">
+                    Modify User ID
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Owner Centralized Credential Control
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setChangeUserModalAccount(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {changeUserError && (
+              <div className="p-3 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 text-xs flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{changeUserError}</span>
+              </div>
+            )}
+
+            {changeUserSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{changeUserSuccess}</span>
+              </div>
+            )}
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Account:</span>
+                <span className="font-bold text-slate-800 dark:text-white">{changeUserModalAccount.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Current User ID:</span>
+                <span className="font-mono text-slate-600 dark:text-slate-300">{changeUserModalAccount.identifier}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Role:</span>
+                <span className="capitalize font-bold text-teal-600">{changeUserModalAccount.role}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+                New User ID / Login Username
+              </label>
+              <input
+                type="text"
+                value={newUsernameInput}
+                onChange={(e) => setNewUsernameInput(e.target.value)}
+                placeholder="e.g. senthil_solar or EMP-104"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-mono text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                Must be at least 3 characters. User will use this new ID to log in.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setChangeUserModalAccount(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={changeUserLoading || !newUsernameInput.trim()}
+                onClick={handleExecuteChangeUsername}
+                className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold disabled:opacity-50 flex items-center space-x-1.5"
+              >
+                {changeUserLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>Save New User ID</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {resetModalUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-5">

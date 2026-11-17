@@ -487,6 +487,21 @@ export default function Login() {
                   )}
                 </button>
               </div>
+
+              <div className="flex justify-between items-center mt-2 px-1 text-[11px]">
+                <Link
+                  to="/activate"
+                  className="text-teal-400 hover:text-teal-300 font-semibold transition-colors"
+                >
+                  {lang === 'ta' ? 'அழைப்பு இணைப்பு உள்ளதா? செயல்படுத்துக' : 'Have an invitation? Activate'}
+                </Link>
+                <Link
+                  to="/forgot-password"
+                  className="text-slate-400 hover:text-teal-400 transition-colors"
+                >
+                  {lang === 'ta' ? 'கடவுச்சொல் மறந்துவிட்டதா?' : 'Forgot password?'}
+                </Link>
+              </div>
             </div>
 
             <button
