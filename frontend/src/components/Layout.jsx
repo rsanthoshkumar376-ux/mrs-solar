@@ -8,7 +8,7 @@ import {
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
   Search, Languages, Mic, CreditCard, Trash2, Settings, KanbanSquare,
   Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench, Sparkles, KeyRound,
-  PlusCircle, MapPin, Eye, Headphones, UserPlus, UserCheck
+  PlusCircle, MapPin, Eye, Headphones
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -224,9 +224,7 @@ export default function Layout({ children }) {
 
   const managerLinks = [
     { label: isTa ? 'மேலாளர் முகப்பு' : 'Manager Dashboard', path: '/manager', icon: LayoutDashboard },
-    { label: isTa ? 'புதிய வாடிக்கையாளர்' : 'Add Customer', path: '/manager?tab=add-customer', icon: UserPlus },
     { label: isTa ? 'வாடிக்கையாளர் மேலாண்மை' : 'Customer Management', path: '/manager?tab=customers', icon: Users },
-    { label: isTa ? 'புதிய பணியாளர்' : 'Add Worker', path: '/manager?tab=add-worker', icon: UserCheck },
     { label: isTa ? 'பணியாளர் மேலாண்மை' : 'Worker Management', path: '/manager?tab=workers', icon: Briefcase },
     { label: isTa ? 'பணிகள் ஒதுக்கீடு' : 'Task Management', path: '/manager?tab=tasks', icon: CheckSquare },
     { label: isTa ? 'கணக்குகள் & பயனர் ஐடி' : 'Account Management', path: '/manager?tab=accounts', icon: KeyRound },
