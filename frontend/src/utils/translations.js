@@ -1528,10 +1528,18 @@ export const translations = {
 };
 
 export function getLanguage() {
-  return localStorage.getItem('mrs_solar_lang') || 'en';
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return 'en';
+  try {
+    return localStorage.getItem('mrs_solar_lang') || 'en';
+  } catch (e) {
+    return 'en';
+  }
 }
 
 export function setLanguage(lang) {
-  localStorage.setItem('mrs_solar_lang', lang);
-  window.dispatchEvent(new Event('language-change'));
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem('mrs_solar_lang', lang);
+    window.dispatchEvent(new Event('language-change'));
+  } catch (e) {}
 }

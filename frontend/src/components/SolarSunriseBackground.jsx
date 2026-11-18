@@ -18,6 +18,7 @@ export default function SolarSunriseBackground() {
     let animationFrameId;
     let time = 0;
     let isVisible = true;
+    let lastTimestamp = performance.now();
 
     // Handle high-DPI retina displays
     const resizeCanvas = () => {
@@ -62,7 +63,7 @@ export default function SolarSunriseBackground() {
       });
     }
 
-    let lastTimestamp = performance.now();
+    lastTimestamp = performance.now();
 
     // Render loop
     const render = (now) => {
