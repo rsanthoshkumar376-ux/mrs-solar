@@ -10,9 +10,15 @@ import {
   TrendingUp, Send, Check, X, ShieldAlert, ChevronRight,
   Eye, RefreshCw, MessageSquare, Sun, Zap, Building, Sparkles, KeyRound,
   Headphones, Star, MessageSquareShare, MessageCircle, AlertTriangle, ShieldCheck,
-  ChevronDown, ChevronUp, User, Phone, Mail, MapPin, Copy
+  ChevronDown, ChevronUp, User, Phone, Mail, MapPin, Copy,
+  BarChart3, Briefcase, History, UserPlus
 } from 'lucide-react';
 import { getSocket, joinTicketRoom, leaveTicketRoom } from '../../utils/socket.js';
+import ManagerCustomerManager from './ManagerCustomerManager.jsx';
+import ManagerWorkerManager from './ManagerWorkerManager.jsx';
+import ManagerAccountManager from './ManagerAccountManager.jsx';
+import ManagerEmailLogs from './ManagerEmailLogs.jsx';
+import ManagerActivityLogs from './ManagerActivityLogs.jsx';
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
