@@ -46,6 +46,7 @@ export default function Layout({ children }) {
   }, []);
 
   const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
 
   // Global hotkey Ctrl+K / Cmd+K for fast search
   useEffect(() => {
