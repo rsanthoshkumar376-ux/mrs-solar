@@ -1,5 +1,5 @@
-// MRS SOLAR Progressive Web App - Service Worker (v2.5.1 Ultra-Fast Network First)
-const CACHE_NAME = 'mrs-solar-v2.5.1';
+// MRS SOLAR Progressive Web App - Service Worker (v2.5.2 Ultra-Fast Network First)
+const CACHE_NAME = 'mrs-solar-v2.5.2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

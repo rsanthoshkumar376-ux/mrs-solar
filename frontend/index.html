@@ -17,6 +17,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Global Pre-bundle Fail-safe Declarations -->
+    <script>
+      // Immunity Polyfill: Guarantees 'isTa' is always defined globally across any legacy or active chunk
+      var isTa = false;
+      try {
+        var currentLang = localStorage.getItem('mrs_solar_lang') || localStorage.getItem('language') || 'en';
+        isTa = (currentLang === 'ta');
+      } catch (e) {
+        isTa = false;
+      }
+      window.isTa = isTa;
+      window.lang = isTa ? 'ta' : 'en';
+    </script>
   </head>
   <body class="bg-slate-950 text-slate-100">
     <div id="root">
@@ -53,12 +67,12 @@
             caches.keys().then(function(keys) {
               return Promise.all(keys.map(function(k) { return caches.delete(k); }));
             }).then(function() {
-              window.location.reload();
+              window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
             });
             return;
           }
         } catch (e) {}
-        window.location.reload();
+        window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
       }
 
       // Display emergency reset if loading takes longer than 4.5 seconds
@@ -79,10 +93,10 @@
             caches.keys().then(function(keys) {
               return Promise.all(keys.map(function(k) { return caches.delete(k); }));
             }).then(function() {
-              window.location.reload();
+              window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
             });
           } else {
-            window.location.reload();
+            window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
           }
         }
       });

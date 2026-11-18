@@ -22,6 +22,9 @@ export default class ErrorBoundary extends React.Component {
 
   handleReset = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
+    // Force fresh reload with timestamp parameter
+    const bustUrl = window.location.origin + window.location.pathname + '?reload=' + Date.now();
+    window.location.replace(bustUrl);
   };
 
   handleHardReload = async () => {
@@ -37,10 +40,12 @@ export default class ErrorBoundary extends React.Component {
         }
       }
       sessionStorage.clear();
+      localStorage.removeItem('mrs_solar_cache_ts');
     } catch (e) {
       console.warn('Cache clearing note:', e);
     }
-    window.location.reload();
+    const bustUrl = window.location.origin + window.location.pathname + '?force_update=' + Date.now();
+    window.location.replace(bustUrl);
   };
 
   render() {
@@ -92,7 +97,7 @@ export default class ErrorBoundary extends React.Component {
 
             <div className="mt-4 text-center">
               <a
-                href="/login"
+                href="/login?fresh=1"
                 className="inline-flex items-center space-x-1 text-xs text-slate-400 hover:text-white transition-colors"
               >
                 <Home className="w-3.5 h-3.5 mr-1" />
