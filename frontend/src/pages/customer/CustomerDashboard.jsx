@@ -7,7 +7,8 @@ import {
   QrCode, Landmark, User, FileText, Info, Calculator, MessageCircle,
   Copy, Check, Leaf, Printer, Phone, Download, AlertCircle, Send,
   ChevronDown, ChevronUp, Award, Wrench, Folder, CreditCard, ChevronRight,
-  ExternalLink, CheckCircle2, History, KeyRound, Lock, Camera, Sparkles
+  ExternalLink, CheckCircle2, History, KeyRound, Lock, Camera, Sparkles,
+  Lightbulb, HelpCircle, Headphones, PhoneCall
 } from 'lucide-react';
 import { 
   openCustomerSupportChat,
@@ -59,11 +60,17 @@ export default function CustomerDashboard() {
     return ['solar', 'payments', 'subsidy', 'documents'].includes(f) ? f : 'solar';
   });
 
-  const switchFolder = (folderId) => {
+  const switchFolder = (folderId, shouldScroll = false) => {
     setActiveFolder(folderId);
     const url = new URL(window.location);
     url.searchParams.set('folder', folderId);
     window.history.replaceState({}, '', url);
+    if (shouldScroll) {
+      setTimeout(() => {
+        const el = document.getElementById('folder-content-container');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    }
   };
 
   useEffect(() => {
@@ -73,6 +80,26 @@ export default function CustomerDashboard() {
   }, []);
 
   const t = translations[lang] || translations.en;
+  const isTa = lang === 'ta';
+
+  // Quick Start Guide Collapsible State (User Friendly for New Customers)
+  const [showQuickGuide, setShowQuickGuide] = useState(() => {
+    try {
+      return localStorage.getItem('mrs_customer_guide_collapsed') !== 'true';
+    } catch (e) {
+      return true;
+    }
+  });
+
+  const toggleQuickGuide = () => {
+    setShowQuickGuide(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('mrs_customer_guide_collapsed', String(!next));
+      } catch (e) {}
+      return next;
+    });
+  };
   
   // Amortisation Calculator States (Live EMI Calculator)
   const [calcCost, setCalcCost] = useState(150000);
@@ -297,9 +324,10 @@ export default function CustomerDashboard() {
         <div className="absolute top-0 right-0 -mt-6 -mr-6 w-36 h-36 bg-yellow-300/15 rounded-full blur-2xl animate-pulse-soft"></div>
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
-            <div className="flex items-center space-x-2">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-teal-200 bg-teal-800/60 border border-teal-600/40 px-3 py-1 rounded-full">
-                {t.activeFinancing}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-teal-200 bg-teal-800/60 border border-teal-600/40 px-3 py-1 rounded-full flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>{isTa ? 'சோலார் மின் உற்பத்தி இயங்குகிறது' : 'Rooftop Solar Plant Active'}</span>
               </span>
               <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-200 bg-emerald-800/50 border border-emerald-600/40 px-3 py-1 rounded-full">
                 {customer.solarCapacity} kW Rooftop Solar
@@ -332,7 +360,7 @@ export default function CustomerDashboard() {
             <button
               type="button"
               onClick={() => {
-                switchFolder('payments');
+                switchFolder('payments', true);
                 if (nextPendingEmi) {
                   openPaymentModal(nextPendingEmi);
                 }
@@ -352,8 +380,283 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
+      {/* 1.1 NEW USER WELCOME & QUICK START GUIDE */}
+      <div className="bg-gradient-to-br from-white via-slate-50 to-teal-50/40 dark:from-slate-900 dark:via-slate-950 dark:to-teal-950/20 border border-teal-500/20 rounded-3xl p-5 sm:p-6 shadow-sm transition-all">
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-200/60 dark:border-slate-800/60">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Lightbulb className="w-5 h-5 fill-amber-400/20" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white flex flex-wrap items-center gap-2">
+                <span>{isTa ? 'புதிய வாடிக்கையாளர் எளிய வழிகாட்டி' : 'Quick Start Guide for Customers'}</span>
+                <span className="text-[10px] bg-teal-500/10 text-teal-700 dark:text-teal-300 font-extrabold px-2.5 py-0.5 rounded-full border border-teal-500/20">
+                  {isTa ? '4 எளிய படிகள்' : '4 Simple Steps'}
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {isTa 
+                  ? 'உங்கள் சோலார் அமைப்பை எளிதாக கண்காணிக்க, தவணை செலுத்த மற்றும் அரசு மானிய நிலையை அறிய இந்த வழிகளைப் பின்பற்றுங்கள்.'
+                  : 'Everything you need to monitor generation, pay monthly EMI, and track government subsidy.'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={toggleQuickGuide}
+            className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors shrink-0"
+          >
+            <span>{showQuickGuide ? (isTa ? 'மறைக்க' : 'Hide Guide') : (isTa ? 'வழிகாட்டி காண்க' : 'Show Guide')}</span>
+            {showQuickGuide ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+
+        {showQuickGuide && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mt-4 animate-fade-in">
+            {/* Step 1 */}
+            <div 
+              onClick={() => switchFolder('solar', true)}
+              className="bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-teal-400 dark:hover:border-teal-600 transition-all cursor-pointer group shadow-xs flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="w-6 h-6 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 font-black text-xs flex items-center justify-center border border-teal-200/50 dark:border-teal-800/50">
+                    1
+                  </span>
+                  <Sun className="w-4 h-4 text-amber-500 group-hover:rotate-45 transition-transform" />
+                </div>
+                <h4 className="font-extrabold text-xs sm:text-sm text-slate-800 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                  {isTa ? '1. சோலார் மின் உற்பத்தி' : '1. Track Solar Power'}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  {isTa 
+                    ? 'உங்கள் கூரை சோலார் அமைப்பின் தினசரி மின் உற்பத்தி மற்றும் EB மின்கட்டண சேமிப்பை நேரலையாக அறியலாம்.'
+                    : 'Check daily electricity units generated from your rooftop and calculate your direct EB bill savings.'}
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-900 flex items-center text-[11px] font-bold text-teal-600 dark:text-teal-400">
+                <span>{isTa ? 'உற்பத்தியை காண்க' : 'Open Solar Tab'}</span>
+                <ChevronRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div 
+              onClick={() => {
+                switchFolder('payments', true);
+                if (nextPendingEmi) openPaymentModal(nextPendingEmi);
+              }}
+              className="bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all cursor-pointer group shadow-xs flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 font-black text-xs flex items-center justify-center border border-emerald-200/50 dark:border-emerald-800/50">
+                    2
+                  </span>
+                  <CreditCard className="w-4 h-4 text-emerald-500" />
+                </div>
+                <h4 className="font-extrabold text-xs sm:text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                  {isTa ? '2. எளிய தவணை கட்டணம்' : '2. 1-Tap EMI & AutoPay'}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  {isTa 
+                    ? 'Google Pay, PhonePe அல்லது QR ஸ்கேன் மூலம் நொடியில் கட்டணம் செலுத்தலாம் அல்லது AutoPay அமைக்கலாம்.'
+                    : 'Pay monthly EMI via Google Pay, PhonePe, or scan UPI QR code with zero penalty and auto-receipt.'}
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-900 flex items-center text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                <span>{isTa ? 'கட்டணம் செலுத்த' : 'Pay / AutoPay'}</span>
+                <ChevronRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div 
+              onClick={() => switchFolder('subsidy', true)}
+              className="bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-600 transition-all cursor-pointer group shadow-xs flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="w-6 h-6 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 font-black text-xs flex items-center justify-center border border-purple-200/50 dark:border-purple-800/50">
+                    3
+                  </span>
+                  <Award className="w-4 h-4 text-purple-500" />
+                </div>
+                <h4 className="font-extrabold text-xs sm:text-sm text-slate-800 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                  {isTa ? '3. ரூ.78,000 மத்திய மானியம்' : '3. Track ₹78,000 Subsidy'}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  {isTa 
+                    ? 'மத்திய அரசின் பி.எம் சூர்யா கர் 5 நிலை மானிய முன்னேற்றத்தை நேரடியாக அறிந்து கொள்ளலாம்.'
+                    : 'Track your 5-stage PM Surya Ghar national subsidy application directly into your bank account.'}
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-900 flex items-center text-[11px] font-bold text-purple-600 dark:text-purple-400">
+                <span>{isTa ? 'மானியத்தை காண்க' : 'Open Subsidy'}</span>
+                <ChevronRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div 
+              onClick={() => switchFolder('documents', true)}
+              className="bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600 transition-all cursor-pointer group shadow-xs flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-black text-xs flex items-center justify-center border border-blue-200/50 dark:border-blue-800/50">
+                    4
+                  </span>
+                  <FileText className="w-4 h-4 text-blue-500" />
+                </div>
+                <h4 className="font-extrabold text-xs sm:text-sm text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  {isTa ? '4. 25 வருட உத்தரவாதம் & பில்' : '4. Invoices & 25-Yr Warranty'}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  {isTa 
+                    ? 'அதிகாரப்பூர்வ ஜிஎஸ்டி வரி ரசீது மற்றும் 25 ஆண்டு திறன் உத்தரவாதக் கடிதத்தை எப்போது வேண்டுமானாலும் பதிவிறக்கலாம்.'
+                    : 'Download official GST tax invoices, stamped loan statement, and 25-Year performance warranty.'}
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-900 flex items-center text-[11px] font-bold text-blue-600 dark:text-blue-400">
+                <span>{isTa ? 'ஆவணங்களை காண்க' : 'Open Documents'}</span>
+                <ChevronRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 1.2 1-CLICK QUICK ACTION HUB */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xs">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center space-x-2">
+            <Zap className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <h4 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">
+              {isTa ? 'உடனடி விரைவுச் சேவைகள் (Quick Actions)' : 'Quick Actions (1-Click Hub)'}
+            </h4>
+          </div>
+          <span className="text-[11px] text-slate-400">
+            {isTa ? 'எளிய 1-கிளிக் சேவைகள்' : 'Fast shortcuts'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          {/* Quick Pay */}
+          <button
+            type="button"
+            onClick={() => {
+              switchFolder('payments', true);
+              if (nextPendingEmi) openPaymentModal(nextPendingEmi);
+            }}
+            className="p-3 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/15 hover:from-amber-500/20 hover:to-orange-500/25 border border-amber-400/30 text-left transition-all group flex flex-col justify-between"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-900 font-bold flex items-center justify-center shadow-xs">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              {nextPendingEmi && (
+                <span className="text-[9px] font-black bg-amber-500/20 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded-md">
+                  {nextPendingEmi.status === 'Overdue' ? 'Overdue' : 'Due Soon'}
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-800 dark:text-white">{isTa ? 'தவணை செலுத்த' : 'Pay Monthly EMI'}</p>
+              <p className="text-[10px] font-mono font-bold text-amber-700 dark:text-amber-400 truncate mt-0.5">
+                {nextPendingEmi ? formatCurrency(nextPendingEmi.emiAmount + (nextPendingEmi.lateFee || 0)) : (isTa ? 'செலுத்தப்பட்டது' : 'All Clear')}
+              </p>
+            </div>
+          </button>
+
+          {/* Solar Generation */}
+          <button
+            type="button"
+            onClick={() => switchFolder('solar', true)}
+            className={`p-3 rounded-2xl border text-left transition-all group flex flex-col justify-between ${
+              activeFolder === 'solar'
+                ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-500'
+                : 'bg-slate-50 dark:bg-slate-950/50 hover:bg-slate-100 dark:hover:bg-slate-800/60 border-slate-200/80 dark:border-slate-800'
+            }`}
+          >
+            <div className="w-8 h-8 rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400 font-bold flex items-center justify-center mb-2">
+              <Sun className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-extrabold text-slate-800 dark:text-white">{isTa ? 'சோலார் உற்பத்தி' : 'Solar Generation'}</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{customer.solarCapacity} kW Rooftop</p>
+            </div>
+          </button>
+
+          {/* Govt Subsidy */}
+          <button
+            type="button"
+            onClick={() => switchFolder('subsidy', true)}
+            className={`p-3 rounded-2xl border text-left transition-all group flex flex-col justify-between ${
+              activeFolder === 'subsidy'
+                ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500'
+                : 'bg-slate-50 dark:bg-slate-950/50 hover:bg-slate-100 dark:hover:bg-slate-800/60 border-slate-200/80 dark:border-slate-800'
+            }`}
+          >
+            <div className="w-8 h-8 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 font-bold flex items-center justify-center mb-2">
+              <Award className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-extrabold text-slate-800 dark:text-white">{isTa ? 'அரசு மானியம்' : 'Govt Subsidy'}</p>
+              <p className="text-[10px] font-bold text-purple-600 dark:text-purple-400 mt-0.5">₹78,000 Tracker</p>
+            </div>
+          </button>
+
+          {/* Tax Invoice */}
+          <button
+            type="button"
+            onClick={() => setShowInvoiceModal(true)}
+            className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/50 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-left transition-all group flex flex-col justify-between"
+          >
+            <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center mb-2">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-extrabold text-slate-800 dark:text-white">{isTa ? 'வரி ரசீது (GST)' : 'GST Tax Invoice'}</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{isTa ? 'பார்வையிட / பில்' : 'Printable Bill'}</p>
+            </div>
+          </button>
+
+          {/* Sanction & Warranty */}
+          <button
+            type="button"
+            onClick={() => setShowSanctionModal(true)}
+            className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/50 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-left transition-all group flex flex-col justify-between"
+          >
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center mb-2">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-extrabold text-slate-800 dark:text-white">{isTa ? 'உத்தரவாதக் கடிதம்' : 'Sanction & Warranty'}</p>
+              <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">25-Yr Performance</p>
+            </div>
+          </button>
+
+          {/* Service & Support */}
+          <button
+            type="button"
+            onClick={() => setShowServiceTicketModal(true)}
+            className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/50 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-left transition-all group flex flex-col justify-between"
+          >
+            <div className="w-8 h-8 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold flex items-center justify-center mb-2">
+              <Wrench className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-extrabold text-slate-800 dark:text-white">{isTa ? 'சர்வீஸ் உதவி' : 'Service Request'}</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{isTa ? 'தொழில்நுட்ப உதவி' : 'Book Support'}</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
       {/* 2. THE 4 FOLDERS NAVIGATION TABS */}
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl p-2 sm:p-2.5 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+      <div id="folder-content-container" className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl p-2 sm:p-2.5 border border-slate-200/80 dark:border-slate-800 shadow-sm scroll-mt-20">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           {folders.map(folder => {
             const isActive = activeFolder === folder.id;
@@ -1191,6 +1494,61 @@ export default function CustomerDashboard() {
 
         </div>
       )}
+
+      {/* ============================================================== */}
+      {/* 5. 24/7 DEDICATED CUSTOMER CARE & SUPPORT BANNER               */}
+      {/* ============================================================== */}
+      <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-emerald-950 rounded-3xl p-6 sm:p-8 text-white border border-teal-500/30 shadow-xl relative overflow-hidden mt-8">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center">
+                <Headphones className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-black uppercase tracking-wider text-teal-300">
+                {isTa ? 'எம்.ஆர்.எஸ் சோலார் வாடிக்கையாளர் உதவி மையம்' : 'MRS SOLAR Dedicated Customer Care'}
+              </span>
+            </div>
+            <h3 className="text-lg sm:text-xl font-black text-white">
+              {isTa ? 'உங்கள் சோலார் அமைப்பில் ஏதேனும் உதவி தேவையா?' : 'Need Help With Your Solar Rooftop or EMI?'}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+              {isTa
+                ? 'உங்கள் மின் உற்பத்தி, மாதாந்திர தவணை அல்லது மத்திய அரசு மானியம் தொடர்பான அனைத்து சந்தேகங்களுக்கும் எங்கள் தொழில்நுட்பக் குழு உங்களுக்கு உதவ தயாராக உள்ளது.'
+                : 'Our certified engineers and support managers are available to assist you with electricity generation, subsidy tracking, and payments anytime.'}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0">
+            <a
+              href="tel:9444798444"
+              className="px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-black text-xs sm:text-sm flex items-center space-x-2 transition-all shadow-md hover:scale-105 active:scale-95"
+            >
+              <PhoneCall className="w-4 h-4 text-teal-600" />
+              <span>{isTa ? 'அழைக்க: 94447 98444' : 'Call: 94447 98444'}</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={() => openCustomerSupportChat({ customer })}
+              className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm flex items-center space-x-2 transition-all shadow-md hover:scale-105 active:scale-95"
+            >
+              <MessageCircle className="w-4 h-4 text-white" />
+              <span>{isTa ? 'வாட்ஸ்அப் உதவி' : 'WhatsApp Support'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowServiceTicketModal(true)}
+              className="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs sm:text-sm flex items-center space-x-2 transition-all"
+            >
+              <Wrench className="w-4 h-4 text-teal-400" />
+              <span>{isTa ? 'பழுதுநீக்கப் பதிவு' : 'Book Service'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* ============================================================== */}
       {/* UNIVERSAL POPUP MODALS                                         */}
