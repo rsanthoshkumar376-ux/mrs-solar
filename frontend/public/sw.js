@@ -1,5 +1,5 @@
-// MRS SOLAR Progressive Web App - Service Worker (v2.5.0 Auto-Cache Buster)
-const CACHE_NAME = 'mrs-solar-v2.5.0';
+// MRS SOLAR Progressive Web App - Service Worker (v2.5.1 Ultra-Fast Network First)
+const CACHE_NAME = 'mrs-solar-v2.5.1';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -38,8 +38,8 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Strategy:
 // - Always bypass cache for API calls, uploads, and non-GET requests
-// - Navigation requests (HTML): Always Network-first, only fallback to offline cache if network completely fails
-// - Static assets (.js, .css): Never cache HTML responses from SPA rewrites
+// - Navigation requests (HTML): Network-first with fresh cache update
+// - Static assets (.js, .css): Network-first for chunk files to prevent stale hashes
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
@@ -71,7 +71,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Static assets & icons: Network-first for chunk files to prevent stale hashes
+  // 3. Static assets & chunks: Network-first to always run latest compiled code
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(
       fetch(event.request)
@@ -101,11 +101,13 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
       return fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && url.origin === self.location.origin) {
+        if (networkResponse && networkResponse.status === 200) {
           const copy = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }
         return networkResponse;
+      }).catch(() => {
+        // Return nothing on network fail for optional assets
       });
     })
   );

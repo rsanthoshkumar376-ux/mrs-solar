@@ -21,7 +21,7 @@
   <body class="bg-slate-950 text-slate-100">
     <div id="root">
       <!-- Instant pre-React visual loader preventing blank screen on cold starts -->
-      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #090d1a; color: #fff; font-family: Inter, system-ui, -apple-system, sans-serif; text-align: center; padding: 20px;">
+      <div id="mrs-preloader" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #090d1a; color: #fff; font-family: Inter, system-ui, -apple-system, sans-serif; text-align: center; padding: 20px;">
         <div style="width: 64px; height: 64px; border-radius: 20px; background: rgba(13, 148, 136, 0.25); border: 1.5px solid rgba(45, 212, 191, 0.4); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; box-shadow: 0 12px 30px -5px rgba(13, 148, 136, 0.35);">
           <svg style="width: 36px; height: 36px; color: #facc15;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
@@ -30,6 +30,14 @@
         <h1 style="font-size: 26px; font-weight: 900; margin: 0 0 6px 0; letter-spacing: -0.5px;">MRS <span style="color: #2dd4bf;">SOLAR</span></h1>
         <p style="font-size: 13px; color: #94a3b8; margin: 0 0 16px 0;">Solar Panel Loan & Installation Management</p>
         <div style="width: 32px; height: 32px; border: 3px solid rgba(45, 212, 191, 0.2); border-top-color: #2dd4bf; border-radius: 50%; animation: mrsSpin 0.8s linear infinite;"></div>
+        
+        <!-- Emergency Recovery Button (Appears if network hangs or initial mount takes > 4s) -->
+        <div id="mrs-loader-reset-btn" style="display: none; margin-top: 20px;">
+          <button type="button" onclick="mrsEmergencyReset()" style="background: #0d9488; color: #fff; border: 1px solid rgba(45, 212, 191, 0.4); padding: 10px 20px; border-radius: 9999px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 6px 16px rgba(13,148,136,0.35);">
+            ↻ Clear Cache & Open Portal
+          </button>
+        </div>
+
         <style>
           @keyframes mrsSpin { to { transform: rotate(360deg); } }
         </style>
@@ -37,48 +45,71 @@
     </div>
 
     <script>
-      // 1. Auto-recover from stale cached chunks after new deployment
-      window.addEventListener('vite:preloadError', () => {
-        console.warn('[Vite] Chunk preload mismatch, reloading fresh bundle...');
-        window.location.reload();
-      });
-
-      window.addEventListener('error', (event) => {
-        const msg = String(event.message || '');
-        if (msg.includes('dynamically imported module') || msg.includes('Failed to fetch') || msg.includes('Unexpected token <')) {
-          const key = 'mrs_chunk_recovery_' + Math.floor(Date.now() / 60000);
-          if (!sessionStorage.getItem(key)) {
-            sessionStorage.setItem(key, '1');
-            if ('caches' in window) {
-              caches.keys().then((names) => {
-                return Promise.all(names.map((name) => caches.delete(name)));
-              }).then(() => {
-                window.location.reload();
-              });
-            } else {
+      function mrsEmergencyReset() {
+        try {
+          sessionStorage.clear();
+          localStorage.removeItem('mrs_solar_cache_ts');
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+            }).then(function() {
               window.location.reload();
-            }
+            });
+            return;
+          }
+        } catch (e) {}
+        window.location.reload();
+      }
+
+      // Display emergency reset if loading takes longer than 4.5 seconds
+      setTimeout(function() {
+        var btn = document.getElementById('mrs-loader-reset-btn');
+        var preloader = document.getElementById('mrs-preloader');
+        if (btn && preloader && document.body.contains(preloader)) {
+          btn.style.display = 'block';
+        }
+      }, 4500);
+
+      // 1. Auto-recover from stale cached chunks after new deployment
+      window.addEventListener('vite:preloadError', function() {
+        if (!sessionStorage.getItem('mrs_preload_reloaded')) {
+          sessionStorage.setItem('mrs_preload_reloaded', '1');
+          console.warn('[Vite] Chunk preload mismatch, reloading fresh bundle...');
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+            }).then(function() {
+              window.location.reload();
+            });
+          } else {
+            window.location.reload();
           }
         }
       });
 
+      // Clear reload guard once page successfully loads
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          sessionStorage.removeItem('mrs_preload_reloaded');
+        }, 10000);
+      });
+
       // 2. Register & auto-update Progressive Web App service worker
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then((reg) => {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').then(function(reg) {
             reg.update();
-            reg.onupdatefound = () => {
-              const installingWorker = reg.installing;
+            reg.onupdatefound = function() {
+              var installingWorker = reg.installing;
               if (installingWorker) {
-                installingWorker.onstatechange = () => {
+                installingWorker.onstatechange = function() {
                   if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('[PWA] Fresh MRS SOLAR version available, updating...');
-                    window.location.reload();
+                    console.log('[PWA] Fresh MRS SOLAR version available.');
                   }
                 };
               }
             };
-          }).catch((err) => {
+          }).catch(function(err) {
             console.warn('[PWA] ServiceWorker failed:', err);
           });
         });

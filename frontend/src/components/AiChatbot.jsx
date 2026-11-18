@@ -140,6 +140,17 @@ export default function AiChatbot() {
     }
   }, [isOpen]);
 
+  // REST Polling Fallback for seamless live chat on Vercel & serverless environments
+  useEffect(() => {
+    if (!isOpen || !activeTicket?._id) return;
+
+    const interval = setInterval(() => {
+      loadTicketMessages(activeTicket._id);
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [isOpen, activeTicket?._id]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages, managerMessages, loading, chatMode]);
