@@ -130,6 +130,24 @@ export default function ReferralPortal() {
   const annualCo2Kg = Math.round(annualGenUnits * 0.82);
   const treesEquiv = Math.round(annualCo2Kg / 22);
 
+  // Instant WhatsApp Quote Dispatch
+  const handleInstantWhatsAppQuote = () => {
+    let msg = '';
+    if (isTa) {
+      msg = `வணக்கம் MRS SOLAR! எனது வீட்டிற்கு *${activeKw} kW* கூரை சோலார் அமைக்க விரும்புகிறேன்.\n\n💰 PM சூர்யா கர் மத்திய மானியம்: ₹${centralSubsidy.toLocaleString('en-IN')}\n⚡ மாதாந்திர EMI: ~₹${estimatedMonthlyEmi.toLocaleString('en-IN')}/மாதம்\n\nஎனது கூரையில் இலவச தள ஆய்வு (Site Feasibility Survey) செய்ய தொடர்பு கொள்ளவும்.`;
+      if (referralCode) {
+        msg += `\nபரிந்துரைக் குறியீடு: *${referralCode}*`;
+      }
+    } else {
+      msg = `Hello MRS SOLAR! I calculated a quote on your website for a *${activeKw} kW* rooftop solar system.\n\n💰 PM Surya Ghar Subsidy: ₹${centralSubsidy.toLocaleString('en-IN')}\n⚡ Estimated EMI: ~₹${estimatedMonthlyEmi.toLocaleString('en-IN')}/mo\n\nPlease contact me for a free rooftop site feasibility survey.`;
+      if (referralCode) {
+        msg += `\nReferral Code: *${referralCode}*`;
+      }
+    }
+    const url = `https://api.whatsapp.com/send?phone=918072454996&text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   // Handle Lead Form Submission
   const handleSubmitLead = async (e) => {
     e.preventDefault();
@@ -1052,6 +1070,15 @@ Please help me schedule a Free Rooftop Site Survey and Loan Consultation.`;
                 >
                   <FileText className="w-4 h-4 text-pink-300" />
                   <span>{isTa ? '📄 அதிகாரப்பூர்வ அறிக்கை (PDF)' : '📄 Get Solar Quotation (PDF)'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleInstantWhatsAppQuote}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#00a884] hover:bg-[#009272] text-white font-black text-xs shadow-md shadow-emerald-950/25 flex items-center justify-center space-x-2 transition-all hover:scale-105 active:scale-95"
+                >
+                  <MessageCircle className="w-4 h-4 text-white fill-current" />
+                  <span>{isTa ? 'வாட்ஸ்அப் உடனடி மதிப்பீடு' : 'WhatsApp Quote'}</span>
                 </button>
 
                 <button

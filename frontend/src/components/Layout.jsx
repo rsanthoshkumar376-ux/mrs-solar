@@ -8,7 +8,7 @@ import {
   FolderLock, Database, CheckCircle, Mail, ChevronRight,
   Search, Languages, Mic, CreditCard, Trash2, Settings, KanbanSquare,
   Briefcase, Target, CheckSquare, Calendar, BarChart3, Wrench, Sparkles, KeyRound,
-  PlusCircle, MapPin, Eye, Headphones
+  PlusCircle, MapPin, Eye, Headphones, MessageCircle, Boxes
 } from 'lucide-react';
 import InstallAppBanner from './InstallAppBanner.jsx';
 import { AppUpdateModalButton } from './AppUpdateModal.jsx';
@@ -229,6 +229,8 @@ export default function Layout({ children }) {
     { label: isTa ? 'பணிகள் ஒதுக்கீடு' : 'Task Management', path: '/manager?tab=tasks', icon: CheckSquare },
     { label: isTa ? 'கணக்குகள் & பயனர் ஐடி' : 'Account Management', path: '/manager?tab=accounts', icon: KeyRound },
     { label: isTa ? 'வாடிக்கையாளர் நேரடி உதவி' : 'Customer Live Support', path: '/manager?tab=support', icon: Headphones },
+    { label: isTa ? 'வாட்ஸ்அப் ஆட்டோமேஷன்' : 'WhatsApp Automation', path: '/manager?tab=whatsapp', icon: MessageCircle },
+    { label: isTa ? 'சோலார் கிடங்கு இருப்பு' : 'Solar Inventory', path: '/manager?tab=inventory', icon: Boxes },
     { label: isTa ? 'மின்னஞ்சல் பதிவுகள்' : 'Email Notifications', path: '/manager?tab=emails', icon: Mail },
     { label: isTa ? 'அறிக்கைகள்' : 'Reports', path: '/manager?tab=reports', icon: BarChart3 },
     { label: isTa ? 'செயல்பாட்டு பதிவுகள்' : 'Activity Logs', path: '/manager?tab=activity', icon: History }

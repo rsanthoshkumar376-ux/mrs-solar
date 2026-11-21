@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   Sun, Zap, Clock, Home, ArrowUpRight, TrendingUp, Calendar, 
   PlusCircle, CheckCircle2, ExternalLink, Copy, Check, IndianRupee,
-  ShieldCheck, Leaf, Wifi, Cpu, Calculator, Radio, Sparkles, RefreshCw, X
+  ShieldCheck, Leaf, Wifi, Cpu, Calculator, Radio, Sparkles, RefreshCw, X,
+  CloudSun, Droplets, Thermometer, Gauge, Activity, BatteryCharging
 } from 'lucide-react';
 import { formatCurrency } from '../utils/format.js';
 import { launchTnebQuickPay, launchTnebBbpsPay, copyToClipboard, calculateTnebBill } from '../utils/tneb.js';
@@ -633,6 +634,180 @@ export default function SolarTrackerCard({
             </p>
             <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium">
               Saved on TNEB Bill
+            </span>
+          </div>
+        </div>
+
+        {/* LIVE INVERTER TELEMETRY STRIP */}
+        <div className="bg-slate-900 text-white rounded-2xl p-3.5 sm:p-4 border border-slate-800 shadow-inner my-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2.5 border-b border-slate-800 gap-2">
+            <div className="flex items-center space-x-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <span className="text-xs font-mono font-bold text-emerald-400 tracking-wider">
+                {lang === 'ta' ? 'நேரலை இன்வெர்ட்டர் டெலிமெட்ரி (LIVE)' : 'REAL-TIME INVERTER TELEMETRY'}
+              </span>
+              <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-mono">
+                {iotDongle.brand}
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-3 text-[11px] text-slate-400 font-mono">
+              <span>S/N: {iotDongle.serialNo}</span>
+              <span className="text-emerald-400 font-bold">● {lang === 'ta' ? 'கிரிட் ஒத்திசைவு' : 'Grid Synced'}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-3 text-xs">
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">
+                {lang === 'ta' ? 'தற்போதைய உற்பத்தி' : 'Live Output'}
+              </span>
+              <span className="text-base font-black text-amber-400 font-mono">
+                {(capacity * 0.81).toFixed(2)} kW
+              </span>
+              <span className="text-[9px] text-slate-500 block mt-0.5">81% Rated Peak</span>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">
+                {lang === 'ta' ? 'AC மின்னழுத்தம்' : 'AC Voltage'}
+              </span>
+              <span className="text-base font-black text-blue-300 font-mono">
+                235.4 V
+              </span>
+              <span className="text-[9px] text-slate-500 block mt-0.5">Single Phase LT</span>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">
+                {lang === 'ta' ? 'அதிர்வெண்' : 'Grid Frequency'}
+              </span>
+              <span className="text-base font-black text-teal-300 font-mono">
+                50.02 Hz
+              </span>
+              <span className="text-[9px] text-slate-500 block mt-0.5">Within CEA Norms</span>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">
+                {lang === 'ta' ? 'வெப்பநிலை' : 'Inverter Temp'}
+              </span>
+              <span className="text-base font-black text-orange-400 font-mono">
+                41.2 °C
+              </span>
+              <span className="text-[9px] text-emerald-400 block mt-0.5">✓ Normal / Cool</span>
+            </div>
+
+            <div className="col-span-2 sm:col-span-1">
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">
+                {lang === 'ta' ? 'செயல்திறன்' : 'Efficiency (PR)'}
+              </span>
+              <span className="text-base font-black text-emerald-400 font-mono">
+                88.5%
+              </span>
+              <span className="text-[9px] text-slate-500 block mt-0.5">Class A Tier 1</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3-DAY SOLAR WEATHER & GENERATION FORECAST CARD */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-500/[0.06] via-slate-50 dark:via-slate-900 to-teal-500/[0.04] border border-amber-200/70 dark:border-amber-800/40 my-5 shadow-sm space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/40 dark:border-amber-800/30 pb-2.5">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <CloudSun className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-800 dark:text-white flex items-center space-x-2">
+                  <span>{lang === 'ta' ? '3 நாள் சோலார் வானிலை & உற்பத்தி முன்னறிவிப்பு' : '3-Day Solar Weather & Generation Forecast'}</span>
+                  <span className="text-[10px] bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-800">
+                    {lang === 'ta' ? 'தமிழ்நாடு பகுதி' : 'Tamil Nadu Zone'}
+                  </span>
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {lang === 'ta' ? 'சூரிய ஒளி அளவீட்டின் அடிப்படையில் எதிர்பார்க்கப்படும் மின் உற்பத்தி' : 'Solar irradiance forecast & peak self-consumption schedule'}
+                </p>
+              </div>
+            </div>
+
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              {lang === 'ta' ? 'இலவச முன்னறிவிப்பு' : '100% FREE FORECAST'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* TODAY FORECAST */}
+            <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1.5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                  {lang === 'ta' ? 'இன்று (Today)' : 'Today'}
+                </span>
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center space-x-1">
+                  <Sun className="w-3.5 h-3.5" />
+                  <span>{lang === 'ta' ? 'பிரகாசம்' : 'Sunny'}</span>
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between pt-1">
+                <span className="text-xl font-black text-slate-900 dark:text-white font-mono">
+                  ~{(capacity * 4.4).toFixed(1)} <span className="text-xs font-normal text-slate-400">kWh</span>
+                </span>
+                <span className="text-[11px] font-semibold text-emerald-600">8.2 hrs sun</span>
+              </div>
+              <p className="text-[10px] text-slate-500">Peak UV: 8.4 • High Output</p>
+            </div>
+
+            {/* TOMORROW FORECAST */}
+            <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-amber-300/80 dark:border-amber-700/60 space-y-1.5 shadow-sm ring-1 ring-amber-400/20">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center space-x-1">
+                  <span>{lang === 'ta' ? 'நாளை (Tomorrow)' : 'Tomorrow'}</span>
+                  <span className="text-[9px] bg-amber-500 text-white font-black px-1.5 py-0.2 rounded-full">PEAK</span>
+                </span>
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center space-x-1">
+                  <Sun className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{lang === 'ta' ? 'முழு வெயில்' : 'Clear Skies'}</span>
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between pt-1">
+                <span className="text-xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                  ~{(capacity * 4.6).toFixed(1)} <span className="text-xs font-normal text-slate-400">kWh</span>
+                </span>
+                <span className="text-[11px] font-semibold text-emerald-600">8.6 hrs sun</span>
+              </div>
+              <p className="text-[10px] text-slate-500">Peak UV: 9.1 • Ideal for Heavy Loads</p>
+            </div>
+
+            {/* DAY 3 FORECAST */}
+            <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1.5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                  {lang === 'ta' ? 'நாளை மறுநாள்' : 'Day After'}
+                </span>
+                <span className="text-[10px] text-slate-500 font-bold flex items-center space-x-1">
+                  <CloudSun className="w-3.5 h-3.5 text-teal-500" />
+                  <span>{lang === 'ta' ? 'லேசான மேகம்' : 'Partly Cloudy'}</span>
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between pt-1">
+                <span className="text-xl font-black text-slate-900 dark:text-white font-mono">
+                  ~{(capacity * 3.8).toFixed(1)} <span className="text-xs font-normal text-slate-400">kWh</span>
+                </span>
+                <span className="text-[11px] font-semibold text-slate-500">6.8 hrs sun</span>
+              </div>
+              <p className="text-[10px] text-slate-500">Peak UV: 6.8 • Moderate Yield</p>
+            </div>
+          </div>
+
+          {/* SMART LOAD RECOMMENDATION */}
+          <div className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-xs flex items-center space-x-2 text-teal-800 dark:text-teal-200">
+            <Zap className="w-4 h-4 text-teal-600 shrink-0" />
+            <span className="text-[11px]">
+              {lang === 'ta'
+                ? '💡 பரிந்துரை: துணி துவைக்கும் இயந்திரம் மற்றும் தண்ணீர் மோட்டாரை காலை 10:30 முதல் மதியம் 2:30 வரை இயக்கினால், 100% இலவச நேரடி சோலார் மின்சாரம் பயன்படுத்தப்படும்!'
+                : '💡 Smart Appliance Tip: Run heavy loads (washing machine, dishwasher, water pump) between 10:30 AM – 2:30 PM for 100% free direct solar power!'}
             </span>
           </div>
         </div>

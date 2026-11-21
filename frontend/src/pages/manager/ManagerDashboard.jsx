@@ -11,7 +11,7 @@ import {
   Eye, RefreshCw, MessageSquare, Sun, Zap, Building, Sparkles, KeyRound,
   Headphones, Star, MessageSquareShare, MessageCircle, AlertTriangle, ShieldCheck,
   ChevronDown, ChevronUp, User, Phone, Mail, MapPin, Copy,
-  BarChart3, Briefcase, History, UserPlus
+  BarChart3, Briefcase, History, UserPlus, Boxes, Package
 } from 'lucide-react';
 import { getSocket, joinTicketRoom, leaveTicketRoom } from '../../utils/socket.js';
 import ManagerCustomerManager from './ManagerCustomerManager.jsx';
@@ -19,6 +19,8 @@ import ManagerWorkerManager from './ManagerWorkerManager.jsx';
 import ManagerAccountManager from './ManagerAccountManager.jsx';
 import ManagerEmailLogs from './ManagerEmailLogs.jsx';
 import ManagerActivityLogs from './ManagerActivityLogs.jsx';
+import ManagerWhatsAppEngine from '../../components/ManagerWhatsAppEngine.jsx';
+import ManagerInventoryTracker from '../../components/ManagerInventoryTracker.jsx';
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
@@ -43,6 +45,8 @@ export default function ManagerDashboard() {
     const tabParam = searchParams.get('tab');
     if (tabParam) return tabParam;
     if (location.pathname.includes('/support')) return 'support';
+    if (location.pathname.includes('/whatsapp')) return 'whatsapp';
+    if (location.pathname.includes('/inventory') || location.pathname.includes('/warehouse')) return 'inventory';
     if (location.pathname.includes('/assign') || location.pathname.includes('/tasks')) return 'assign';
     if (location.pathname.includes('/targets')) return 'targets';
     if (location.pathname.includes('/team') || location.pathname.includes('/members') || location.pathname.includes('/workers')) return 'workers';
@@ -625,6 +629,8 @@ export default function ManagerDashboard() {
           { id: 'workers', label: isTa ? 'பணியாளர்கள்' : 'Worker Management', icon: Briefcase, badge: managerStats.summary?.totalWorkers },
           { id: 'accounts', label: isTa ? 'கணக்குகள் & பயனர் ஐடி' : 'Account Management', icon: KeyRound, badge: managerStats.summary?.pendingAccountActivations },
           { id: 'support', label: isTa ? 'வாடிக்கையாளர் நேரடி உதவி' : 'Customer Live Support', icon: Headphones, badge: openSupportCount, isHighlight: true },
+          { id: 'whatsapp', label: isTa ? 'வாட்ஸ்அப் ஆட்டோமேஷன்' : 'WhatsApp Engine', icon: MessageCircle },
+          { id: 'inventory', label: isTa ? 'சோலார் கிடங்கு இருப்பு' : 'Solar Inventory', icon: Boxes },
           { id: 'approvals', label: isTa ? 'அனுமதிக்க வேண்டியவை' : 'Task Approvals', icon: FileCheck, badge: pendingApprovals.length },
           { id: 'assign', label: isTa ? 'பணி ஒதுக்கீடு' : 'Assign Task', icon: PlusCircle },
           { id: 'targets', label: isTa ? 'இலக்கு பகிர்வு' : 'Target Distribution', icon: Target, badge: targets.length },
@@ -980,6 +986,24 @@ export default function ManagerDashboard() {
       {/* ========================================================================= */}
       {activeTab === 'activity' && (
         <ManagerActivityLogs />
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: AUTOMATED WHATSAPP NOTIFICATION ENGINE */}
+      {/* ========================================================================= */}
+      {activeTab === 'whatsapp' && (
+        <div className="animate-fade-in">
+          <ManagerWhatsAppEngine isTa={isTa} />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: SOLAR WAREHOUSE & INVENTORY TRACKING */}
+      {/* ========================================================================= */}
+      {activeTab === 'inventory' && (
+        <div className="animate-fade-in">
+          <ManagerInventoryTracker isTa={isTa} />
+        </div>
       )}
 
       {/* ========================================================================= */}
